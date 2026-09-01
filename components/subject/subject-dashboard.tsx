@@ -13,11 +13,11 @@ import {
   Inbox,
   School,
   Send,
-  Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
+import { PointSourceBadge } from "@/components/ui/point-source-badge"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
 import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
@@ -215,7 +215,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
       </div>
 
       {/* 顶部入口卡片 */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <button
           type="button"
           onClick={() => onNavigate("award")}
@@ -304,7 +304,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
           </div>
 
           {/* 按班级分行进度 */}
-          <ul className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-1.5 lg:grid-cols-3">
             {peProgress.perClass.map(({ cls, male, female }) => {
               const done = male && female
               const partial = !done && (male || female)
@@ -435,9 +435,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
                   key={c.id}
                   className="flex items-start gap-2.5 rounded-xl bg-muted/30 px-3 py-2.5"
                 >
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-yellow/15 text-brand-yellow">
-                    <Sparkles className="size-3.5" />
-                  </span>
+                  <PointSourceBadge source={c.source} className="size-7 rounded-lg [&_svg]:size-3.5" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-foreground">
                       发给 <span className="font-semibold">{c.studentName}</span>{" "}

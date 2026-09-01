@@ -7,8 +7,8 @@ export type PointSource = "online" | "offline_scan" | "flag_reward" | "honor"
 
 export const POINT_SOURCE_LABEL: Record<PointSource, string> = {
   online: "线上奖卡",
-  offline_scan: "线下扫码",
-  flag_reward: "流动红旗奖励",
+  offline_scan: "线下奖卡",
+  flag_reward: "优雅班集体",
   honor: "荣誉录入",
 }
 
@@ -17,6 +17,14 @@ export const POINT_SOURCE_STYLE: Record<PointSource, string> = {
   offline_scan: "bg-brand-green/15 text-brand-green",
   flag_reward: "bg-brand-yellow/20 text-brand-yellow",
   honor: "bg-brand-orange/15 text-brand-orange",
+}
+
+/** 来源图标徽章（与班主任首页五育积分动态一致）：图标名 + 渐变底色 */
+export const POINT_SOURCE_BADGE: Record<PointSource, { icon: string; badge: string }> = {
+  online: { icon: "Award", badge: "from-brand-blue to-primary shadow-brand-blue/30" },
+  offline_scan: { icon: "QrCode", badge: "from-brand-green to-brand-blue shadow-brand-green/30" },
+  flag_reward: { icon: "Flag", badge: "from-brand-yellow to-brand-orange shadow-brand-yellow/30" },
+  honor: { icon: "Trophy", badge: "from-brand-orange to-brand-pink shadow-brand-orange/30" },
 }
 
 export type TimeRange = "week" | "month" | "semester"

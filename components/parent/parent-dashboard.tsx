@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import {
@@ -19,6 +19,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
+import { PointSourceBadge } from "@/components/ui/point-source-badge"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
 import { formatDate } from "@/lib/scoring-utils"
@@ -26,6 +27,8 @@ import {
   buildPointEntries,
   getSemesterRange,
   inRange,
+  POINT_SOURCE_LABEL,
+  POINT_SOURCE_STYLE,
 } from "@/lib/points-utils"
 import { getSemesterLabel } from "@/lib/pe-scores"
 import { ACTIVITY_STATUS_META, isEnrolling } from "@/lib/activity-utils"
@@ -215,6 +218,22 @@ export function ParentDashboard() {
     [honors, studentId, semester],
   )
 
+  // 孩子本学期五育奖卡记录（按创建时间倒序）
+  const semesterAwardCards = useMemo(
+    () =>
+      awardCards
+        .filter((a) => a.studentId === studentId && inRange(a.date, semester.start, semester.end))
+        .slice()
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [awardCards, studentId, semester],
+  )
+
+  const awardCardsLoadMore = useLoadMore(semesterAwardCards, 8)
+  const awardCardsScroll = useScrollLoadMore(
+    awardCardsLoadMore.hasMore,
+    awardCardsLoadMore.loadMore,
+  )
+
   const semesterHonorsLoadMore = useLoadMore(semesterHonors, 10)
   const semesterHonorsScroll = useScrollLoadMore(
     semesterHonorsLoadMore.hasMore,
@@ -263,64 +282,46 @@ export function ParentDashboard() {
         </Link>
       )}
 
-      {/* 家长身份 + 孩子切换 */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* 孩子切换（多孩家庭） */}
+      {children.length > 1 && (
         <div className="flex flex-wrap items-center gap-3">
-          <div className="glass-panel flex items-center gap-3 rounded-xl px-4 py-2.5">
-            <span className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-yellow/25 to-brand-orange/20 text-sm font-bold text-brand-yellow shadow-sm">
-              {currentChild.name.slice(0, 1)}
-            </span>
-            <div className="flex flex-col leading-tight">
-              <span className="text-sm font-bold text-foreground">{currentChild.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {currentChild.className} · 家长：{parentUser.name}
-              </span>
-            </div>
+          <div className="glass-panel flex items-center gap-1 rounded-xl px-1.5 py-1.5">
+            <Users className="ml-1.5 size-3.5 text-muted-foreground" />
+            {children.map((c) => {
+              const active = c.studentId === currentChild.studentId
+              return (
+                <button
+                  key={c.studentId}
+                  type="button"
+                  onClick={() => setSelectedChildId(c.studentId)}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-xs font-medium transition",
+                    active
+                      ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {c.name}
+                  <span className="ml-1 text-xs opacity-70">{c.className}</span>
+                </button>
+              )
+            })}
           </div>
-
-          {/* 多孩家庭：孩子切换器 */}
-          {children.length > 1 && (
-            <div className="glass-panel flex items-center gap-1 rounded-xl px-1.5 py-1.5">
-              <Users className="ml-1.5 size-3.5 text-muted-foreground" />
-              {children.map((c) => {
-                const active = c.studentId === currentChild.studentId
-                return (
-                  <button
-                    key={c.studentId}
-                    type="button"
-                    onClick={() => setSelectedChildId(c.studentId)}
-                    className={cn(
-                      "rounded-lg px-3 py-1.5 text-xs font-medium transition",
-                      active
-                        ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {c.name}
-                    <span className="ml-1 text-xs opacity-70">{c.className}</span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-gradient-to-r from-primary/10 to-brand-blue/10 px-3 py-1.5 text-xs font-medium text-foreground">
-          <CalendarDays className="size-3.5 text-brand-blue" />
-          {semesterLabel}
-        </div>
-      </div>
+      )}
 
-      {/* 学生基本信息 + 点击用户 ID 跳活动报名 */}
-      <section className="glass-panel flex flex-col gap-3 rounded-2xl p-4 sm:p-5">
+      {/* 学生基本信息大卡片 + 学期信息 */}
+      <section className="glass-panel relative overflow-hidden rounded-2xl p-4 sm:p-5">
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-blue via-primary to-brand-green" />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-blue/20 to-primary/20 text-brand-blue">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-blue to-primary text-white shadow-md shadow-brand-blue/30">
               <GraduationCap className="size-6" />
             </span>
             <div>
               <p className="text-base font-bold text-foreground">
                 {currentChild.name}
-                <span className="ml-2 rounded-full bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                <span className="ml-2 rounded-full bg-brand-pink/15 px-2 py-0.5 text-xs font-medium text-brand-pink">
                   {student?.gender ?? ""}
                 </span>
               </p>
@@ -328,74 +329,86 @@ export function ParentDashboard() {
                 {gradeNameLabel}
                 {clazz ? ` · ${clazz.name}` : ` · ${currentChild.className}`}
                 {clazz ? ` · 班主任 ${clazz.homeroomTeacher}` : ""}
+                {" · 家长 "}
+                {parentUser.name}
               </p>
             </div>
           </div>
           <Link
             href={`/activities/enroll?student=${encodeURIComponent(studentId)}`}
-            className="group flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-xs font-medium text-foreground transition hover:border-primary/50 hover:bg-primary/10"
-            title="点击用户 ID 前往活动报名"
+            className="flex items-center gap-1.5 rounded-full border border-border/50 bg-gradient-to-r from-primary/10 to-brand-blue/10 px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/50 hover:bg-primary/15"
           >
-            <span className="text-xs text-muted-foreground">用户 ID</span>
-            <span className="font-mono text-xs font-semibold">{studentId}</span>
-            <ChevronRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            <CalendarDays className="size-3.5 text-brand-blue" />
+            {semesterLabel}
           </Link>
         </div>
       </section>
 
       {/* 四项积分指标 */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="glass-panel flex items-center gap-3 rounded-2xl p-4">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-blue/15 text-brand-blue">
-            <Sparkles className="size-5" />
-          </span>
-          <div className="flex min-w-0 flex-col">
-            <span className="text-xs text-muted-foreground">累计获得积分</span>
-            <span className="text-lg font-bold text-foreground">
-              {totalEarned}
-              <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="glass-panel group relative overflow-hidden rounded-2xl p-4">
+          <span className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-brand-blue/10 blur-xl transition group-hover:bg-brand-blue/20" />
+          <div className="relative flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-blue to-primary text-white shadow-md shadow-brand-blue/30">
+              <Sparkles className="size-5" />
             </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="text-xs text-muted-foreground">累计获得积分</span>
+              <span className="bg-gradient-to-r from-brand-blue to-primary bg-clip-text text-lg font-bold text-transparent">
+                {totalEarned}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
+              </span>
+            </div>
           </div>
         </div>
-        <div className="glass-panel flex items-center gap-3 rounded-2xl p-4">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-yellow/15 text-brand-yellow">
-            <TrendingUp className="size-5" />
-          </span>
-          <div className="flex min-w-0 flex-col">
-            <span className="text-xs text-muted-foreground">当前学期累计获得</span>
-            <span className="text-lg font-bold text-foreground">
-              {semesterEarned}
-              <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
+        <div className="glass-panel group relative overflow-hidden rounded-2xl p-4">
+          <span className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-brand-yellow/10 blur-xl transition group-hover:bg-brand-yellow/20" />
+          <div className="relative flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-yellow to-brand-orange text-white shadow-md shadow-brand-yellow/30">
+              <TrendingUp className="size-5" />
             </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="text-xs text-muted-foreground">当前学期累计获得</span>
+              <span className="bg-gradient-to-r from-brand-yellow to-brand-orange bg-clip-text text-lg font-bold text-transparent">
+                {semesterEarned}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
+              </span>
+            </div>
           </div>
         </div>
-        <div className="glass-panel flex items-center gap-3 rounded-2xl p-4">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-orange/15 text-brand-orange">
-            <Coins className="size-5" />
-          </span>
-          <div className="flex min-w-0 flex-col">
-            <span className="text-xs text-muted-foreground">已使用积分</span>
-            <span className="text-lg font-bold text-foreground">
-              {spent}
-              <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
+        <div className="glass-panel group relative overflow-hidden rounded-2xl p-4">
+          <span className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-brand-orange/10 blur-xl transition group-hover:bg-brand-orange/20" />
+          <div className="relative flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-orange to-destructive/80 text-white shadow-md shadow-brand-orange/30">
+              <Coins className="size-5" />
             </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="text-xs text-muted-foreground">已使用积分</span>
+              <span className="bg-gradient-to-r from-brand-orange to-destructive/80 bg-clip-text text-lg font-bold text-transparent">
+                {spent}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
+              </span>
+            </div>
           </div>
         </div>
-        <div className="glass-panel flex items-center gap-3 rounded-2xl p-4">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-green/15 text-brand-green">
-            <Wallet className="size-5" />
-          </span>
-          <div className="flex min-w-0 flex-col">
-            <span className="text-xs text-muted-foreground">剩余积分</span>
-            <span className="text-lg font-bold text-foreground">
-              {balance}
-              <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
+        <div className="glass-panel group relative overflow-hidden rounded-2xl p-4">
+          <span className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-brand-green/10 blur-xl transition group-hover:bg-brand-green/20" />
+          <div className="relative flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-green to-brand-blue text-white shadow-md shadow-brand-green/30">
+              <Wallet className="size-5" />
             </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="text-xs text-muted-foreground">剩余积分</span>
+              <span className="bg-gradient-to-r from-brand-green to-brand-blue bg-clip-text text-lg font-bold text-transparent">
+                {balance}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="grid gap-4 lg:grid-cols-3">
         {/* 雷达图：本学期一级指标积分对比 */}
         <section className="glass-panel flex flex-col gap-3 rounded-2xl p-4 sm:p-5">
           <div className="flex items-center justify-between">
@@ -406,6 +419,59 @@ export function ParentDashboard() {
             </h3>
           </div>
           <PointsRadarChart series={radarSeries} />
+        </section>
+
+        {/* 本学期五育奖卡记录 */}
+        <section className="glass-panel flex flex-col gap-3 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+              <Wallet className="size-4 text-brand-yellow" />
+              本学期五育奖卡
+            </h3>
+            <span className="text-xs text-muted-foreground">共 {semesterAwardCards.length} 张</span>
+          </div>
+          {semesterAwardCards.length === 0 ? (
+            <p className="rounded-xl bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
+              本学期暂无奖卡记录
+            </p>
+          ) : (
+            <ul
+              className="flex max-h-[420px] flex-col gap-2 overflow-y-auto pr-1"
+              onScroll={awardCardsScroll.onScroll}
+            >
+              {awardCardsLoadMore.visible.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center gap-2.5 rounded-xl border border-border/40 bg-white/70 px-3 py-2.5 shadow-sm transition hover:border-brand-yellow/40 hover:shadow-md"
+                >
+                  <PointSourceBadge source={a.source} />
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                      POINT_SOURCE_STYLE[a.source],
+                    )}
+                  >
+                    {POINT_SOURCE_LABEL[a.source]}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{a.level1}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {a.level2} · {a.date}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-bold text-brand-green">+{a.points}</span>
+                </li>
+              ))}
+              <li>
+                <LoadMoreFooter
+                  hasMore={awardCardsLoadMore.hasMore}
+                  loaded={awardCardsLoadMore.visible.length}
+                  total={awardCardsLoadMore.total}
+                  onLoadMore={awardCardsLoadMore.loadMore}
+                />
+              </li>
+            </ul>
+          )}
         </section>
 
         {/* 本学期荣誉记录 */}
@@ -429,8 +495,17 @@ export function ParentDashboard() {
               {semesterHonorsLoadMore.visible.map((h) => (
                 <li
                   key={h.id}
-                  className="flex items-start justify-between gap-3 rounded-xl bg-muted/30 px-3 py-2.5"
+                  className="relative flex items-start justify-between gap-3 rounded-xl border border-border/40 bg-white/70 px-3 py-2.5 pl-4 shadow-sm transition hover:border-brand-orange/30 hover:shadow-md"
                 >
+                  <span
+                    className={cn(
+                      "absolute inset-y-2 left-1.5 w-1 rounded-full",
+                      h.honorLevel === "school" && "bg-brand-blue",
+                      h.honorLevel === "district" && "bg-brand-green",
+                      h.honorLevel === "city" && "bg-brand-orange",
+                      h.honorLevel === "national" && "bg-gradient-to-b from-brand-yellow to-brand-orange",
+                    )}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">{h.honorName}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
@@ -494,7 +569,7 @@ export function ParentDashboard() {
               return (
                 <li
                   key={act.id}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-muted/30 px-3 py-2.5 transition hover:bg-muted/50"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border/40 bg-white/70 px-3 py-2.5 shadow-sm transition hover:border-brand-blue/30 hover:shadow-md"
                 >
                   <Link
                     href={`/activities/detail?student=${encodeURIComponent(studentId)}&id=${encodeURIComponent(act.id)}`}
@@ -519,7 +594,7 @@ export function ParentDashboard() {
                   ) : isEnrolling(act, today) ? (
                     <Link
                       href={`/activities/enroll?student=${encodeURIComponent(studentId)}&id=${encodeURIComponent(act.id)}`}
-                      className="rounded-lg bg-brand-green/15 px-2 py-0.5 text-xs font-semibold text-brand-green transition hover:bg-brand-green/25"
+                      className="rounded-lg bg-gradient-to-r from-brand-green to-brand-blue px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:opacity-90"
                     >
                       去报名
                     </Link>

@@ -11,7 +11,7 @@ const notoSansSC = Noto_Sans_SC({
 
 export const metadata: Metadata = {
   title: '明珠临港 · 学生综评',
-  description: '班级日常行为评价与周流动红旗颁发系统',
+  description: '班级日常行为评价与周优雅班集体颁发系统',
   generator: 'v0.app',
   icons: {
     icon: [

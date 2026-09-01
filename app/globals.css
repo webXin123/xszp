@@ -42,6 +42,7 @@
   --color-brand-green: var(--brand-green);
   --color-brand-orange: var(--brand-orange);
   --color-brand-yellow: var(--brand-yellow);
+  --color-brand-pink: var(--brand-pink);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -91,6 +92,7 @@
   --brand-green: oklch(0.62 0.14 145);
   --brand-orange: oklch(0.6 0.19 40);
   --brand-yellow: oklch(0.75 0.15 85);
+  --brand-pink: oklch(0.66 0.17 350);
 }
 
 .dark {
@@ -132,6 +134,7 @@
   --brand-green: oklch(0.68 0.14 145);
   --brand-orange: oklch(0.68 0.18 40);
   --brand-yellow: oklch(0.78 0.15 85);
+  --brand-pink: oklch(0.7 0.16 350);
 }
 
 @layer base {

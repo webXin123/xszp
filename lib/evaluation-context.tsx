@@ -150,7 +150,7 @@ function seedAwardCards(): AwardCardRecord[] {
       1,
       twoDaysAgo,
       "system",
-      "流动红旗奖励",
+      "优雅班集体奖励",
       2,
       "flag_reward",
     ),
@@ -233,6 +233,12 @@ function seedHonors(): HonorRecord[] {
     mk("honor-seed-4", "class-5-1-stu-1", "智慧小博士", "school", 1, "五年级数学速算竞赛一等奖", twoDaysAgo, "明珠临港校区教务处", 2),
     mk("honor-seed-5", "class-6-3-stu-2", "家国红五星", "national", 4, "2025年全国青少年人工智能创新挑战赛二等奖", yesterday, "中国少年儿童发展服务中心", 1),
     mk("honor-seed-6", "class-7-2-stu-1", "小小工程师", "district", 2, "第二十一届明珠杯小学生科技创新大赛一等奖", today, "浦东新区教育局", 0),
+    mk("honor-seed-7", "class-6-1-stu-3", "友善美少年", "school", 1, "校级“友善之星”评选一等奖", twoDaysAgo, "明珠临港校区德育处", 2),
+    mk("honor-seed-8", "class-5-2-stu-1", "健康小能手", "district", 2, "区级中小学生游泳锦标赛自由泳第二名", twoDaysAgo, "浦东新区体育局", 2),
+    mk("honor-seed-9", "class-6-2-stu-1", "自信创造星", "school", 1, "校园演讲比赛低年级组一等奖", yesterday, "明珠临港校区大队部", 1),
+    mk("honor-seed-10", "class-7-1-stu-1", "智慧小博士", "city", 3, "区青少年科技创新大赛科幻画一等奖", yesterday, "浦东新区青少年活动中心", 1),
+    mk("honor-seed-11", "class-5-1-stu-2", "才艺智多星", "national", 4, "全国中小学生绘画书法作品比赛绘画类三等奖", twoDaysAgo, "中国教育学会美术教育专业委员会", 2),
+    mk("honor-seed-12", "class-6-3-stu-1", "合作创享星", "school", 1, "校园合唱节团体一等奖", twoDaysAgo, "明珠临港校区教务处", 2),
   ]
 }
 

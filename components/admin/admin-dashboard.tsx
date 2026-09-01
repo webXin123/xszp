@@ -4,17 +4,23 @@ import { useMemo, useState } from "react"
 import {
   Award,
   BellRing,
+  CalendarDays,
   CalendarRange,
   ChartColumn,
   CheckCircle2,
   ChevronDown,
   Download,
   Flag,
+  Globe,
   HeartPulse,
   House,
   LayoutGrid,
+  Landmark,
   Medal,
+  QrCode,
+  School,
   Send,
+  Trophy,
   TrendingUp,
 } from "lucide-react"
 import Link from "next/link"
@@ -68,6 +74,22 @@ const HONOR_LEVEL_STYLE: Record<string, string> = {
   district: "bg-brand-green/15 text-brand-green",
   city: "bg-brand-orange/15 text-brand-orange",
   national: "bg-brand-yellow/20 text-brand-yellow",
+}
+
+/** 荣誉级别图标：不同级别不同图标 + 渐变徽章底色 */
+const HONOR_LEVEL_ICON: Record<string, { icon: typeof Trophy; badge: string }> = {
+  school: { icon: House, badge: "from-brand-blue to-primary shadow-brand-blue/30" },
+  district: { icon: Landmark, badge: "from-brand-green to-brand-blue shadow-brand-green/30" },
+  city: { icon: Landmark, badge: "from-brand-orange to-brand-yellow shadow-brand-orange/30" },
+  national: { icon: Globe, badge: "from-brand-yellow to-brand-orange shadow-brand-yellow/30" },
+}
+
+/** 奖卡来源图标徽章：与班主任首页五育积分动态保持一致 */
+const AWARD_SOURCE_BADGE: Record<string, { icon: typeof Award; badge: string }> = {
+  online: { icon: Award, badge: "from-brand-blue to-primary shadow-brand-blue/30" },
+  offline_scan: { icon: QrCode, badge: "from-brand-green to-brand-blue shadow-brand-green/30" },
+  flag_reward: { icon: Flag, badge: "from-brand-yellow to-brand-orange shadow-brand-yellow/30" },
+  honor: { icon: Trophy, badge: "from-brand-orange to-brand-pink shadow-brand-orange/30" },
 }
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
@@ -270,7 +292,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       </div>
 
       {/* 快捷入口 */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {shortcuts.map((s) => {
           const inner = (
             <>
@@ -339,23 +361,31 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
       {/* 体育成绩录入发布：侧边弹窗表单（仅管理员） */}
       <Dialog open={pePublishOpen} onOpenChange={setPePublishOpen}>
-        <DialogContent className="fixed left-auto right-0 top-0 grid h-full max-h-full w-full max-w-md translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none rounded-l-2xl p-0 sm:max-w-md">
-          <DialogHeader className="border-b border-border/60 p-4 pr-12">
-            <DialogTitle>发布体育成绩录入任务</DialogTitle>
+        <DialogContent className="fixed left-auto right-0 top-0 grid h-full max-h-full w-full max-w-md translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none rounded-l-2xl border-border/60 bg-background/80 p-0 backdrop-blur-2xl sm:max-w-md">
+          <DialogHeader className="relative border-b border-border/60 bg-gradient-to-r from-brand-green/10 via-transparent to-transparent p-5 pr-12">
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-green to-brand-blue text-white shadow-md shadow-brand-green/30">
+                <HeartPulse className="size-4" />
+              </span>
+              发布体育成绩录入任务
+            </DialogTitle>
             <DialogDescription>
               选择需要录入的年级班级与录入时间段，发布后体育教师可开始录入
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
             {/* 录入班级：下拉复选 */}
-            <div className="flex flex-col gap-2">
+            <div className="glass-panel flex flex-col gap-2.5 rounded-xl p-3.5">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">录入班级</p>
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <School className="size-3.5 text-brand-blue" />
+                  录入班级
+                </p>
                 <button
                   type="button"
                   onClick={() => setPeFormClassIds(peFormClassIds.length === PE_CLASSES.length ? [] : PE_CLASS_IDS)}
-                  className="rounded-lg bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                  className="rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:border-brand-green/50 hover:text-brand-green"
                 >
                   {peFormClassIds.length === PE_CLASSES.length ? "清空全部" : "全选"}
                 </button>
@@ -365,7 +395,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   render={
                     <button
                       type="button"
-                      className="glass-panel flex w-full items-center justify-between gap-2 rounded-lg border-border/60 px-3 py-2 text-left text-sm transition hover:border-primary/40"
+                      className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/60 bg-white/70 px-3.5 py-2.5 text-left text-sm shadow-sm transition hover:border-brand-green/50 hover:shadow-md dark:bg-card/60"
                     />
                   }
                 >
@@ -382,7 +412,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                       <span className="font-medium text-brand-green">全部年级（15 个班）</span>
                     )}
                   </span>
-                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-80 p-1.5">
                   <Command>
@@ -444,16 +474,19 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </div>
 
             {/* 录入时间 */}
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-semibold text-foreground">录入时间</p>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="glass-panel flex flex-col gap-2.5 rounded-xl p-3.5">
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <CalendarDays className="size-3.5 text-brand-blue" />
+                录入时间
+              </p>
+              <div className="flex flex-col gap-3">
                 <label className="flex flex-col gap-1.5">
                   <span className="text-xs text-muted-foreground">开始时间</span>
                   <Input
                     type="date"
                     value={peFormStart}
                     onChange={(e) => setPeFormStart(e.target.value)}
-                    className="glass-panel h-9 rounded-lg border-border/60 bg-transparent"
+                    className="h-10 rounded-lg border-border/60 bg-white/70 shadow-sm transition hover:border-brand-green/50 dark:bg-card/60"
                   />
                 </label>
                 <label className="flex flex-col gap-1.5">
@@ -462,7 +495,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                     type="date"
                     value={peFormEnd}
                     onChange={(e) => setPeFormEnd(e.target.value)}
-                    className="glass-panel h-9 rounded-lg border-border/60 bg-transparent"
+                    className="h-10 rounded-lg border-border/60 bg-white/70 shadow-sm transition hover:border-brand-green/50 dark:bg-card/60"
                   />
                 </label>
               </div>
@@ -472,12 +505,15 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-border/60 bg-muted/30 p-4">
-            <Button variant="outline" size="sm" onClick={() => setPePublishOpen(false)}>
+          <div className="flex items-center justify-end gap-3 border-t border-border/60 bg-muted/30 p-4">
+            <Button
+              variant="outline"
+              onClick={() => setPePublishOpen(false)}
+              className="h-11 min-w-24 rounded-xl px-6 text-sm font-medium"
+            >
               取消
             </Button>
             <Button
-              size="sm"
               disabled={
                 peFormClassIds.length === 0 ||
                 !peFormStart ||
@@ -485,9 +521,9 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 peFormEnd < peFormStart
               }
               onClick={publishPeTask}
-              className="bg-gradient-to-r from-[oklch(0.56_0.17_150)] to-[oklch(0.46_0.16_165)] text-white shadow-lg shadow-brand-green/40 ring-1 ring-white/20 transition hover:brightness-110"
+              className="h-11 min-w-32 rounded-xl bg-gradient-to-r from-[oklch(0.56_0.17_150)] to-[oklch(0.46_0.16_165)] px-8 text-sm font-semibold text-white shadow-lg shadow-brand-green/40 ring-1 ring-white/20 transition hover:brightness-110 hover:shadow-xl hover:shadow-brand-green/50"
             >
-              <Send className="size-3.5" />
+              <Send className="size-4" />
               发布
             </Button>
           </div>
@@ -569,7 +605,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               全部班级已完成体育成绩录入
             </p>
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-2 gap-2 lg:grid-cols-3">
               {peProgress.pending.map((p) => {
                 const reminded = remindedClassIds.has(p.classId)
                 return (
@@ -622,11 +658,11 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         <section className="glass-panel flex min-h-0 flex-col gap-3 rounded-2xl p-4 sm:p-5">
           <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
             <Flag className="size-4 fill-brand-yellow text-brand-yellow" />
-            本周荣誉班级获得名单
+            本周优雅班集体获得名单
           </h3>
           {honoredByGrade.length === 0 ? (
             <p className="rounded-xl bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
-              本周暂未颁发流动红旗
+              本周暂未颁发优雅班集体
             </p>
           ) : (
             <ul className="scrollbar-none flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
@@ -652,7 +688,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </ul>
           )}
           <p className="mt-auto text-xs text-muted-foreground">
-            数据来源：周流动红旗颁发记录（{today}）
+            数据来源：周优雅班集体颁发记录（{today}）
           </p>
         </section>
 
@@ -681,22 +717,32 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </p>
           ) : (
             <ul
-              className="scrollbar-none flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1"
+              className="scrollbar-none flex max-h-[360px] min-h-0 flex-col gap-2 overflow-y-auto pr-1"
               onScroll={honorsScroll.onScroll}
             >
               {honorsLoadMore.visible.map((h) => {
                 const cls = classes.find((c) => c.id === h.classId)
+                const levelMeta = HONOR_LEVEL_ICON[h.honorLevel] ?? HONOR_LEVEL_ICON.school
+                const LevelIcon = levelMeta.icon
                 return (
-                  <li key={h.id} className="flex items-start gap-2 rounded-lg bg-muted/30 px-2.5 py-2 transition hover:bg-brand-orange/10">
-                    <span className={cn("mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", HONOR_LEVEL_STYLE[h.honorLevel])}>
+                  <li key={h.id} className="flex items-start gap-2.5 rounded-xl bg-muted/30 px-3.5 py-3 transition hover:bg-brand-orange/10">
+                    <span
+                      className={cn(
+                        "flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-md",
+                        levelMeta.badge,
+                      )}
+                      title={HONOR_LEVEL_LABEL[h.honorLevel]}
+                    >
+                      <LevelIcon className="size-4" />
+                    </span>
+                    <span className={cn("mt-1 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", HONOR_LEVEL_STYLE[h.honorLevel])}>
                       {HONOR_LEVEL_LABEL[h.honorLevel]}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-medium text-foreground">{h.honorName}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="truncate text-xs text-muted-foreground">
                         {h.studentName} · {cls?.name ?? h.classId} · {h.level1}
                       </p>
-                      <p className="truncate text-xs text-muted-foreground">{h.issuer}</p>
                     </div>
                     <span className="shrink-0 text-xs font-bold text-brand-orange">+{h.points}</span>
                   </li>
@@ -728,27 +774,31 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </p>
           ) : (
             <div
-              className="scrollbar-none flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1"
+              className="scrollbar-none flex max-h-[360px] min-h-0 flex-col gap-2 overflow-y-auto pr-1"
               onScroll={awardCardsScroll.onScroll}
             >
               {awardCardsLoadMore.visible.map((a) => {
                 const cls = classes.find((c) => c.id === a.classId)
+                const sourceMeta = AWARD_SOURCE_BADGE[a.source] ?? AWARD_SOURCE_BADGE.online
+                const SourceIcon = sourceMeta.icon
                 return (
-                  <div key={a.id} className="flex items-center gap-2 rounded-lg bg-muted/30 px-2.5 py-1.5 transition hover:bg-brand-blue/10">
+                  <div key={a.id} className="flex items-center gap-2.5 rounded-xl bg-muted/30 px-3.5 py-2.5 transition hover:bg-brand-blue/10">
+                    <span
+                      className={cn(
+                        "flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-md",
+                        sourceMeta.badge,
+                      )}
+                      title={POINT_SOURCE_LABEL[a.source]}
+                    >
+                      <SourceIcon className="size-4" />
+                    </span>
                     <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", POINT_SOURCE_STYLE[a.source])}>
                       {POINT_SOURCE_LABEL[a.source]}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium text-foreground">
-                        {a.studentName}
-                        <span className="ml-1.5 text-muted-foreground">· {a.level1}</span>
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {cls?.name ?? a.classId} · {a.level2}
-                      </p>
-                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground">{cls?.name ?? a.classId}</span>
+                    <span className="shrink-0 text-xs font-medium text-foreground">{a.studentName}</span>
+                    <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{a.level1}</span>
                     <span className="shrink-0 text-xs font-bold text-brand-green">+{a.points}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{a.date.slice(5)}</span>
                   </div>
                 )
               })}

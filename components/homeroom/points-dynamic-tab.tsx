@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
+import { PointSourceBadge } from "@/components/ui/point-source-badge"
 import {
   POINT_SOURCE_LABEL,
   POINT_SOURCE_STYLE,
@@ -12,6 +13,14 @@ import {
   type TimeRange,
 } from "@/lib/points-utils"
 import { useEvaluation } from "@/lib/evaluation-context"
+
+/** 创建时间显示为 MM-DD HH:mm */
+function formatCreatedAt(createdAt: string) {
+  const d = new Date(createdAt)
+  if (Number.isNaN(d.getTime())) return createdAt
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 interface PointsDynamicTabProps {
   classId: string
@@ -43,34 +52,36 @@ export function PointsDynamicTab({ classId, range }: PointsDynamicTabProps) {
           className="flex max-h-[420px] flex-col gap-2 overflow-y-auto pr-1"
           onScroll={dynamicScroll.onScroll}
         >
-          {dynamicLoadMore.visible.map((e) => (
-            <li
-              key={e.id}
-              className="flex items-center gap-3 rounded-xl border border-border/40 bg-white px-3 py-2.5 shadow-sm"
-            >
-              <span
-                className={cn(
-                  "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-                  POINT_SOURCE_STYLE[e.source],
-                )}
+          {dynamicLoadMore.visible.map((e) => {
+            const isNegative = e.points < 0
+            return (
+              <li
+                key={e.id}
+                className="flex items-center gap-2.5 rounded-xl border border-border/40 bg-white px-3 py-2.5 shadow-sm"
               >
-                {POINT_SOURCE_LABEL[e.source]}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {e.studentName}
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    {e.level1}
-                  </span>
-                </p>
-                <p className="truncate text-xs text-muted-foreground">{e.detail}</p>
-              </div>
-              <div className="flex shrink-0 flex-col items-end">
-                <span className="text-sm font-bold text-brand-green">+{e.points}</span>
-                <span className="text-xs text-muted-foreground">{e.date}</span>
-              </div>
-            </li>
-          ))}
+                <PointSourceBadge source={e.source} />
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                    POINT_SOURCE_STYLE[e.source],
+                  )}
+                >
+                  {POINT_SOURCE_LABEL[e.source]}
+                </span>
+                <span className="shrink-0 text-sm font-medium text-foreground">{e.studentName}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{e.level1}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{formatCreatedAt(e.createdAt)}</span>
+                <span
+                  className={cn(
+                    "shrink-0 text-sm font-bold",
+                    isNegative ? "text-brand-orange" : "text-brand-green",
+                  )}
+                >
+                  {isNegative ? e.points : `+${e.points}`}
+                </span>
+              </li>
+            )
+          })}
           <li>
             <LoadMoreFooter
               hasMore={dynamicLoadMore.hasMore}

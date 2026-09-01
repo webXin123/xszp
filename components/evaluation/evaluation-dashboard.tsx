@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
@@ -175,9 +175,8 @@ export function EvaluationDashboard() {
               </button>
             ))}
 
-            {/* 二级页面分组（仅教师可见） */}
-            {/* 二级页面分组（仅教师可见） */}
-            {isTeacher && showSecondaryGroup && (
+            {/* 二级页面分组：按要求在页面中隐藏，功能仍可通过各首页快捷入口进入 */}
+            {false && isTeacher && showSecondaryGroup && (
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={

@@ -198,7 +198,7 @@ export function WeeklyFlagTab() {
               <th className="w-24 px-4 py-3 text-left font-semibold text-foreground">排名</th>
               <th className="px-4 py-3 text-left font-semibold text-foreground">班级</th>
               <th className="px-4 py-3 text-left font-semibold text-foreground">周总分</th>
-              <th className="px-4 py-3 text-center font-semibold text-foreground">流动红旗</th>
+              <th className="px-4 py-3 text-center font-semibold text-foreground">优雅班集体</th>
             </tr>
           </thead>
           <tbody>
@@ -251,7 +251,7 @@ export function WeeklyFlagTab() {
                             type="button"
                             onClick={() => togglePending(row.cls.id)}
                             aria-pressed={selected}
-                            aria-label={selected ? `取消 ${row.cls.name} 的流动红旗` : `为 ${row.cls.name} 颁发流动红旗`}
+                            aria-label={selected ? `取消 ${row.cls.name} 的优雅班集体` : `为 ${row.cls.name} 颁发优雅班集体`}
                             className={cn(
                               "flex size-9 items-center justify-center rounded-lg border transition-all duration-150 active:scale-95",
                               selected
@@ -269,7 +269,7 @@ export function WeeklyFlagTab() {
                         ) : awarded ? (
                           <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-yellow/15 px-2.5 py-1 text-xs font-medium text-brand-yellow">
                             <Flag className="size-3.5 fill-current" />
-                            已获红旗
+                            已获评
                           </span>
                         ) : (
                           <span className="flex size-9 items-center justify-center text-muted-foreground/40">
@@ -296,7 +296,7 @@ export function WeeklyFlagTab() {
 
       {canManageFlags && ranking.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          提示：点击红旗图标切换选中状态，选中后需点击右上角「确定颁发」方可生效。
+          提示：点击旗帜图标切换选中状态，选中后需点击右上角「确定颁发」方可生效。
         </p>
       )}
     </div>
