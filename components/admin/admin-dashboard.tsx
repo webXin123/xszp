@@ -11,6 +11,7 @@ import {
   HeartPulse,
   House,
   LayoutGrid,
+  ListChecks,
   Medal,
   Send,
   TrendingUp,
@@ -19,10 +20,19 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
 import { TEACHERS } from "@/lib/mock-data"
-import { PE_CLASSES, getSemesterLabel } from "@/lib/pe-scores"
+import { PE_CLASSES, PE_GRADE_NAMES, PE_CLASS_IDS, getSemesterLabel } from "@/lib/pe-scores"
 import { formatDate, getISOWeekKey } from "@/lib/scoring-utils"
 import {
   POINT_SOURCE_LABEL,
@@ -56,6 +66,20 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const [recordCollapsed, setRecordCollapsed] = useState(false)
   // 已提醒的未录入班级（演示态：标记后按钮置为"已提醒"）
   const [remindedClassIds, setRemindedClassIds] = useState<Set<string>>(new Set())
+  // 本学期已发布的体育成绩录入任务（null 表示未发布）
+  const [peTask, setPeTask] = useState<{
+    classIds: string[]
+    startDate: string
+    endDate: string
+    semesterLabel: string
+  } | null>(null)
+  // 侧边发布弹窗 / 进度弹窗
+  const [pePublishOpen, setPePublishOpen] = useState(false)
+  const [peProgressOpen, setPeProgressOpen] = useState(false)
+  // 发布表单
+  const [peFormClassIds, setPeFormClassIds] = useState<string[]>(PE_CLASS_IDS)
+  const [peFormStart, setPeFormStart] = useState("")
+  const [peFormEnd, setPeFormEnd] = useState("")
 
   const weekKey = getISOWeekKey(new Date())
   const { start: weekStart, end: weekEnd } = getWeekRange(new Date())
@@ -117,18 +141,22 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     return days
   }, [awardCards])
 
-  // 体育成绩录入进度：按已上传文件统计，未录入班级关联负责体育教师
+  // 体育成绩录入进度：按已上传文件统计（已发布任务时仅统计任务范围内班级），
+  // 未录入班级关联负责体育教师
   const peProgress = useMemo(() => {
+    const scopedClasses = peTask
+      ? PE_CLASSES.filter((c) => peTask.classIds.includes(c.id))
+      : PE_CLASSES
     const uploadMap = new Map<string, boolean>()
     for (const u of peScoreUploads) uploadMap.set(`${u.classId}:${u.gender}`, true)
     // 班级 -> 负责的体育教师（配置了 peTeacherClassIds 的教师）
     const peTeachersOf = (classId: string) =>
       TEACHERS.filter((t) => t.peTeacherClassIds?.includes(classId))
 
-    const totalFiles = PE_CLASSES.length * 2
+    const totalFiles = scopedClasses.length * 2
     let uploadedFiles = 0
     const pending: { classId: string; className: string; gradeName: string; missing: string[]; teachers: string[] }[] = []
-    for (const c of PE_CLASSES) {
+    for (const c of scopedClasses) {
       const male = uploadMap.has(`${c.id}:male`)
       const female = uploadMap.has(`${c.id}:female`)
       uploadedFiles += (male ? 1 : 0) + (female ? 1 : 0)
@@ -150,7 +178,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       pending,
       semesterLabel: getSemesterLabel(),
     }
-  }, [peScoreUploads])
+  }, [peScoreUploads, peTask])
 
   const remindClass = (classId: string) => {
     setRemindedClassIds((prev) => new Set(prev).add(classId))
@@ -163,6 +191,31 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     })
   }
   const pendingUnreminded = peProgress.pending.filter((p) => !remindedClassIds.has(p.classId))
+
+  const togglePeFormClass = (classId: string) => {
+    setPeFormClassIds((prev) =>
+      prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId],
+    )
+  }
+  const togglePeFormGrade = (gradeName: string) => {
+    const gradeIds = PE_CLASSES.filter((c) => c.gradeName === gradeName).map((c) => c.id)
+    const allSelected = gradeIds.every((id) => peFormClassIds.includes(id))
+    setPeFormClassIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !gradeIds.includes(id))
+        : [...new Set([...prev, ...gradeIds])],
+    )
+  }
+  const publishPeTask = () => {
+    if (peFormClassIds.length === 0 || !peFormStart || !peFormEnd) return
+    setPeTask({
+      classIds: peFormClassIds,
+      startDate: peFormStart,
+      endDate: peFormEnd,
+      semesterLabel: getSemesterLabel(),
+    })
+    setPePublishOpen(false)
+  }
 
   const shortcuts = [
     { key: "activity" as MainTab, label: "活动管理", desc: "发布与审核活动", icon: CalendarRange, tone: "bg-gradient-to-br from-brand-blue to-primary-2 shadow-brand-blue/30", ring: "hover:border-brand-blue/40" },
@@ -207,7 +260,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       </div>
 
       {/* 快捷入口 */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {shortcuts.map((s) => {
           const inner = (
             <>
@@ -237,57 +290,178 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </button>
           )
         })}
+
+        {/* 体育成绩录入发布（仅管理员）：未发布时点击打开发布侧边弹窗，已发布变更为查看录入进度 */}
+        {role === "director" && (
+          <div className="glass-panel group flex items-center gap-3 rounded-2xl p-4 text-left transition hover:shadow-xl hover:-translate-y-0.5 hover:border-brand-green/40">
+            <button
+              type="button"
+              onClick={() => (peTask ? setPeProgressOpen(true) : setPePublishOpen(true))}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            >
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-green to-chart-2 text-white shadow-lg shadow-brand-green/30 transition-transform group-hover:scale-105">
+                <HeartPulse className="size-5" />
+              </span>
+              <span className="flex min-w-0 flex-col">
+                <span className="text-sm font-semibold text-foreground">
+                  {peTask ? "查看录入进度" : "体育成绩录入发布"}
+                </span>
+                <span className="truncate text-[11px] text-muted-foreground">
+                  {peTask
+                    ? `已发布 · ${peTask.startDate} ~ ${peTask.endDate}`
+                    : "发布体测成绩录入任务"}
+                </span>
+              </span>
+            </button>
+            {/* 录入进度查看图标 */}
+            <button
+              type="button"
+              title="查看录入进度"
+              aria-label="查看录入进度"
+              onClick={() => setPeProgressOpen(true)}
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-green/10 text-brand-green transition hover:bg-brand-green/20"
+            >
+              <ListChecks className="size-4" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* 体育成绩录入进度（仅管理员） */}
-      {role === "director" && (
-        <section className="glass-panel flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <HeartPulse className="size-4 text-brand-green" />
-                体育成绩录入进度
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {peProgress.semesterLabel} · 1-5 年级体质健康成绩
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/pe-score-import"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 px-3.5 py-2 text-xs font-semibold text-foreground transition hover:border-primary/40 hover:bg-accent/60"
-              >
-                查看录入页
-              </Link>
-              {peProgress.pending.length > 0 && (
+      {/* 体育成绩录入发布：侧边弹窗表单（仅管理员） */}
+      <Dialog open={pePublishOpen} onOpenChange={setPePublishOpen}>
+        <DialogContent className="fixed left-auto right-0 top-0 grid h-full max-h-full w-full max-w-md translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none rounded-l-2xl p-0 sm:max-w-md">
+          <DialogHeader className="border-b border-border/60 p-4 pr-12">
+            <DialogTitle>发布体育成绩录入任务</DialogTitle>
+            <DialogDescription>
+              选择需要录入的年级班级与录入时间段，发布后体育教师可开始录入
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+            {/* 录入班级 */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">
+                  录入班级
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    已选 {peFormClassIds.length} / {PE_CLASSES.length} 个班
+                  </span>
+                </p>
                 <button
                   type="button"
-                  onClick={remindAll}
-                  disabled={pendingUnreminded.length === 0}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-sm transition",
-                    pendingUnreminded.length === 0
-                      ? "cursor-default bg-muted/50 text-muted-foreground"
-                      : "bg-brand-green text-white shadow-brand-green/25 hover:bg-brand-green/90",
-                  )}
+                  onClick={() => setPeFormClassIds(peFormClassIds.length === PE_CLASSES.length ? [] : PE_CLASS_IDS)}
+                  className="rounded-lg bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground"
                 >
-                  {pendingUnreminded.length === 0 ? (
-                    <>
-                      <CheckCircle2 className="size-3.5" />
-                      已全部提醒
-                    </>
-                  ) : (
-                    <>
-                      <Send className="size-3.5" />
-                      批量提醒（{pendingUnreminded.length} 个班级）
-                    </>
-                  )}
+                  {peFormClassIds.length === PE_CLASSES.length ? "清空全部" : "全选"}
                 </button>
+              </div>
+              <div className="flex flex-col gap-3">
+                {PE_GRADE_NAMES.map((gradeName) => {
+                  const gradeClasses = PE_CLASSES.filter((c) => c.gradeName === gradeName)
+                  const allSelected = gradeClasses.every((c) => peFormClassIds.includes(c.id))
+                  return (
+                    <div key={gradeName} className="flex flex-col gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => togglePeFormGrade(gradeName)}
+                        className="flex w-fit items-center gap-1.5 text-xs font-semibold text-foreground"
+                      >
+                        {gradeName}
+                        <span className="text-[11px] font-normal text-muted-foreground">
+                          {allSelected ? "点击取消整年级" : "点击选择整年级"}
+                        </span>
+                      </button>
+                      <div className="flex flex-wrap gap-1.5">
+                        {gradeClasses.map((c) => {
+                          const selected = peFormClassIds.includes(c.id)
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => togglePeFormClass(c.id)}
+                              className={cn(
+                                "rounded-lg px-2.5 py-1.5 text-xs font-medium transition",
+                                selected
+                                  ? "bg-brand-green/15 text-brand-green ring-1 ring-brand-green/40"
+                                  : "bg-muted/40 text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {c.index.toString().padStart(2, "0")}班
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 录入时间 */}
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold text-foreground">录入时间</p>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs text-muted-foreground">开始时间</span>
+                  <Input
+                    type="date"
+                    value={peFormStart}
+                    onChange={(e) => setPeFormStart(e.target.value)}
+                    className="glass-panel h-9 rounded-lg border-border/60 bg-transparent"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs text-muted-foreground">截止时间</span>
+                  <Input
+                    type="date"
+                    value={peFormEnd}
+                    onChange={(e) => setPeFormEnd(e.target.value)}
+                    className="glass-panel h-9 rounded-lg border-border/60 bg-transparent"
+                  />
+                </label>
+              </div>
+              {peFormStart && peFormEnd && peFormEnd < peFormStart && (
+                <p className="text-[11px] text-destructive">截止时间需晚于开始时间</p>
               )}
             </div>
           </div>
 
-          {/* 总进度条 */}
+          <div className="flex items-center justify-end gap-2 border-t border-border/60 bg-muted/30 p-4">
+            <Button variant="outline" size="sm" onClick={() => setPePublishOpen(false)}>
+              取消
+            </Button>
+            <Button
+              size="sm"
+              disabled={
+                peFormClassIds.length === 0 ||
+                !peFormStart ||
+                !peFormEnd ||
+                peFormEnd < peFormStart
+              }
+              onClick={publishPeTask}
+              className="bg-brand-green text-white shadow-sm shadow-brand-green/25 hover:bg-brand-green/90"
+            >
+              <Send className="size-3.5" />
+              发布
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 体育成绩录入进度弹窗（仅管理员） */}
+      <Dialog open={peProgressOpen} onOpenChange={setPeProgressOpen}>
+        <DialogContent className="flex max-h-[85vh] w-full flex-col gap-4 overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="pr-10">
+            <DialogTitle className="flex items-center gap-1.5">
+              <HeartPulse className="size-4 text-brand-green" />
+              体育成绩录入进度
+            </DialogTitle>
+            <DialogDescription>
+              {peProgress.semesterLabel} · 1-5 年级体质健康成绩
+              {peTask && ` · 录入时间 ${peTask.startDate} ~ ${peTask.endDate}`}
+            </DialogDescription>
+          </DialogHeader>
+
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between text-xs">
               <span className="text-muted-foreground">
@@ -307,13 +481,49 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </div>
           </div>
 
-          {/* 未录入班级列表 */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-foreground">未录入班级</p>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/pe-score-import"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-[11px] font-semibold text-foreground transition hover:border-primary/40 hover:bg-accent/60"
+              >
+                查看录入页
+              </Link>
+              {peProgress.pending.length > 0 && (
+                <button
+                  type="button"
+                  onClick={remindAll}
+                  disabled={pendingUnreminded.length === 0}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold shadow-sm transition",
+                    pendingUnreminded.length === 0
+                      ? "cursor-default bg-muted/50 text-muted-foreground"
+                      : "bg-brand-green text-white shadow-brand-green/25 hover:bg-brand-green/90",
+                  )}
+                >
+                  {pendingUnreminded.length === 0 ? (
+                    <>
+                      <CheckCircle2 className="size-3.5" />
+                      已全部提醒
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-3.5" />
+                      批量提醒（{pendingUnreminded.length}）
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
           {peProgress.pending.length === 0 ? (
-            <p className="rounded-xl bg-muted/40 px-3 py-5 text-center text-sm text-muted-foreground">
+            <p className="rounded-xl bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
               全部班级已完成体育成绩录入
             </p>
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid gap-2 sm:grid-cols-2">
               {peProgress.pending.map((p) => {
                 const reminded = remindedClassIds.has(p.classId)
                 return (
@@ -358,8 +568,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               })}
             </ul>
           )}
-        </section>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* 荣誉班级名单 + 奖卡折线图 */}
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
@@ -409,8 +619,55 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         </section>
       </div>
 
-      {/* 本周奖卡发放记录 + 本周荣誉记录 */}
+      {/* 本周荣誉记录 + 本周奖卡发放记录 */}
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
+        <section className="glass-panel flex min-h-0 flex-col gap-3 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+              <Medal className="size-4 text-brand-orange" />
+              本周荣誉记录
+            </h3>
+            <span className="text-xs text-muted-foreground">共 {weekHonors.length} 条</span>
+          </div>
+          {weekHonors.length === 0 ? (
+            <p className="rounded-xl bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
+              本周暂无荣誉录入
+            </p>
+          ) : (
+            <ul
+              className="scrollbar-none flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1"
+              onScroll={honorsScroll.onScroll}
+            >
+              {honorsLoadMore.visible.map((h) => {
+                const cls = classes.find((c) => c.id === h.classId)
+                return (
+                  <li key={h.id} className="flex items-start gap-2 rounded-lg bg-muted/30 px-2.5 py-2 transition hover:bg-brand-orange/10">
+                    <span className={cn("mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium", HONOR_LEVEL_STYLE[h.honorLevel])}>
+                      {HONOR_LEVEL_LABEL[h.honorLevel]}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium text-foreground">{h.honorName}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {h.studentName} · {cls?.name ?? h.classId} · {h.level1}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground">{h.issuer}</p>
+                    </div>
+                    <span className="shrink-0 text-xs font-bold text-brand-orange">+{h.points}</span>
+                  </li>
+                )
+              })}
+              <li>
+                <LoadMoreFooter
+                  hasMore={honorsLoadMore.hasMore}
+                  loaded={honorsLoadMore.visible.length}
+                  total={honorsLoadMore.total}
+                  onLoadMore={honorsLoadMore.loadMore}
+                />
+              </li>
+            </ul>
+          )}
+        </section>
+
         <section className="glass-panel flex min-h-0 flex-col gap-3 rounded-2xl p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -456,53 +713,6 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 onLoadMore={awardCardsLoadMore.loadMore}
               />
             </div>
-          )}
-        </section>
-
-        <section className="glass-panel flex min-h-0 flex-col gap-3 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-              <Medal className="size-4 text-brand-orange" />
-              本周荣誉记录
-            </h3>
-            <span className="text-xs text-muted-foreground">共 {weekHonors.length} 条</span>
-          </div>
-          {weekHonors.length === 0 ? (
-            <p className="rounded-xl bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
-              本周暂无荣誉录入
-            </p>
-          ) : (
-            <ul
-              className="scrollbar-none flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1"
-              onScroll={honorsScroll.onScroll}
-            >
-              {honorsLoadMore.visible.map((h) => {
-                const cls = classes.find((c) => c.id === h.classId)
-                return (
-                  <li key={h.id} className="flex items-start gap-2 rounded-lg bg-muted/30 px-2.5 py-2 transition hover:bg-brand-orange/10">
-                    <span className={cn("mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium", HONOR_LEVEL_STYLE[h.honorLevel])}>
-                      {HONOR_LEVEL_LABEL[h.honorLevel]}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium text-foreground">{h.honorName}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {h.studentName} · {cls?.name ?? h.classId} · {h.level1}
-                      </p>
-                      <p className="truncate text-[11px] text-muted-foreground">{h.issuer}</p>
-                    </div>
-                    <span className="shrink-0 text-xs font-bold text-brand-orange">+{h.points}</span>
-                  </li>
-                )
-              })}
-              <li>
-                <LoadMoreFooter
-                  hasMore={honorsLoadMore.hasMore}
-                  loaded={honorsLoadMore.visible.length}
-                  total={honorsLoadMore.total}
-                  onLoadMore={honorsLoadMore.loadMore}
-                />
-              </li>
-            </ul>
           )}
         </section>
       </div>

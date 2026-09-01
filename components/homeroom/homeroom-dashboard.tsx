@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CalendarDays, ChevronDown, LayoutGrid, Medal, MinusCircle, Search, TrendingDown } from "lucide-react"
+import { CalendarDays, ChevronDown, LayoutGrid, Medal, MinusCircle, Search, Send, TrendingDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
@@ -196,7 +196,16 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
 
         {/* 入口卡片 */}
         <section className="flex flex-col gap-3">
-          <div className="glass-panel grid grid-cols-2 gap-3 rounded-2xl p-4">
+          <div className="glass-panel grid grid-cols-2 gap-3 rounded-2xl p-4 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => onNavigate("award")}
+              className="flex flex-col items-start gap-2 rounded-xl bg-brand-green/10 p-3 text-left transition hover:bg-brand-green/15"
+            >
+              <Send className="size-5 text-brand-green" />
+              <span className="text-sm font-medium text-foreground">线上发卡</span>
+              <span className="text-[11px] text-muted-foreground">为本班学生发放奖卡</span>
+            </button>
             <button
               type="button"
               onClick={() => onNavigate("score")}
@@ -257,31 +266,33 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
               学生积分排名
             </button>
           </div>
-          <div className="relative order-2 lg:order-none">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={studentSearch}
-              onChange={(e) => setStudentSearch(e.target.value)}
-              placeholder="搜索姓名/学号"
-              className="glass-panel h-9 w-44 rounded-lg border-border/60 bg-transparent pl-8"
-            />
-          </div>
-          <div className="flex gap-1.5">
-            {RANGES.map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRange(r)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition",
-                  range === r
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "glass-panel text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {TIME_RANGE_LABEL[r]}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                placeholder="搜索姓名/学号"
+                className="glass-panel h-9 w-44 rounded-lg border-border/60 bg-transparent pl-8"
+              />
+            </div>
+            <div className="flex gap-1.5">
+              {RANGES.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRange(r)}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-sm font-medium transition",
+                    range === r
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "glass-panel text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {TIME_RANGE_LABEL[r]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
