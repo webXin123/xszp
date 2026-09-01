@@ -109,22 +109,6 @@ function seedAwardCards(): AwardCardRecord[] {
     ...STUDENTS.filter((s) => s.classId === "class-6-1"),
     ...STUDENTS.filter((s) => s.classId === "class-7-1"),
   ]
-  const flagRewards: AwardCardRecord[] = flagRewardStudents.map((s, idx) =>
-    mk(
-      `award-flag-${idx}`,
-      s.id,
-      s.classId,
-      "award-7-1",
-      "合作创享星",
-      "团队协作",
-      1,
-      twoDaysAgo,
-      "system",
-      "流动红旗奖励",
-      2,
-      "flag_reward",
-    ),
-  )
   const mk = (
     id: string,
     studentId: string,
@@ -154,6 +138,23 @@ function seedAwardCards(): AwardCardRecord[] {
     operatorName,
     createdAt: new Date(now - daysAgo * day).toISOString(),
   })
+  // 上周获流动红旗的班级（6-1、7-1）全部学生各获一张“合作创享星”奖卡（+1）
+  const flagRewards: AwardCardRecord[] = flagRewardStudents.map((s, idx) =>
+    mk(
+      `award-flag-${idx}`,
+      s.id,
+      s.classId,
+      "award-7-1",
+      "合作创享星",
+      "团队协作",
+      1,
+      twoDaysAgo,
+      "system",
+      "流动红旗奖励",
+      2,
+      "flag_reward",
+    ),
+  )
   return [
     mk("award-seed-1", "class-6-1-stu-1", "class-6-1", "award-1-1", "智慧小博士", "乐于探究", 1, today, "teacher-zhao", "赵得鑫", 0),
     mk("award-seed-2", "class-6-1-stu-2", "class-6-1", "award-7-1", "合作创享星", "团队协作", 1, today, "teacher-zhao", "赵得鑫", 0),

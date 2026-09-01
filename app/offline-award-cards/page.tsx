@@ -172,7 +172,7 @@ function OfflineAwardCardsPage() {
         <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
           <div className="flex shrink-0 items-center gap-2.5">
             <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg ring-1 ring-border/40">
-              <Image src="/images/logo.png" alt="明珠临港" width={30} height={30} />
+              <Image src="/mzlg/images/logo.png" alt="明珠临港" width={30} height={30} />
             </span>
             <div className="hidden flex-col leading-tight md:flex">
               <span className="text-sm font-bold text-foreground">明珠临港</span>
