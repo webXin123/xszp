@@ -1,0 +1,82 @@
+[
+  {
+    "level1": "思想品德",
+    "level2": [
+      {
+        "name": "尊敬师长",
+        "description": "尊敬老师，听从教诲",
+        "score": 5
+      },
+      {
+        "name": "团结同学",
+        "description": "与同学友好相处，互助合作",
+        "score": 5
+      },
+      {
+        "name": "诚实守信",
+        "description": "不说谎，不欺骗他人",
+        "score": 5
+      }
+    ]
+  },
+  {
+    "level1": "学习态度",
+    "level2": [
+      {
+        "name": "课堂纪律",
+        "description": "遵守课堂纪律，认真听讲",
+        "score": 5
+      },
+      {
+        "name": "作业完成",
+        "description": "按时完成作业，质量良好",
+        "score": 5
+      },
+      {
+        "name": "学习积极性",
+        "description": "主动学习，积极思考",
+        "score": 5
+      }
+    ]
+  },
+  {
+    "level1": "行为规范",
+    "level2": [
+      {
+        "name": "文明礼仪",
+        "description": "讲文明，懂礼貌",
+        "score": 5
+      },
+      {
+        "name": "卫生习惯",
+        "description": "保持个人和环境卫生",
+        "score": 5
+      },
+      {
+        "name": "爱护公物",
+        "description": "爱护学校公共财物",
+        "score": 5
+      }
+    ]
+  },
+  {
+    "level1": "社会实践",
+    "level2": [
+      {
+        "name": "志愿服务",
+        "description": "参与志愿服务活动",
+        "score": 5
+      },
+      {
+        "name": "社团活动",
+        "description": "积极参与学校社团活动",
+        "score": 5
+      },
+      {
+        "name": "社会实践",
+        "description": "参加社会实践活动",
+        "score": 5
+      }
+    ]
+  }
+]
