@@ -26,20 +26,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
-      
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.0.0
-          run_install: false
+          cache: 'npm'
+          cache-dependency-path: package.json
       
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
       
       - name: Build project
-        run: pnpm build
+        run: npm run build
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
