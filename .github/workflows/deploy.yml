@@ -11,6 +11,10 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,6 +33,7 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10.0.0
+          run_install: false
       
       - name: Install dependencies
         run: pnpm install
