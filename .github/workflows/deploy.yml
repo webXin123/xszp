@@ -36,11 +36,10 @@ jobs:
       - name: Build project
         run: pnpm build
       
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./out
+          path: ./out
 
   deploy:
     environment:
