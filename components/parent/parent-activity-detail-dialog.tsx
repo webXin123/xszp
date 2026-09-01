@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import {
@@ -198,7 +198,7 @@ export function ParentActivityDetailDialog({
                 {activity.title}
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                     meta.className,
                   )}
                 >
@@ -246,7 +246,7 @@ export function ParentActivityDetailDialog({
                 <span className="text-muted-foreground">· {myEnrollment.reviewNote}</span>
               )}
               {myEnrollment.reviewerName && (
-                <span className="ml-auto text-[11px] text-muted-foreground">
+                <span className="ml-auto text-xs text-muted-foreground">
                   审核人 {myEnrollment.reviewerName}
                 </span>
               )}
@@ -267,7 +267,7 @@ export function ParentActivityDetailDialog({
             <ul className="flex flex-col gap-2">
               {mySubmissions.map((s) => (
                 <li key={s.id} className="rounded-xl bg-muted/30 px-3 py-2">
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="rounded-full bg-brand-blue/15 px-2 py-0.5 font-medium text-brand-blue">
                       {SUBMISSION_TYPE_META.find((t) => t.key === s.type)?.label}
                     </span>
@@ -301,7 +301,7 @@ export function ParentActivityDetailDialog({
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Star className="size-3.5 fill-brand-yellow text-brand-yellow" />
               已评价 {existingEvaluation.rating} 分
-              <span className="text-[11px]">
+              <span className="text-xs">
                 · {existingEvaluation.createdAt.slice(0, 16).replace("T", " ")}
               </span>
             </div>
@@ -368,7 +368,7 @@ export function ParentActivityDetailDialog({
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {SUBMISSION_TYPE_META.find((t) => t.key === subType)?.hint}
               </p>
             </div>

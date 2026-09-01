@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { ChevronDown, HeartHandshake, UserRoundCog } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -66,7 +66,7 @@ export function TeacherSwitcher() {
         </Avatar>
         <div className="hidden flex-col leading-tight sm:flex">
           <span className="text-sm font-semibold text-foreground">{name}</span>
-          <span className="text-[11px] text-muted-foreground">{sub}</span>
+          <span className="text-xs text-muted-foreground">{sub}</span>
         </div>
         <ChevronDown className="size-4 text-muted-foreground" />
       </DropdownMenuTrigger>
@@ -95,7 +95,7 @@ export function TeacherSwitcher() {
                   <span className="text-sm font-medium text-foreground">{teacher.name}</span>
                   <span className="text-xs text-muted-foreground">{teacher.title}</span>
                 </div>
-                <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", roleStyle.className)}>
+                <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", roleStyle.className)}>
                   {roleStyle.label}
                 </span>
               </DropdownMenuItem>
@@ -130,7 +130,7 @@ export function TeacherSwitcher() {
                   <span className="text-sm font-medium text-foreground">{pu.name}</span>
                   <span className="text-xs text-muted-foreground">{subLabel}</span>
                 </div>
-                <span className="rounded-full bg-brand-green/15 px-2 py-0.5 text-[11px] font-medium text-brand-green">
+                <span className="rounded-full bg-brand-green/15 px-2 py-0.5 text-xs font-medium text-brand-green">
                   家长
                 </span>
               </DropdownMenuItem>

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { cn } from "@/lib/utils"
 
@@ -31,14 +31,14 @@ export function AwardBarChart({ data, unit = "张" }: AwardBarChartProps) {
         <p className="text-xs text-muted-foreground">
           合计 <span className="text-sm font-bold text-foreground">{total}</span> {unit}
         </p>
-        <p className="text-[11px] text-muted-foreground">按一级指标分布</p>
+        <p className="text-xs text-muted-foreground">按一级指标分布</p>
       </div>
       <div className="flex h-44 items-end gap-1.5">
         {data.map((d, i) => {
           const heightPct = (d.points / max) * 100
           return (
             <div key={d.level1} className="flex flex-1 flex-col items-center gap-1">
-              <span className="text-[11px] font-semibold text-foreground">
+              <span className="text-xs font-semibold text-foreground">
                 {d.points > 0 ? d.points : ""}
               </span>
               <div className="flex h-32 w-full items-end justify-center">
@@ -55,7 +55,7 @@ export function AwardBarChart({ data, unit = "张" }: AwardBarChartProps) {
                   }}
                 />
               </div>
-              <span className="line-clamp-2 h-7 text-center text-[10px] leading-tight text-muted-foreground">
+              <span className="line-clamp-2 h-7 text-center text-xs leading-tight text-muted-foreground">
                 {d.level1}
               </span>
             </div>

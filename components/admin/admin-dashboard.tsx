@@ -1,17 +1,18 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import {
   Award,
   BellRing,
   CalendarRange,
+  ChartColumn,
   CheckCircle2,
+  ChevronDown,
   Download,
   Flag,
   HeartPulse,
   House,
   LayoutGrid,
-  ListChecks,
   Medal,
   Send,
   TrendingUp,
@@ -29,6 +30,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
 import { TEACHERS } from "@/lib/mock-data"
@@ -243,7 +253,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <div>
               <h2 className="flex items-center gap-2 text-lg font-bold">
                 管理员首页
-                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium">
+                <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium">
                   {today}
                 </span>
               </h2>
@@ -269,7 +279,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               </span>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-foreground">{s.label}</span>
-                <span className="text-[11px] text-muted-foreground">{s.desc}</span>
+                <span className="text-xs text-muted-foreground">{s.desc}</span>
               </div>
             </>
           )
@@ -306,7 +316,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 <span className="text-sm font-semibold text-foreground">
                   {peTask ? "查看录入进度" : "体育成绩录入发布"}
                 </span>
-                <span className="truncate text-[11px] text-muted-foreground">
+                <span className="truncate text-xs text-muted-foreground">
                   {peTask
                     ? `已发布 · ${peTask.startDate} ~ ${peTask.endDate}`
                     : "发布体测成绩录入任务"}
@@ -321,7 +331,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               onClick={() => setPeProgressOpen(true)}
               className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-green/10 text-brand-green transition hover:bg-brand-green/20"
             >
-              <ListChecks className="size-4" />
+              <ChartColumn className="size-4" />
             </button>
           </div>
         )}
@@ -338,63 +348,99 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           </DialogHeader>
 
           <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-            {/* 录入班级 */}
-            <div className="flex flex-col gap-3">
+            {/* 录入班级：下拉复选 */}
+            <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">
-                  录入班级
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    已选 {peFormClassIds.length} / {PE_CLASSES.length} 个班
-                  </span>
-                </p>
+                <p className="text-sm font-semibold text-foreground">录入班级</p>
                 <button
                   type="button"
                   onClick={() => setPeFormClassIds(peFormClassIds.length === PE_CLASSES.length ? [] : PE_CLASS_IDS)}
-                  className="rounded-lg bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground"
+                  className="rounded-lg bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:text-foreground"
                 >
                   {peFormClassIds.length === PE_CLASSES.length ? "清空全部" : "全选"}
                 </button>
               </div>
-              <div className="flex flex-col gap-3">
-                {PE_GRADE_NAMES.map((gradeName) => {
-                  const gradeClasses = PE_CLASSES.filter((c) => c.gradeName === gradeName)
-                  const allSelected = gradeClasses.every((c) => peFormClassIds.includes(c.id))
-                  return (
-                    <div key={gradeName} className="flex flex-col gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => togglePeFormGrade(gradeName)}
-                        className="flex w-fit items-center gap-1.5 text-xs font-semibold text-foreground"
-                      >
-                        {gradeName}
-                        <span className="text-[11px] font-normal text-muted-foreground">
-                          {allSelected ? "点击取消整年级" : "点击选择整年级"}
-                        </span>
-                      </button>
-                      <div className="flex flex-wrap gap-1.5">
-                        {gradeClasses.map((c) => {
-                          const selected = peFormClassIds.includes(c.id)
-                          return (
-                            <button
-                              key={c.id}
-                              type="button"
-                              onClick={() => togglePeFormClass(c.id)}
-                              className={cn(
-                                "rounded-lg px-2.5 py-1.5 text-xs font-medium transition",
-                                selected
-                                  ? "bg-brand-green/15 text-brand-green ring-1 ring-brand-green/40"
-                                  : "bg-muted/40 text-muted-foreground hover:text-foreground",
-                              )}
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="glass-panel flex w-full items-center justify-between gap-2 rounded-lg border-border/60 px-3 py-2 text-left text-sm transition hover:border-primary/40"
+                    />
+                  }
+                >
+                  <span className="truncate text-foreground">
+                    {peFormClassIds.length === 0 && (
+                      <span className="text-muted-foreground">请选择需要录入的年级班级</span>
+                    )}
+                    {peFormClassIds.length > 0 && peFormClassIds.length < PE_CLASSES.length && (
+                      <>
+                        已选 <span className="font-bold text-brand-green">{peFormClassIds.length}</span> 个班
+                      </>
+                    )}
+                    {peFormClassIds.length === PE_CLASSES.length && (
+                      <span className="font-medium text-brand-green">全部年级（15 个班）</span>
+                    )}
+                  </span>
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-80 p-1.5">
+                  <Command>
+                    <CommandInput placeholder="搜索年级或班级…" />
+                    <CommandList className="max-h-64">
+                      <CommandEmpty>未找到匹配班级</CommandEmpty>
+                      {PE_GRADE_NAMES.map((gradeName) => {
+                        const gradeClasses = PE_CLASSES.filter((c) => c.gradeName === gradeName)
+                        const allSelected = gradeClasses.every((c) => peFormClassIds.includes(c.id))
+                        return (
+                          <CommandGroup key={gradeName} heading={gradeName}>
+                            <CommandItem
+                              value={`${gradeName} 全部`}
+                              onSelect={() => togglePeFormGrade(gradeName)}
+                              data-checked={allSelected}
                             >
-                              {c.index.toString().padStart(2, "0")}班
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                              <span
+                                className={cn(
+                                  "flex size-4 items-center justify-center rounded border transition",
+                                  allSelected
+                                    ? "border-brand-green bg-brand-green text-white"
+                                    : "border-muted-foreground/40",
+                                )}
+                              >
+                                {allSelected && <CheckCircle2 className="size-3" />}
+                              </span>
+                              全部班级（{gradeClasses.length} 个）
+                            </CommandItem>
+                            {gradeClasses.map((c) => {
+                              const selected = peFormClassIds.includes(c.id)
+                              return (
+                                <CommandItem
+                                  key={c.id}
+                                  value={`${gradeName} ${c.index.toString().padStart(2, "0")}班`}
+                                  onSelect={() => togglePeFormClass(c.id)}
+                                  data-checked={selected}
+                                >
+                                  <span
+                                    className={cn(
+                                      "flex size-4 items-center justify-center rounded border transition",
+                                      selected
+                                        ? "border-brand-green bg-brand-green text-white"
+                                        : "border-muted-foreground/40",
+                                    )}
+                                  >
+                                    {selected && <CheckCircle2 className="size-3" />}
+                                  </span>
+                                  {c.index.toString().padStart(2, "0")}班
+                                </CommandItem>
+                              )
+                            })}
+                          </CommandGroup>
+                        )
+                      })}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* 录入时间 */}
@@ -421,7 +467,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 </label>
               </div>
               {peFormStart && peFormEnd && peFormEnd < peFormStart && (
-                <p className="text-[11px] text-destructive">截止时间需晚于开始时间</p>
+                <p className="text-xs text-destructive">截止时间需晚于开始时间</p>
               )}
             </div>
           </div>
@@ -439,7 +485,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 peFormEnd < peFormStart
               }
               onClick={publishPeTask}
-              className="bg-brand-green text-white shadow-sm shadow-brand-green/25 hover:bg-brand-green/90"
+              className="bg-gradient-to-r from-[oklch(0.56_0.17_150)] to-[oklch(0.46_0.16_165)] text-white shadow-lg shadow-brand-green/40 ring-1 ring-white/20 transition hover:brightness-110"
             >
               <Send className="size-3.5" />
               发布
@@ -450,7 +496,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
       {/* 体育成绩录入进度弹窗（仅管理员） */}
       <Dialog open={peProgressOpen} onOpenChange={setPeProgressOpen}>
-        <DialogContent className="flex max-h-[85vh] w-full flex-col gap-4 overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="flex max-h-[85vh] w-full flex-col gap-4 overflow-y-auto bg-popover/100 backdrop-blur-none sm:max-w-3xl">
           <DialogHeader className="pr-10">
             <DialogTitle className="flex items-center gap-1.5">
               <HeartPulse className="size-4 text-brand-green" />
@@ -486,7 +532,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <div className="flex items-center gap-2">
               <Link
                 href="/pe-score-import"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-[11px] font-semibold text-foreground transition hover:border-primary/40 hover:bg-accent/60"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-primary/40 hover:bg-accent/60"
               >
                 查看录入页
               </Link>
@@ -496,10 +542,10 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   onClick={remindAll}
                   disabled={pendingUnreminded.length === 0}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold shadow-sm transition",
+                    "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition",
                     pendingUnreminded.length === 0
                       ? "cursor-default bg-muted/50 text-muted-foreground"
-                      : "bg-brand-green text-white shadow-brand-green/25 hover:bg-brand-green/90",
+                      : "bg-gradient-to-r from-[oklch(0.56_0.17_150)] to-[oklch(0.46_0.16_165)] text-white shadow-md shadow-brand-green/40 hover:brightness-110",
                   )}
                 >
                   {pendingUnreminded.length === 0 ? (
@@ -523,7 +569,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               全部班级已完成体育成绩录入
             </p>
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {peProgress.pending.map((p) => {
                 const reminded = remindedClassIds.has(p.classId)
                 return (
@@ -538,12 +584,12 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium text-foreground">{p.className}</span>
-                      <span className="rounded-full bg-brand-orange/15 px-2 py-0.5 text-[11px] font-medium text-brand-orange">
+                      <span className="rounded-full bg-brand-orange/15 px-2 py-0.5 text-xs font-medium text-brand-orange">
                         未录入 {p.missing.join("、")}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+                      <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                         <BellRing className="size-3 shrink-0 text-brand-blue" />
                         <span className="truncate">
                           体育教师：{p.teachers.length > 0 ? p.teachers.join("、") : "未分配"}
@@ -554,7 +600,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                         onClick={() => remindClass(p.classId)}
                         disabled={reminded}
                         className={cn(
-                          "shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition",
+                          "shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition",
                           reminded
                             ? "cursor-default bg-brand-green/10 text-brand-green"
                             : "bg-brand-blue/15 text-brand-blue hover:bg-brand-blue/25",
@@ -598,14 +644,14 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                       </span>
                     ))}
                   </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     班主任：{g.classes.map((c) => c.teacher).join("、")}
                   </p>
                 </li>
               ))}
             </ul>
           )}
-          <p className="mt-auto text-[11px] text-muted-foreground">
+          <p className="mt-auto text-xs text-muted-foreground">
             数据来源：周流动红旗颁发记录（{today}）
           </p>
         </section>
@@ -642,15 +688,15 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 const cls = classes.find((c) => c.id === h.classId)
                 return (
                   <li key={h.id} className="flex items-start gap-2 rounded-lg bg-muted/30 px-2.5 py-2 transition hover:bg-brand-orange/10">
-                    <span className={cn("mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium", HONOR_LEVEL_STYLE[h.honorLevel])}>
+                    <span className={cn("mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", HONOR_LEVEL_STYLE[h.honorLevel])}>
                       {HONOR_LEVEL_LABEL[h.honorLevel]}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-medium text-foreground">{h.honorName}</p>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {h.studentName} · {cls?.name ?? h.classId} · {h.level1}
                       </p>
-                      <p className="truncate text-[11px] text-muted-foreground">{h.issuer}</p>
+                      <p className="truncate text-xs text-muted-foreground">{h.issuer}</p>
                     </div>
                     <span className="shrink-0 text-xs font-bold text-brand-orange">+{h.points}</span>
                   </li>
@@ -689,7 +735,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 const cls = classes.find((c) => c.id === a.classId)
                 return (
                   <div key={a.id} className="flex items-center gap-2 rounded-lg bg-muted/30 px-2.5 py-1.5 transition hover:bg-brand-blue/10">
-                    <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium", POINT_SOURCE_STYLE[a.source])}>
+                    <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", POINT_SOURCE_STYLE[a.source])}>
                       {POINT_SOURCE_LABEL[a.source]}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -697,12 +743,12 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                         {a.studentName}
                         <span className="ml-1.5 text-muted-foreground">· {a.level1}</span>
                       </p>
-                      <p className="truncate text-[11px] text-muted-foreground">
+                      <p className="truncate text-xs text-muted-foreground">
                         {cls?.name ?? a.classId} · {a.level2}
                       </p>
                     </div>
                     <span className="shrink-0 text-xs font-bold text-brand-green">+{a.points}</span>
-                    <span className="shrink-0 text-[11px] text-muted-foreground">{a.date.slice(5)}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{a.date.slice(5)}</span>
                   </div>
                 )
               })}

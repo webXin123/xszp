@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { CalendarDays, ChevronDown, LayoutGrid, Medal, MinusCircle, Search, Send, TrendingDown } from "lucide-react"
@@ -178,7 +178,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
                   </div>
                   <div className="flex shrink-0 flex-col items-end">
                     <span className="text-sm font-bold text-brand-orange">{r.totalDeduction}</span>
-                    <span className="text-[11px] text-muted-foreground">{r.date}</span>
+                    <span className="text-xs text-muted-foreground">{r.date}</span>
                   </div>
                 </li>
               ))}
@@ -204,7 +204,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
             >
               <Send className="size-5 text-brand-green" />
               <span className="text-sm font-medium text-foreground">线上发卡</span>
-              <span className="text-[11px] text-muted-foreground">为本班学生发放奖卡</span>
+              <span className="text-xs text-muted-foreground">为本班学生发放奖卡</span>
             </button>
             <button
               type="button"
@@ -213,7 +213,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
             >
               <LayoutGrid className="size-5 text-brand-blue" />
               <span className="text-sm font-medium text-foreground">班级评价</span>
-              <span className="text-[11px] text-muted-foreground">查看/录入本班评价</span>
+              <span className="text-xs text-muted-foreground">查看/录入本班评价</span>
             </button>
             <button
               type="button"
@@ -222,7 +222,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
             >
               <Medal className="size-5 text-brand-yellow" />
               <span className="text-sm font-medium text-foreground">荣誉上传</span>
-              <span className="text-[11px] text-muted-foreground">为学生录入获奖荣誉</span>
+              <span className="text-xs text-muted-foreground">为学生录入获奖荣誉</span>
             </button>
           </div>
 
@@ -238,7 +238,10 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
       </div>
 
       {/* 底部双 Tab：左侧 Tab 切换 + 首行右侧共用频次切换 */}
-      <div className="glass-panel flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+      <div
+        className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-[#f8f9fc] p-4 shadow-[0_12px_40px_-12px_rgba(20,30,60,0.28)] sm:p-5"
+        style={{ backgroundColor: "#f8f9fc" }}
+      >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
           <div className="flex gap-2">
             <button
@@ -247,7 +250,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
               className={cn(
                 "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
                 bottomTab === "dynamic"
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                  ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -259,7 +262,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
               className={cn(
                 "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
                 bottomTab === "ranking"
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                  ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -285,7 +288,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium transition",
                     range === r
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                      ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-sm shadow-primary/30"
                       : "glass-panel text-muted-foreground hover:text-foreground",
                   )}
                 >

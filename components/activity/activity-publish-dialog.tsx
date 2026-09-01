@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import { CalendarDays } from "lucide-react"
@@ -312,7 +312,7 @@ export function ActivityPublishDialog({
                       </div>
                     )}
                     {someIn && gradeChecked && (
-                      <p className="ml-6 text-[11px] text-brand-yellow">本年级部分班级未选</p>
+                      <p className="ml-6 text-xs text-brand-yellow">本年级部分班级未选</p>
                     )}
                   </div>
                 )
@@ -343,7 +343,7 @@ export function ActivityPublishDialog({
                 onChange={(e) => setPointsCost(e.target.value)}
                 className={FIELD}
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 报名时从学生奖卡积分余额扣除，0 表示不限制
               </p>
             </div>
@@ -357,7 +357,7 @@ export function ActivityPublishDialog({
                 onChange={(e) => setCapacity(e.target.value)}
                 className={FIELD}
               />
-              <p className="text-[11px] text-muted-foreground">0 表示不限名额</p>
+              <p className="text-xs text-muted-foreground">0 表示不限名额</p>
             </div>
           </div>
 

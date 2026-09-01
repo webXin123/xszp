@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import Image from "next/image"
@@ -176,7 +176,7 @@ function OfflineAwardCardsPage() {
             </span>
             <div className="hidden flex-col leading-tight md:flex">
               <span className="text-sm font-bold text-foreground">明珠临港</span>
-              <span className="text-[11px] text-muted-foreground">学生综合评价</span>
+              <span className="text-xs text-muted-foreground">学生综合评价</span>
             </div>
           </div>
 
@@ -396,7 +396,7 @@ function OfflineAwardCardsPage() {
               </div>
             </div>
 
-            <p className={cn("text-[11px] leading-relaxed text-muted-foreground")}>
+            <p className={cn("text-xs leading-relaxed text-muted-foreground")}>
               每张奖卡对应一条 Excel 记录。本次添加 {quantity} 张，每张 {points} 积分。
             </p>
           </div>

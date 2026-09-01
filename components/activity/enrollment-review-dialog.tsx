@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { Check, X } from "lucide-react"
@@ -77,7 +77,7 @@ export function EnrollmentReviewDialog({
                   <span className="font-medium text-foreground">{e.studentName}</span>
                   <span className="text-xs text-muted-foreground">·</span>
                   <span className="text-xs text-muted-foreground">{e.classId}</span>
-                  <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium", meta.className)}>
+                  <span className={cn("ml-auto rounded-full px-2 py-0.5 text-xs font-medium", meta.className)}>
                     {meta.label}
                   </span>
                 </div>

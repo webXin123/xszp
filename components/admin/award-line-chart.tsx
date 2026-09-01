@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo } from "react"
 
@@ -44,7 +44,7 @@ export function AwardLineChart({ data }: AwardLineChartProps) {
         <p className="text-xs text-muted-foreground">
           合计 <span className="text-sm font-bold text-foreground">{total}</span> 张
         </p>
-        <p className="text-[11px] text-muted-foreground">最近 {data.length} 天</p>
+        <p className="text-xs text-muted-foreground">最近 {data.length} 天</p>
       </div>
       <div className="w-full overflow-x-auto">
         <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full min-w-[420px]" preserveAspectRatio="xMidYMid meet">

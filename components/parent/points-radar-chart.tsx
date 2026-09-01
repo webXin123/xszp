@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo } from "react"
 import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
@@ -58,7 +58,7 @@ export function PointsRadarChart({ series }: PointsRadarChartProps) {
       {/* 图例 */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
         {series.map((s) => (
-          <span key={s.key} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span key={s.key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span
               className="inline-block size-2.5 rounded-sm"
               style={{ background: s.color, opacity: Math.max(0.55, s.fillOpacity + 0.4) }}
@@ -139,45 +139,13 @@ export function PointsRadarChart({ series }: PointsRadarChartProps) {
                 y={y + 3}
                 textAnchor={anchor}
                 className="fill-muted-foreground"
-                fontSize={10}
+                fontSize={12}
               >
                 {name}
               </text>
             )
           })}
         </svg>
-      </div>
-
-      {/* 明细对比表 */}
-      <div className="max-h-56 overflow-y-auto rounded-xl border border-border/40">
-        <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-muted/60 backdrop-blur">
-            <tr className="text-muted-foreground">
-              <th className="px-3 py-1.5 text-left font-medium">一级指标</th>
-              {series.map((s) => (
-                <th key={s.key} className="px-3 py-1.5 text-right font-medium">
-                  {s.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {AWARD_LEVEL1_LIST.map((name, i) => (
-              <tr key={name} className="border-t border-border/30">
-                <td className="px-3 py-1.5 text-foreground">{name}</td>
-                {series.map((s) => (
-                  <td
-                    key={s.key}
-                    className="px-3 py-1.5 text-right font-semibold tabular-nums"
-                    style={{ color: s.color }}
-                  >
-                    {s.values[i]}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   )

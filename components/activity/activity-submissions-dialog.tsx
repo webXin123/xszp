@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { CalendarDays, ClipboardList, MapPin, Star, Users } from "lucide-react"
@@ -86,7 +86,7 @@ export function ActivitySubmissionsDialog({
             <DialogTitle className="text-base">{activity.title}</DialogTitle>
             <span
               className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                 meta.className,
               )}
             >
@@ -173,7 +173,7 @@ export function ActivitySubmissionsDialog({
                     <span className="text-xs text-muted-foreground">{s.classId}</span>
                     <span
                       className={cn(
-                        "ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        "ml-auto rounded-full px-2 py-0.5 text-xs font-medium",
                         TYPE_STYLE[s.type],
                       )}
                     >
@@ -196,7 +196,7 @@ export function ActivitySubmissionsDialog({
                       ))}
                     </div>
                   )}
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     提交于 {s.createdAt.slice(0, 16).replace("T", " ")}
                   </p>
                 </div>
@@ -244,7 +244,7 @@ export function ActivitySubmissionsDialog({
                     </span>
                   </div>
                   <p className="text-sm leading-relaxed text-foreground">{e.comment}</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {e.createdAt.slice(0, 16).replace("T", " ")}
                   </p>
                 </div>

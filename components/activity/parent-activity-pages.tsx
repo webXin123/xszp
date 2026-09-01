@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
@@ -88,7 +88,7 @@ function StudentSwitcher({ studentId }: { studentId: string }) {
             )}
           >
             {c.name}
-            <span className="ml-1 text-[10px] opacity-70">{c.className}</span>
+            <span className="ml-1 text-xs opacity-70">{c.className}</span>
           </button>
         )
       })}
@@ -181,7 +181,7 @@ export function ActivityEnrollView({
           </span>
           <div className="leading-tight">
             <p className="text-sm font-bold text-foreground">{student.name}</p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {grade?.name ?? ""}
               {cls ? ` · ${cls.name}` : ""} · 学号 {student.studentNo}
             </p>
@@ -191,7 +191,7 @@ export function ActivityEnrollView({
           <Wallet className="size-3.5" />
           剩余积分 {balance}
         </span>
-        <span className="ml-auto text-[11px] text-muted-foreground">
+        <span className="ml-auto text-xs text-muted-foreground">
           用户 ID：{studentId}
         </span>
       </div>
@@ -219,21 +219,21 @@ export function ActivityEnrollView({
                   </Link>
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                       meta.className,
                     )}
                   >
                     <span className={cn("size-1.5 rounded-full", meta.dot)} />
                     {meta.label}
                   </span>
-                  <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-[11px] font-medium text-brand-blue">
+                  <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-xs font-medium text-brand-blue">
                     {act.level1}
                   </span>
                 </div>
                 <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                   {act.description}
                 </p>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <CalendarDays className="size-3.5" />
                     报名 {formatActivityDateRange(act.enrollStart, act.enrollEnd)}
@@ -259,13 +259,13 @@ export function ActivityEnrollView({
                     <>
                       <span
                         className={cn(
-                          "rounded-lg px-2 py-0.5 text-[11px] font-semibold",
+                          "rounded-lg px-2 py-0.5 text-xs font-semibold",
                           ENROLLMENT_STATUS_META[my.status].className,
                         )}
                       >
                         {ENROLLMENT_STATUS_META[my.status].label}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {my.enrolledAt.slice(0, 16).replace("T", " ")} 提交报名
                       </span>
                     </>
@@ -274,7 +274,7 @@ export function ActivityEnrollView({
                       立即报名
                     </Button>
                   ) : (
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {today < act.enrollStart ? "报名未开始" : "报名已结束"}
                     </span>
                   )}
@@ -302,7 +302,7 @@ export function ActivityEnrollView({
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-xl bg-muted/30 px-3 py-2.5 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-xl bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
               <span>报名截止 {enrollTarget?.enrollEnd}</span>
               {enrollTarget && enrollTarget.capacity > 0 && (
                 <span>
@@ -404,14 +404,14 @@ export function ActivityDetailView({
           <h2 className="text-base font-bold text-foreground">{activity.title}</h2>
           <span
             className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
               meta.className,
             )}
           >
             <span className={cn("size-1.5 rounded-full", meta.dot)} />
             {meta.label}
           </span>
-          <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-[11px] font-medium text-brand-blue">
+          <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-xs font-medium text-brand-blue">
             {activity.level1}
           </span>
         </div>
@@ -457,7 +457,7 @@ export function ActivityDetailView({
             <span className="font-medium">{ENROLLMENT_STATUS_META[my.status].label}</span>
             {my.reviewNote && <span className="text-muted-foreground">· {my.reviewNote}</span>}
             {my.reviewerName && (
-              <span className="ml-auto text-[11px] text-muted-foreground">
+              <span className="ml-auto text-xs text-muted-foreground">
                 审核人 {my.reviewerName}
               </span>
             )}

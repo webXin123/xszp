@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Check, ImagePlus, Loader2, Medal, Sparkles, Upload, X } from "lucide-react"
@@ -285,7 +285,7 @@ export function HonorUploadTab() {
                 </span>
                 <span
                   className={cn(
-                    "rounded-md px-1.5 py-px text-[11px] font-semibold transition",
+                    "rounded-md px-1.5 py-px text-xs font-semibold transition",
                     honorLevel === opt.value
                       ? "bg-brand-yellow/20 text-brand-yellow"
                       : "text-muted-foreground/70 group-hover:text-muted-foreground",
@@ -320,7 +320,7 @@ export function HonorUploadTab() {
               <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/50 to-transparent p-2">
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-medium",
+                    "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium",
                     ocrState === "recognizing" && "bg-brand-blue/20 text-brand-blue",
                     ocrState === "done" && "bg-brand-green/20 text-brand-green",
                   )}
@@ -357,7 +357,7 @@ export function HonorUploadTab() {
                 <ImagePlus className="size-5" />
               </span>
               <span className="text-xs">点击上传奖状图片</span>
-              <span className="text-[11px] text-muted-foreground/60">支持 JPG / PNG，上传后自动识别荣誉信息</span>
+              <span className="text-xs text-muted-foreground/60">支持 JPG / PNG，上传后自动识别荣誉信息</span>
             </button>
           )}
         </div>
@@ -482,7 +482,7 @@ function HonorRow({ honor }: { honor: HonorRecord }) {
         </div>
         <span
           className={cn(
-            "shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold",
+            "shrink-0 rounded-lg px-2 py-1 text-xs font-semibold",
             HONOR_LEVEL_STYLE[honor.honorLevel],
           )}
         >

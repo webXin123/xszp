@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { ChevronDown, ChevronRight, Info, RotateCcw, Search, Sparkles } from "lucide-react"
@@ -290,7 +290,7 @@ export function AwardCardTab() {
                                           e.stopPropagation()
                                           setWeeklyDetailStudent(student)
                                         }}
-                                        className="rounded-full bg-brand-yellow/20 px-2 py-0.5 text-[11px] font-medium text-brand-yellow transition hover:bg-brand-yellow/30"
+                                        className="rounded-full bg-brand-yellow/20 px-2 py-0.5 text-xs font-medium text-brand-yellow transition hover:bg-brand-yellow/30"
                                         aria-label={`查看 ${student.name} 本周获得奖卡详情`}
                                       >
                                         本周获得 {weekly} 张

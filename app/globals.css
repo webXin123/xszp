@@ -31,6 +31,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-2: var(--primary-2);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -59,6 +60,7 @@
   --popover: oklch(1 0 0 / 92%);
   --popover-foreground: oklch(0.24 0.03 258);
   --primary: oklch(0.53 0.18 260);
+  --primary-2: oklch(0.45 0.19 295);
   --primary-foreground: oklch(0.98 0.01 260);
   --secondary: oklch(1 0 0 / 55%);
   --secondary-foreground: oklch(0.3 0.05 258);
@@ -100,6 +102,7 @@
   --popover: oklch(0.22 0.035 265 / 96%);
   --popover-foreground: oklch(0.95 0.01 258);
   --primary: oklch(0.68 0.16 260);
+  --primary-2: oklch(0.58 0.18 295);
   --primary-foreground: oklch(0.16 0.02 260);
   --secondary: oklch(1 0 0 / 8%);
   --secondary-foreground: oklch(0.95 0.01 258);
@@ -141,22 +144,92 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      linear-gradient(135deg, oklch(0.62 0.14 260 / 10%) 0%, transparent 38%),
-      linear-gradient(225deg, oklch(0.62 0.14 145 / 9%) 0%, transparent 42%),
-      radial-gradient(circle at 10% 6%, oklch(0.53 0.18 260 / 20%), transparent 52%),
-      radial-gradient(circle at 92% 10%, oklch(0.62 0.14 145 / 16%), transparent 48%),
-      radial-gradient(circle at 85% 92%, oklch(0.6 0.19 40 / 14%), transparent 52%),
-      radial-gradient(circle at 6% 88%, oklch(0.78 0.15 85 / 14%), transparent 48%);
+      linear-gradient(135deg, oklch(0.62 0.14 260 / 16%) 0%, transparent 40%),
+      linear-gradient(225deg, oklch(0.62 0.14 145 / 14%) 0%, transparent 44%),
+      radial-gradient(circle at 8% 4%, oklch(0.53 0.18 260 / 30%), transparent 55%),
+      radial-gradient(circle at 94% 8%, oklch(0.62 0.14 145 / 24%), transparent 50%),
+      radial-gradient(circle at 88% 96%, oklch(0.6 0.19 40 / 20%), transparent 55%),
+      radial-gradient(circle at 4% 92%, oklch(0.78 0.15 85 / 20%), transparent 50%);
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-card border border-border/60 shadow-[0_8px_32px_-8px_rgba(20,30,60,0.25)] backdrop-blur-xl;
-    background-image: linear-gradient(135deg, oklch(1 0 0 / 14%) 0%, oklch(1 0 0 / 4%) 100%);
+    @apply border border-white/45 shadow-[0_12px_40px_-12px_rgba(20,30,60,0.35)] backdrop-blur-2xl dark:border-white/10;
+    background-color: oklch(1 0 0 / 52%);
+    background-image:
+      linear-gradient(to bottom, oklch(1 0 0 / 26%), oklch(1 0 0 / 0%) 42%),
+      linear-gradient(135deg, oklch(1 0 0 / 16%) 0%, oklch(1 0 0 / 5%) 100%);
   }
   .glass-surface {
-    @apply bg-popover border border-border/60 shadow-[0_16px_48px_-12px_rgba(20,30,60,0.35)] backdrop-blur-2xl;
-    background-image: linear-gradient(135deg, oklch(1 0 0 / 18%) 0%, oklch(1 0 0 / 6%) 100%);
+    @apply border border-white/50 shadow-[0_20px_56px_-16px_rgba(20,30,60,0.45)] backdrop-blur-2xl dark:border-white/12;
+    background-color: oklch(1 0 0 / 72%);
+    background-image:
+      linear-gradient(to bottom, oklch(1 0 0 / 30%), oklch(1 0 0 / 0%) 40%),
+      linear-gradient(135deg, oklch(1 0 0 / 20%) 0%, oklch(1 0 0 / 7%) 100%);
+  }
+}
+
+/* ===== 字体规范（硬性）=====
+ * PC：主标题 20px / 标题 16px / 正文 14px / 辅助文字 12px
+ * 移动端：主标题 16px / 标题 14px / 正文与辅助 12px
+ * 说明：以下规则不放入 @layer，优先级高于 Tailwind 工具类。
+ */
+@theme {
+  /* 主标题统一 20px（text-lg / text-2xl 用于页面大标题与模块大数字） */
+  --text-lg: 20px;
+  --text-lg--line-height: 1.6;
+  --text-2xl: 20px;
+  --text-2xl--line-height: 1.6;
+}
+
+body {
+  font-size: 14px;
+}
+/* 标题语义：h1 = 页面大标题；h2/h3 = 卡片、分区、表格标题 */
+h1 {
+  font-size: 20px;
+}
+h2,
+h3 {
+  font-size: 16px;
+}
+h1.text-lg,
+h2.text-lg,
+h2.text-xl,
+h2.text-2xl {
+  font-size: 20px;
+}
+
+/* 移动端字号梯度（不跟随 PC 端） */
+@media (max-width: 767px) {
+  body {
+    font-size: 12px;
+  }
+  h1 {
+    font-size: 16px;
+  }
+  h2,
+  h3 {
+    font-size: 14px;
+  }
+  h1.text-lg,
+  h2.text-lg,
+  h2.text-xl,
+  h2.text-2xl {
+    font-size: 16px;
+  }
+  .text-xl,
+  .text-2xl {
+    font-size: 16px;
+  }
+  .text-lg {
+    font-size: 16px;
+  }
+  .text-base {
+    font-size: 14px;
+  }
+  .text-sm {
+    font-size: 12px;
   }
 }

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import {
@@ -117,7 +117,7 @@ export function ActivityManageTab() {
               className={cn(
                 "rounded-lg px-3 py-1.5 text-sm font-medium transition",
                 filter === f.key
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
                   : "glass-panel text-muted-foreground hover:text-foreground",
               )}
             >
@@ -153,7 +153,7 @@ export function ActivityManageTab() {
                   <div className="flex flex-1 flex-col">
                     <div className="flex items-center gap-2">
                       <span className="text-base font-semibold text-foreground">{activity.title}</span>
-                      <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium", meta.className)}>
+                      <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", meta.className)}>
                         <span className={cn("size-1.5 rounded-full", meta.dot)} />
                         {meta.label}
                       </span>

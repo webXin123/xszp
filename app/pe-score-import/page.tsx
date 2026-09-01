@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useRef, useState } from "react"
 import Image from "next/image"
@@ -201,7 +201,7 @@ function PeScoreImportPage() {
         <p className="truncate text-xs text-muted-foreground" title={upload.fileName}>
           {upload.fileName}
         </p>
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
             {upload.uploaderName} · {formatTime(upload.uploadedAt)}
           </span>
@@ -245,7 +245,7 @@ function PeScoreImportPage() {
             </span>
             <div className="hidden flex-col leading-tight md:flex">
               <span className="text-sm font-bold text-foreground">明珠临港</span>
-              <span className="text-[11px] text-muted-foreground">学生综合评价</span>
+              <span className="text-xs text-muted-foreground">学生综合评价</span>
             </div>
           </div>
 
@@ -324,14 +324,14 @@ function PeScoreImportPage() {
                 <div className="glass-panel flex flex-col gap-1 rounded-2xl p-4">
                   <span className="text-xs text-muted-foreground">已上传成绩条数</span>
                   <span className="text-2xl font-bold text-brand-green">{uploadedRows}</span>
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     已上传 {uploadedFiles} 个文件
                   </span>
                 </div>
                 <div className="glass-panel flex flex-col gap-1 rounded-2xl p-4">
                   <span className="text-xs text-muted-foreground">待上传成绩数</span>
                   <span className="text-2xl font-bold text-brand-orange">{pendingStudents}</span>
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     剩余 {totalFiles - uploadedFiles} 个文件待上传
                   </span>
                 </div>
@@ -372,7 +372,7 @@ function PeScoreImportPage() {
                           >
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-semibold text-foreground">{cls.name}</p>
-                              <span className="text-[11px] text-muted-foreground">
+                              <span className="text-xs text-muted-foreground">
                                 全班 {cls.maleCount + cls.femaleCount} 人 · 男 {cls.maleCount} / 女{" "}
                                 {cls.femaleCount}
                               </span>
@@ -433,7 +433,7 @@ function PeScoreImportPage() {
                 </table>
               </div>
               {viewing.rowCount > viewing.preview.length - 1 && (
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   仅预览前 {viewing.preview.length - 1} 条数据
                 </p>
               )}

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
@@ -147,7 +147,7 @@ export function EvaluationDashboard() {
             </span>
             <div className="hidden flex-col leading-tight md:flex">
               <span className="text-sm font-bold text-foreground">明珠临港</span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {isParent ? "家长成长看板" : "学生综合评价"}
               </span>
             </div>

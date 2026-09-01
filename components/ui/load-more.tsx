@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { ChevronsDown } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -29,7 +29,7 @@ export function LoadMoreFooter({
   if (!hasMore) {
     if (loaded <= 8) return null
     return (
-      <p className={cn("shrink-0 py-1.5 text-center text-[11px] text-muted-foreground", className)}>
+      <p className={cn("shrink-0 py-1.5 text-center text-xs text-muted-foreground", className)}>
         已加载全部 {total} 条
       </p>
     )
@@ -40,7 +40,7 @@ export function LoadMoreFooter({
       type="button"
       onClick={onLoadMore}
       className={cn(
-        "flex w-full shrink-0 items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] text-muted-foreground transition hover:bg-accent/40 hover:text-foreground",
+        "flex w-full shrink-0 items-center justify-center gap-1 rounded-lg py-1.5 text-xs text-muted-foreground transition hover:bg-accent/40 hover:text-foreground",
         className,
       )}
     >

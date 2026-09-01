@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import {
@@ -237,7 +237,7 @@ export function ParentDashboard() {
   const gradeNameLabel = grades.find((g) => g.id === currentChild.gradeId)?.name ?? ""
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="relative flex flex-col gap-5">
       {/* 顶部：最新发布活动消息横幅 */}
       {latestRecruiting && (
         <Link
@@ -251,7 +251,7 @@ export function ParentDashboard() {
             <p className="truncate text-sm font-semibold text-foreground">
               最新发布活动：{latestRecruiting.title}
             </p>
-            <p className="truncate text-[11px] text-muted-foreground">
+            <p className="truncate text-xs text-muted-foreground">
               {latestRecruiting.level1} · 报名截止 {latestRecruiting.enrollEnd} ·{" "}
               {latestRecruiting.publisherName} 发布，点击前往报名
             </p>
@@ -272,7 +272,7 @@ export function ParentDashboard() {
             </span>
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-bold text-foreground">{currentChild.name}</span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {currentChild.className} · 家长：{parentUser.name}
               </span>
             </div>
@@ -292,12 +292,12 @@ export function ParentDashboard() {
                     className={cn(
                       "rounded-lg px-3 py-1.5 text-xs font-medium transition",
                       active
-                        ? "bg-primary text-primary-foreground shadow-sm"
+                        ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {c.name}
-                    <span className="ml-1 text-[10px] opacity-70">{c.className}</span>
+                    <span className="ml-1 text-xs opacity-70">{c.className}</span>
                   </button>
                 )
               })}
@@ -320,11 +320,11 @@ export function ParentDashboard() {
             <div>
               <p className="text-base font-bold text-foreground">
                 {currentChild.name}
-                <span className="ml-2 rounded-full bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <span className="ml-2 rounded-full bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
                   {student?.gender ?? ""}
                 </span>
               </p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {gradeNameLabel}
                 {clazz ? ` · ${clazz.name}` : ` · ${currentChild.className}`}
                 {clazz ? ` · 班主任 ${clazz.homeroomTeacher}` : ""}
@@ -336,7 +336,7 @@ export function ParentDashboard() {
             className="group flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-xs font-medium text-foreground transition hover:border-primary/50 hover:bg-primary/10"
             title="点击用户 ID 前往活动报名"
           >
-            <span className="text-[11px] text-muted-foreground">用户 ID</span>
+            <span className="text-xs text-muted-foreground">用户 ID</span>
             <span className="font-mono text-xs font-semibold">{studentId}</span>
             <ChevronRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </Link>
@@ -350,7 +350,7 @@ export function ParentDashboard() {
             <Sparkles className="size-5" />
           </span>
           <div className="flex min-w-0 flex-col">
-            <span className="text-[11px] text-muted-foreground">累计获得积分</span>
+            <span className="text-xs text-muted-foreground">累计获得积分</span>
             <span className="text-lg font-bold text-foreground">
               {totalEarned}
               <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
@@ -362,7 +362,7 @@ export function ParentDashboard() {
             <TrendingUp className="size-5" />
           </span>
           <div className="flex min-w-0 flex-col">
-            <span className="text-[11px] text-muted-foreground">当前学期累计获得</span>
+            <span className="text-xs text-muted-foreground">当前学期累计获得</span>
             <span className="text-lg font-bold text-foreground">
               {semesterEarned}
               <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
@@ -374,7 +374,7 @@ export function ParentDashboard() {
             <Coins className="size-5" />
           </span>
           <div className="flex min-w-0 flex-col">
-            <span className="text-[11px] text-muted-foreground">已使用积分</span>
+            <span className="text-xs text-muted-foreground">已使用积分</span>
             <span className="text-lg font-bold text-foreground">
               {spent}
               <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
@@ -386,7 +386,7 @@ export function ParentDashboard() {
             <Wallet className="size-5" />
           </span>
           <div className="flex min-w-0 flex-col">
-            <span className="text-[11px] text-muted-foreground">剩余积分</span>
+            <span className="text-xs text-muted-foreground">剩余积分</span>
             <span className="text-lg font-bold text-foreground">
               {balance}
               <span className="ml-1 text-xs font-normal text-muted-foreground">分</span>
@@ -433,13 +433,13 @@ export function ParentDashboard() {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">{h.honorName}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {h.level1} · {h.issuer} · {h.awardDate}
                     </p>
                   </div>
                   <span
                     className={cn(
-                      "shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-semibold",
+                      "shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold",
                       HONOR_LEVEL_STYLE[h.honorLevel],
                     )}
                   >
@@ -457,7 +457,7 @@ export function ParentDashboard() {
               </li>
             </ul>
           )}
-          <p className="text-[11px] text-muted-foreground">由班主任录入上传</p>
+          <p className="text-xs text-muted-foreground">由班主任录入上传</p>
         </section>
       </div>
 
@@ -502,12 +502,12 @@ export function ParentDashboard() {
                   >
                     {act.title}
                   </Link>
-                  <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                  <span className="hidden text-xs text-muted-foreground sm:inline">
                     {act.startDate} ~ {act.endDate} · {act.location}
                   </span>
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                       meta.className,
                     )}
                   >
@@ -519,7 +519,7 @@ export function ParentDashboard() {
                   ) : isEnrolling(act, today) ? (
                     <Link
                       href={`/activities/enroll?student=${encodeURIComponent(studentId)}&id=${encodeURIComponent(act.id)}`}
-                      className="rounded-lg bg-brand-green/15 px-2 py-0.5 text-[11px] font-semibold text-brand-green transition hover:bg-brand-green/25"
+                      className="rounded-lg bg-brand-green/15 px-2 py-0.5 text-xs font-semibold text-brand-green transition hover:bg-brand-green/25"
                     >
                       去报名
                     </Link>
@@ -554,7 +554,7 @@ function EnrollmentStatusBadge({ status }: { status: "pending" | "approved" | "r
   } as const
   const s = map[status]
   return (
-    <span className={cn("shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-semibold", s.cls)}>
+    <span className={cn("shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold", s.cls)}>
       {s.label}
     </span>
   )

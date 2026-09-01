@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
@@ -163,7 +163,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
             <span className="text-base font-bold text-foreground">{teacher.name}</span>
             <span className="text-xs text-muted-foreground">{teacher.title}</span>
             {isPe && (
-              <span className="rounded-md bg-brand-green/15 px-2 py-0.5 text-[11px] font-medium text-brand-green">
+              <span className="rounded-md bg-brand-green/15 px-2 py-0.5 text-xs font-medium text-brand-green">
                 体育老师
               </span>
             )}
@@ -226,7 +226,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
           </span>
           <span className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-foreground">线上发卡</span>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               为 {awardClasses.length} 个班级发放五育奖卡
             </span>
           </span>
@@ -242,7 +242,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
             </span>
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-semibold text-foreground">体育成绩录入</span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 体测成绩批量导入与查看
               </span>
             </span>
@@ -321,7 +321,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
                   )}
                 >
                   <span className="font-medium text-foreground">{cls.name}</span>
-                  <span className="flex items-center gap-1.5 text-[11px]">
+                  <span className="flex items-center gap-1.5 text-xs">
                     <span
                       className={cn(
                         "inline-flex items-center gap-0.5",
@@ -365,7 +365,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
                   className={cn(
                     "rounded-md px-3 py-1 text-xs font-medium transition",
                     range === k
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                      ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -380,7 +380,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
               {TIME_RANGE_LABEL[range]}合计{" "}
               <span className="text-sm font-bold text-foreground">{rangeTotal}</span> 张
             </p>
-            <p className="text-[11px] text-muted-foreground">按一级指标分布</p>
+            <p className="text-xs text-muted-foreground">按一级指标分布</p>
           </div>
 
           <div className="flex h-48 items-end gap-1.5">
@@ -389,7 +389,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
               const heightPct = (d.points / max) * 100
               return (
                 <div key={d.level1} className="flex flex-1 flex-col items-center gap-1">
-                  <span className="text-[11px] font-semibold text-foreground">
+                  <span className="text-xs font-semibold text-foreground">
                     {d.points > 0 ? d.points : ""}
                   </span>
                   <div className="flex h-32 w-full items-end justify-center">
@@ -402,7 +402,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
                       style={{ height: `${Math.max(heightPct, d.points > 0 ? 6 : 0)}%` }}
                     />
                   </div>
-                  <span className="line-clamp-2 h-7 text-center text-[10px] leading-tight text-muted-foreground">
+                  <span className="line-clamp-2 h-7 text-center text-xs leading-tight text-muted-foreground">
                     {d.level1}
                   </span>
                 </div>
@@ -449,7 +449,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end text-right">
-                    <span className="text-[11px] text-muted-foreground">{c.date}</span>
+                    <span className="text-xs text-muted-foreground">{c.date}</span>
                   </div>
                 </li>
               ))}

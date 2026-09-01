@@ -34,10 +34,6 @@ export function PointsDynamicTab({ classId, range }: PointsDynamicTabProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-end">
-        <span className="text-xs text-muted-foreground">共 {filtered.length} 条动态</span>
-      </div>
-
       {filtered.length === 0 ? (
         <p className="rounded-xl bg-muted/40 px-3 py-8 text-center text-sm text-muted-foreground">
           暂无积分动态
@@ -50,11 +46,11 @@ export function PointsDynamicTab({ classId, range }: PointsDynamicTabProps) {
           {dynamicLoadMore.visible.map((e) => (
             <li
               key={e.id}
-              className="glass-panel flex items-center gap-3 rounded-xl px-3 py-2.5"
+              className="flex items-center gap-3 rounded-xl border border-border/40 bg-white px-3 py-2.5 shadow-sm"
             >
               <span
                 className={cn(
-                  "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                  "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
                   POINT_SOURCE_STYLE[e.source],
                 )}
               >
@@ -71,7 +67,7 @@ export function PointsDynamicTab({ classId, range }: PointsDynamicTabProps) {
               </div>
               <div className="flex shrink-0 flex-col items-end">
                 <span className="text-sm font-bold text-brand-green">+{e.points}</span>
-                <span className="text-[11px] text-muted-foreground">{e.date}</span>
+                <span className="text-xs text-muted-foreground">{e.date}</span>
               </div>
             </li>
           ))}
