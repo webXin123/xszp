@@ -23,7 +23,6 @@ yarn-error.log*
 # source data files (not needed at runtime)
 *.xlsx
 奖卡图片/
-data/
 
 # typescript
 *.tsbuildinfo

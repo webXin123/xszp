@@ -11,6 +11,7 @@ import {
   Medal,
   TrendingUp,
 } from "lucide-react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
@@ -170,9 +171,9 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           )
           if ("href" in s && s.href) {
             return (
-              <a key={s.label} href={s.href} className={cls}>
+              <Link key={s.label} href={s.href} className={cls}>
                 {inner}
-              </a>
+              </Link>
             )
           }
           return (
