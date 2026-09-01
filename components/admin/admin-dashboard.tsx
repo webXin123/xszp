@@ -3,12 +3,16 @@
 import { useMemo, useState } from "react"
 import {
   Award,
+  BellRing,
   CalendarRange,
+  CheckCircle2,
   Download,
   Flag,
+  HeartPulse,
   House,
   LayoutGrid,
   Medal,
+  Send,
   TrendingUp,
 } from "lucide-react"
 import Link from "next/link"
@@ -17,6 +21,8 @@ import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
+import { TEACHERS } from "@/lib/mock-data"
+import { PE_CLASSES, getSemesterLabel } from "@/lib/pe-scores"
 import { formatDate, getISOWeekKey } from "@/lib/scoring-utils"
 import {
   POINT_SOURCE_LABEL,
@@ -45,9 +51,11 @@ const HONOR_LEVEL_STYLE: Record<string, string> = {
 }
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
-  const { grades, classes, flags, awardCards, honors } = useEvaluation()
+  const { grades, classes, flags, awardCards, honors, peScoreUploads } = useEvaluation()
   const { role } = usePermission()
   const [recordCollapsed, setRecordCollapsed] = useState(false)
+  // 已提醒的未录入班级（演示态：标记后按钮置为"已提醒"）
+  const [remindedClassIds, setRemindedClassIds] = useState<Set<string>>(new Set())
 
   const weekKey = getISOWeekKey(new Date())
   const { start: weekStart, end: weekEnd } = getWeekRange(new Date())
@@ -108,6 +116,53 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     }
     return days
   }, [awardCards])
+
+  // 体育成绩录入进度：按已上传文件统计，未录入班级关联负责体育教师
+  const peProgress = useMemo(() => {
+    const uploadMap = new Map<string, boolean>()
+    for (const u of peScoreUploads) uploadMap.set(`${u.classId}:${u.gender}`, true)
+    // 班级 -> 负责的体育教师（配置了 peTeacherClassIds 的教师）
+    const peTeachersOf = (classId: string) =>
+      TEACHERS.filter((t) => t.peTeacherClassIds?.includes(classId))
+
+    const totalFiles = PE_CLASSES.length * 2
+    let uploadedFiles = 0
+    const pending: { classId: string; className: string; gradeName: string; missing: string[]; teachers: string[] }[] = []
+    for (const c of PE_CLASSES) {
+      const male = uploadMap.has(`${c.id}:male`)
+      const female = uploadMap.has(`${c.id}:female`)
+      uploadedFiles += (male ? 1 : 0) + (female ? 1 : 0)
+      const missing = [...(!male ? ["男生"] : []), ...(!female ? ["女生"] : [])]
+      if (missing.length > 0) {
+        pending.push({
+          classId: c.id,
+          className: c.name,
+          gradeName: c.gradeName,
+          missing,
+          teachers: peTeachersOf(c.id).map((t) => t.name),
+        })
+      }
+    }
+    return {
+      totalFiles,
+      uploadedFiles,
+      percent: totalFiles === 0 ? 0 : Math.round((uploadedFiles / totalFiles) * 100),
+      pending,
+      semesterLabel: getSemesterLabel(),
+    }
+  }, [peScoreUploads])
+
+  const remindClass = (classId: string) => {
+    setRemindedClassIds((prev) => new Set(prev).add(classId))
+  }
+  const remindAll = () => {
+    setRemindedClassIds((prev) => {
+      const next = new Set(prev)
+      for (const p of peProgress.pending) next.add(p.classId)
+      return next
+    })
+  }
+  const pendingUnreminded = peProgress.pending.filter((p) => !remindedClassIds.has(p.classId))
 
   const shortcuts = [
     { key: "activity" as MainTab, label: "活动管理", desc: "发布与审核活动", icon: CalendarRange, tone: "bg-gradient-to-br from-brand-blue to-primary-2 shadow-brand-blue/30", ring: "hover:border-brand-blue/40" },
@@ -183,6 +238,128 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           )
         })}
       </div>
+
+      {/* 体育成绩录入进度（仅管理员） */}
+      {role === "director" && (
+        <section className="glass-panel flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <HeartPulse className="size-4 text-brand-green" />
+                体育成绩录入进度
+              </h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {peProgress.semesterLabel} · 1-5 年级体质健康成绩
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/pe-score-import"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 px-3.5 py-2 text-xs font-semibold text-foreground transition hover:border-primary/40 hover:bg-accent/60"
+              >
+                查看录入页
+              </Link>
+              {peProgress.pending.length > 0 && (
+                <button
+                  type="button"
+                  onClick={remindAll}
+                  disabled={pendingUnreminded.length === 0}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-sm transition",
+                    pendingUnreminded.length === 0
+                      ? "cursor-default bg-muted/50 text-muted-foreground"
+                      : "bg-brand-green text-white shadow-brand-green/25 hover:bg-brand-green/90",
+                  )}
+                >
+                  {pendingUnreminded.length === 0 ? (
+                    <>
+                      <CheckCircle2 className="size-3.5" />
+                      已全部提醒
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-3.5" />
+                      批量提醒（{pendingUnreminded.length} 个班级）
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 总进度条 */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-baseline justify-between text-xs">
+              <span className="text-muted-foreground">
+                已上传 <span className="font-bold text-foreground">{peProgress.uploadedFiles}</span>
+                <span className="text-muted-foreground"> / {peProgress.totalFiles} 份</span>
+                {peProgress.pending.length > 0 && (
+                  <span className="ml-2 text-brand-orange">未录入班级 {peProgress.pending.length} 个</span>
+                )}
+              </span>
+              <span className="font-semibold text-brand-green">{peProgress.percent}%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
+              <div
+                className="h-full rounded-full bg-brand-green transition-all"
+                style={{ width: `${peProgress.percent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* 未录入班级列表 */}
+          {peProgress.pending.length === 0 ? (
+            <p className="rounded-xl bg-muted/40 px-3 py-5 text-center text-sm text-muted-foreground">
+              全部班级已完成体育成绩录入
+            </p>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {peProgress.pending.map((p) => {
+                const reminded = remindedClassIds.has(p.classId)
+                return (
+                  <li
+                    key={p.classId}
+                    className={cn(
+                      "flex flex-col gap-2 rounded-xl border px-3 py-2.5 transition",
+                      reminded
+                        ? "border-brand-green/30 bg-brand-green/5"
+                        : "border-border/60 bg-transparent",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-foreground">{p.className}</span>
+                      <span className="rounded-full bg-brand-orange/15 px-2 py-0.5 text-[11px] font-medium text-brand-orange">
+                        未录入 {p.missing.join("、")}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+                        <BellRing className="size-3 shrink-0 text-brand-blue" />
+                        <span className="truncate">
+                          体育教师：{p.teachers.length > 0 ? p.teachers.join("、") : "未分配"}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => remindClass(p.classId)}
+                        disabled={reminded}
+                        className={cn(
+                          "shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition",
+                          reminded
+                            ? "cursor-default bg-brand-green/10 text-brand-green"
+                            : "bg-brand-blue/15 text-brand-blue hover:bg-brand-blue/25",
+                        )}
+                      >
+                        {reminded ? "已提醒" : "一键提醒"}
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* 荣誉班级名单 + 奖卡折线图 */}
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">

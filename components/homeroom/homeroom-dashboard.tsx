@@ -1,21 +1,15 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import {
-  CalendarDays,
-  ChevronDown,
-  LayoutGrid,
-  Medal,
-  MinusCircle,
-  TrendingDown,
-} from "lucide-react"
+import { CalendarDays, ChevronDown, LayoutGrid, Medal, MinusCircle, Search, TrendingDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
 import { computeWeeklyScore, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek } from "@/lib/scoring-utils"
-import { aggregateByLevel1, buildPointEntries, filterEntries } from "@/lib/points-utils"
+import { aggregateByLevel1, buildPointEntries, filterEntries, TIME_RANGE_LABEL, type TimeRange } from "@/lib/points-utils"
 import { AwardBarChart } from "./award-bar-chart"
 import { PointsDynamicTab } from "./points-dynamic-tab"
 import { PointsRankingTab } from "./points-ranking-tab"
@@ -28,6 +22,8 @@ interface HomeroomDashboardProps {
 
 type BottomTab = "dynamic" | "ranking"
 
+const RANGES: TimeRange[] = ["week", "month", "semester"]
+
 export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
   const { records, awardCards, honors, students, classes } = useEvaluation()
   const { scoringClasses } = usePermission()
@@ -37,6 +33,10 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
     scoringClasses[0]?.id ?? "",
   )
   const [bottomTab, setBottomTab] = useState<BottomTab>("dynamic")
+  // 五育积分动态与学生积分排名共用的频次切换
+  const [range, setRange] = useState<TimeRange>("week")
+  // 学生积分排名的姓名/学号搜索（放在首行频次切换前）
+  const [studentSearch, setStudentSearch] = useState("")
   const [classMenuOpen, setClassMenuOpen] = useState(false)
 
   const currentClass = classes.find((c) => c.id === classId) ?? scoringClasses[0]
@@ -228,39 +228,71 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
         </section>
       </div>
 
-      {/* 底部双 Tab */}
+      {/* 底部双 Tab：左侧 Tab 切换 + 首行右侧共用频次切换 */}
       <div className="glass-panel flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
-        <div className="flex gap-2 border-b border-border/40 pb-3">
-          <button
-            type="button"
-            onClick={() => setBottomTab("dynamic")}
-            className={cn(
-              "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
-              bottomTab === "dynamic"
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            五育积分动态
-          </button>
-          <button
-            type="button"
-            onClick={() => setBottomTab("ranking")}
-            className={cn(
-              "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
-              bottomTab === "ranking"
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            学生积分排名
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setBottomTab("dynamic")}
+              className={cn(
+                "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
+                bottomTab === "dynamic"
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              五育积分动态
+            </button>
+            <button
+              type="button"
+              onClick={() => setBottomTab("ranking")}
+              className={cn(
+                "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
+                bottomTab === "ranking"
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              学生积分排名
+            </button>
+          </div>
+          <div className="relative order-2 lg:order-none">
+            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+              placeholder="搜索姓名/学号"
+              className="glass-panel h-9 w-44 rounded-lg border-border/60 bg-transparent pl-8"
+            />
+          </div>
+          <div className="flex gap-1.5">
+            {RANGES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition",
+                  range === r
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "glass-panel text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {TIME_RANGE_LABEL[r]}
+              </button>
+            ))}
+          </div>
         </div>
 
         {bottomTab === "dynamic" ? (
-          <PointsDynamicTab classId={currentClass.id} />
+          <PointsDynamicTab classId={currentClass.id} range={range} />
         ) : (
-          <PointsRankingTab classId={currentClass.id} />
+          <PointsRankingTab
+            classId={currentClass.id}
+            range={range}
+            search={studentSearch}
+          />
         )}
       </div>
     </div>

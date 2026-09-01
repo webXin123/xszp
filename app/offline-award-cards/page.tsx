@@ -166,7 +166,7 @@ function OfflineAwardCardsPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden px-4 pb-4 pt-16 sm:px-6">
+    <div className="flex min-h-screen flex-col px-4 pb-4 pt-16 sm:px-6">
       {/* 固定顶栏：与主站一致 */}
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
@@ -199,8 +199,8 @@ function OfflineAwardCardsPage() {
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full  flex-col gap-4 max-w-[1240px]">
-        <main className="glass-panel flex min-h-0 w-full min-w-0 flex-col gap-6 overflow-y-auto rounded-2xl p-4 sm:p-6">
+      <div className="mx-auto flex w-full flex-1 flex-col gap-4 max-w-[1240px]">
+        <main className="glass-panel flex w-full min-w-0 flex-col gap-6 rounded-2xl p-4 sm:p-6">
           {/* ---------------- 标题 + 操作 ---------------- */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

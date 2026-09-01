@@ -135,16 +135,15 @@ export function pickStudentNames(classId: string, seed: string, count: number): 
  * ------------------------------------------------------------------ */
 
 const GRADE_6_CLASSES = CLASSES.filter((c) => c.gradeId === "grade-6").map((c) => c.id)
-const GRADE_7_CLASSES = CLASSES.filter((c) => c.gradeId === "grade-7").map((c) => c.id)
 const ALL_CLASS_IDS = CLASSES.map((c) => c.id)
 const ALL_GRADE_IDS = GRADES.map((g) => g.id)
 
 /**
  * 权限模型：
  * - 班主任（homeroom）：本班发卡 + 本班班级评价
- * - 任课教师（subject）：仅对任教班级发放奖卡，无班级评价权限；
- *   若兼任体育（配置了 peTeacherClassIds），额外获得体质健康成绩导入权限
- * - 体育老师（pe_teacher）：负责 1-5 年级体质健康成绩导入，无班级评价/发卡权限（当前演示账号已下线）
+ * - 任课教师（subject）：仅对任教班级发放奖卡，无班级评价权限
+ * - 体育老师（pe_teacher）：任课教师基础上负责 1-5 年级体质健康成绩导入，
+ *   首页额外展示体育成绩录入入口与录入进度
  * - 年级组长（grade_leader）：本年级发卡 + 班级评价 + 流动红旗发放
  * - 管理员（director）：全部权限
  */
@@ -160,37 +159,28 @@ export const TEACHERS: Teacher[] = [
     awardClassIds: ["class-6-1"],
     viewGradeIds: ["grade-6"],
   },
-  {
-    id: "teacher-wang",
-    name: "王芳",
-    avatar: "",
-    role: "homeroom",
-    title: "六年级02班 班主任",
-    scoringClassIds: ["class-6-2"],
-    awardClassIds: ["class-6-2"],
-    viewGradeIds: ["grade-6"],
-  },
   /* ---------------------------------- 任课教师 ---------------------------------- */
   {
     id: "teacher-liu",
     name: "刘敏",
     avatar: "",
     role: "subject",
-    title: "六年级 数学任课教师",
+    title: "六年级 语文任课教师",
     scoringClassIds: [],
     awardClassIds: ["class-6-1"],
     viewGradeIds: ["grade-6"],
   },
+  /* ---------------------------------- 体育教师 ---------------------------------- */
   {
     id: "teacher-qian",
     name: "钱进",
     avatar: "",
-    role: "subject",
-    title: "六年级 语文、体育任课教师",
+    role: "pe_teacher",
+    title: "体育教师",
     scoringClassIds: [],
     awardClassIds: ["class-6-2", "class-6-3"],
     viewGradeIds: ["grade-6"],
-    // 兼任体育：负责 1-5 年级体质健康成绩导入
+    // 负责 1-5 年级体质健康成绩导入
     peTeacherClassIds: PE_CLASS_IDS,
   },
   /* ---------------------------------- 年级组长 ---------------------------------- */
@@ -203,16 +193,6 @@ export const TEACHERS: Teacher[] = [
     scoringClassIds: GRADE_6_CLASSES,
     awardClassIds: GRADE_6_CLASSES,
     viewGradeIds: ["grade-6"],
-  },
-  {
-    id: "teacher-xu",
-    name: "徐蓉",
-    avatar: "",
-    role: "grade_leader",
-    title: "七年级 年级组长",
-    scoringClassIds: GRADE_7_CLASSES,
-    awardClassIds: GRADE_7_CLASSES,
-    viewGradeIds: ["grade-7", "grade-8"],
   },
   /* ---------------------------------- 管理员 ---------------------------------- */
   {

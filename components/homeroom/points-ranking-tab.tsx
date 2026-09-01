@@ -1,12 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react"
 import { Pagination } from "@/components/ui/pagination"
 import { cn } from "@/lib/utils"
 import {
-  TIME_RANGE_LABEL,
   aggregateByStudent,
   buildPointEntries,
   type TimeRange,
@@ -16,17 +14,17 @@ import { useEvaluation } from "@/lib/evaluation-context"
 
 interface PointsRankingTabProps {
   classId: string
+  /** 频次切换由父组件统一控制（与五育积分动态共用） */
+  range: TimeRange
+  /** 姓名/学号搜索由父组件首行统一展示 */
+  search: string
 }
 
 type SortKey = "studentNo" | "cumulativeTotal" | "semesterTotal" | `level1:${string}`
 type SortDir = "asc" | "desc"
 
-const RANGES: TimeRange[] = ["week", "month", "semester"]
-
-export function PointsRankingTab({ classId }: PointsRankingTabProps) {
+export function PointsRankingTab({ classId, range, search }: PointsRankingTabProps) {
   const { awardCards, honors, students } = useEvaluation()
-  const [range, setRange] = useState<TimeRange>("semester")
-  const [search, setSearch] = useState("")
   const [sortKey, setSortKey] = useState<SortKey>("cumulativeTotal")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [page, setPage] = useState(1)
@@ -82,36 +80,6 @@ export function PointsRankingTab({ classId }: PointsRankingTabProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 顶部：学期筛选 + 姓名搜索 */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1.5">
-          {RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setRange(r)}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-sm font-medium transition",
-                range === r
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "glass-panel text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {TIME_RANGE_LABEL[r]}
-            </button>
-          ))}
-        </div>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索姓名/学号"
-            className="glass-panel h-9 w-44 rounded-lg border-border/60 bg-transparent pl-8"
-          />
-        </div>
-      </div>
-
       <div className="glass-panel overflow-hidden rounded-2xl">
         <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">

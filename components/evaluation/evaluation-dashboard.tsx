@@ -62,7 +62,7 @@ export function EvaluationDashboard() {
   } = usePermission()
   const canUploadHonor = role === "homeroom"
   const isHomeroom = role === "homeroom"
-  const isSubject = role === "subject"
+  const isSubject = role === "subject" || role === "pe_teacher"
   const isDirector = role === "director"
   const isGradeLeader = role === "grade_leader"
 

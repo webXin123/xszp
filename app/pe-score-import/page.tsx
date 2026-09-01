@@ -235,7 +235,7 @@ function PeScoreImportPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden px-4 pb-4 pt-16 sm:px-6">
+    <div className="flex min-h-screen flex-col px-4 pb-4 pt-16 sm:px-6">
       {/* 固定顶栏：与主站一致 */}
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
@@ -287,14 +287,14 @@ function PeScoreImportPage() {
         aria-label="选择成绩 Excel 文件"
       />
 
-      <div className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-4 max-w-[1240px]">
-        <main className="glass-panel flex min-h-0 w-full min-w-0  flex-col gap-6 overflow-y-auto rounded-2xl p-4 sm:p-6">
+      <div className="mx-auto flex w-full flex-1 flex-col gap-4 max-w-[1240px]">
+        <main className="glass-panel flex w-full min-w-0 flex-col gap-6 rounded-2xl p-4 sm:p-6">
           {!canImportPeScores ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <HeartPulse className="size-10 text-muted-foreground" />
               <p className="text-sm font-semibold text-foreground">暂无导入权限</p>
               <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
-                体质健康成绩导入仅对体育任课老师与管理员开放。可在右上角切换身份为「钱进 · 语文、体育任课教师」或「李静 · 管理员」后体验。
+                体质健康成绩导入仅对体育教师与管理员开放。可在右上角切换身份为「钱进 · 体育教师」或「李静 · 管理员」后体验。
               </p>
               <Link
                 href="/"

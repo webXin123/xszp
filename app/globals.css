@@ -136,7 +136,7 @@
     @apply border-border outline-ring/50;
   }
   html, body {
-    height: 100%;
+    min-height: 100%;
   }
   body {
     @apply bg-background text-foreground;
@@ -147,7 +147,6 @@
       radial-gradient(circle at 92% 10%, oklch(0.62 0.14 145 / 16%), transparent 48%),
       radial-gradient(circle at 85% 92%, oklch(0.6 0.19 40 / 14%), transparent 52%),
       radial-gradient(circle at 6% 88%, oklch(0.78 0.15 85 / 14%), transparent 48%);
-    background-attachment: fixed;
   }
 }
 

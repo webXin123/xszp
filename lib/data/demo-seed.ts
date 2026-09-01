@@ -30,7 +30,7 @@ const CHECKERS: Record<string, { id: string; name: string }[]> = {
   ],
   "午休、午会": [
     { id: "teacher-chen", name: "陈明（年级组长）" },
-    { id: "teacher-xu", name: "徐蓉（年级组长）" },
+    { id: "duty-song", name: "宋成（值周）" },
   ],
 }
 

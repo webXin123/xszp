@@ -1,13 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
 import {
   POINT_SOURCE_LABEL,
   POINT_SOURCE_STYLE,
-  TIME_RANGE_LABEL,
   buildPointEntries,
   filterEntries,
   type TimeRange,
@@ -16,13 +15,12 @@ import { useEvaluation } from "@/lib/evaluation-context"
 
 interface PointsDynamicTabProps {
   classId: string
+  /** 频次切换由父组件统一控制（与学生积分排名共用） */
+  range: TimeRange
 }
 
-const RANGES: TimeRange[] = ["week", "month", "semester"]
-
-export function PointsDynamicTab({ classId }: PointsDynamicTabProps) {
+export function PointsDynamicTab({ classId, range }: PointsDynamicTabProps) {
   const { awardCards, honors } = useEvaluation()
-  const [range, setRange] = useState<TimeRange>("week")
 
   const entries = useMemo(() => buildPointEntries(awardCards, honors), [awardCards, honors])
   const filtered = useMemo(() => {
@@ -36,24 +34,7 @@ export function PointsDynamicTab({ classId }: PointsDynamicTabProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1.5">
-          {RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setRange(r)}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-sm font-medium transition",
-                range === r
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "glass-panel text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {TIME_RANGE_LABEL[r]}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-end">
         <span className="text-xs text-muted-foreground">共 {filtered.length} 条动态</span>
       </div>
 
