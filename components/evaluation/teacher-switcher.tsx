@@ -19,7 +19,7 @@ const ROLE_STYLES: Record<TeacherRole, { label: string; className: string }> = {
   homeroom: { label: "班主任", className: "bg-brand-blue/15 text-brand-blue" },
   subject: { label: "任课教师", className: "bg-brand-blue/15 text-brand-blue" },
   pe_teacher: { label: "体育老师", className: "bg-brand-green/15 text-brand-green" },
-  grade_leader: { label: "年级组长", className: "bg-brand-green/15 text-brand-green" },
+  moral_director: { label: "德育主任", className: "bg-brand-green/15 text-brand-green" },
   director: { label: "管理员", className: "bg-brand-orange/15 text-brand-orange" },
 }
 

@@ -29,7 +29,7 @@ const CHECKERS: Record<string, { id: string; name: string }[]> = {
     { id: "duty-song", name: "宋成（值周）" },
   ],
   "午休、午会": [
-    { id: "teacher-chen", name: "陈明（年级组长）" },
+    { id: "teacher-chen", name: "陈明（德育主任）" },
     { id: "duty-song", name: "宋成（值周）" },
   ],
 }

@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-noto-sans-sc);
+  --font-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -54,41 +54,41 @@
 
 :root {
   color-scheme: light;
-  --background: oklch(0.96 0.015 258);
-  --foreground: oklch(0.24 0.03 258);
-  --card: oklch(1 0 0 / 62%);
-  --card-foreground: oklch(0.24 0.03 258);
-  --popover: oklch(1 0 0 / 92%);
-  --popover-foreground: oklch(0.24 0.03 258);
-  --primary: oklch(0.53 0.18 260);
-  --primary-2: oklch(0.45 0.19 295);
-  --primary-foreground: oklch(0.98 0.01 260);
-  --secondary: oklch(1 0 0 / 55%);
-  --secondary-foreground: oklch(0.3 0.05 258);
-  --muted: oklch(0.94 0.015 258 / 70%);
-  --muted-foreground: oklch(0.48 0.03 258);
-  --accent: oklch(0.9 0.05 258 / 60%);
-  --accent-foreground: oklch(0.3 0.08 258);
+  --background: #f3f1ff;
+  --foreground: #323c70;
+  --card: transparent;
+  --card-foreground: #323c70;
+  --popover: #ffffff;
+  --popover-foreground: #323c70;
+  --primary: #718cff;
+  --primary-2: #ad9df5;
+  --primary-foreground: #ffffff;
+  --secondary: #ececff;
+  --secondary-foreground: #5969c3;
+  --muted: #eff0ff;
+  --muted-foreground: #747fa7;
+  --accent: #e4e1ff;
+  --accent-foreground: #5969c3;
   --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.7 0.04 258 / 25%);
-  --input: oklch(0.7 0.04 258 / 30%);
-  --ring: oklch(0.53 0.18 260 / 60%);
-  --chart-1: oklch(0.53 0.18 260);
+  --border: #cfd5ff;
+  --input: #d7dcff;
+  --ring: #718cff;
+  --chart-1: #718cff;
   --chart-2: oklch(0.62 0.14 145);
   --chart-3: oklch(0.68 0.17 55);
   --chart-4: oklch(0.75 0.15 85);
-  --chart-5: oklch(0.5 0.03 258);
+  --chart-5: #747fa7;
   --radius: 1rem;
-  --sidebar: oklch(1 0 0 / 60%);
-  --sidebar-foreground: oklch(0.24 0.03 258);
-  --sidebar-primary: oklch(0.53 0.18 260);
-  --sidebar-primary-foreground: oklch(0.98 0.01 260);
-  --sidebar-accent: oklch(0.9 0.05 258 / 60%);
-  --sidebar-accent-foreground: oklch(0.3 0.08 258);
-  --sidebar-border: oklch(0.7 0.04 258 / 25%);
-  --sidebar-ring: oklch(0.53 0.18 260 / 60%);
+  --sidebar: #fbfaff;
+  --sidebar-foreground: #323c70;
+  --sidebar-primary: #718cff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ececff;
+  --sidebar-accent-foreground: #5969c3;
+  --sidebar-border: #dde0ff;
+  --sidebar-ring: #718cff;
 
-  --brand-blue: oklch(0.53 0.18 260);
+  --brand-blue: #718cff;
   --brand-green: oklch(0.62 0.14 145);
   --brand-orange: oklch(0.6 0.19 40);
   --brand-yellow: oklch(0.75 0.15 85);
@@ -103,9 +103,9 @@
   --card-foreground: oklch(0.95 0.01 258);
   --popover: oklch(0.22 0.035 265 / 96%);
   --popover-foreground: oklch(0.95 0.01 258);
-  --primary: oklch(0.68 0.16 260);
-  --primary-2: oklch(0.58 0.18 295);
-  --primary-foreground: oklch(0.16 0.02 260);
+  --primary: #9caaff;
+  --primary-2: #c5b5ff;
+  --primary-foreground: #1d2450;
   --secondary: oklch(1 0 0 / 8%);
   --secondary-foreground: oklch(0.95 0.01 258);
   --muted: oklch(1 0 0 / 6%);
@@ -115,22 +115,22 @@
   --destructive: oklch(0.7 0.19 25);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.68 0.16 260 / 55%);
-  --chart-1: oklch(0.68 0.16 260);
+  --ring: #9caaff;
+  --chart-1: #9caaff;
   --chart-2: oklch(0.68 0.14 145);
   --chart-3: oklch(0.72 0.17 55);
   --chart-4: oklch(0.78 0.15 85);
   --chart-5: oklch(0.75 0.02 258);
   --sidebar: oklch(0.24 0.035 265 / 65%);
   --sidebar-foreground: oklch(0.95 0.01 258);
-  --sidebar-primary: oklch(0.68 0.16 260);
-  --sidebar-primary-foreground: oklch(0.16 0.02 260);
+  --sidebar-primary: #9caaff;
+  --sidebar-primary-foreground: #1d2450;
   --sidebar-accent: oklch(0.68 0.16 260 / 18%);
   --sidebar-accent-foreground: oklch(0.95 0.01 258);
   --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.68 0.16 260 / 55%);
+  --sidebar-ring: #9caaff;
 
-  --brand-blue: oklch(0.68 0.16 260);
+  --brand-blue: #9caaff;
   --brand-green: oklch(0.68 0.14 145);
   --brand-orange: oklch(0.68 0.18 40);
   --brand-yellow: oklch(0.78 0.15 85);
@@ -147,22 +147,17 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      linear-gradient(135deg, oklch(0.62 0.14 260 / 16%) 0%, transparent 40%),
-      linear-gradient(225deg, oklch(0.62 0.14 145 / 14%) 0%, transparent 44%),
-      radial-gradient(circle at 8% 4%, oklch(0.53 0.18 260 / 30%), transparent 55%),
-      radial-gradient(circle at 94% 8%, oklch(0.62 0.14 145 / 24%), transparent 50%),
-      radial-gradient(circle at 88% 96%, oklch(0.6 0.19 40 / 20%), transparent 55%),
-      radial-gradient(circle at 4% 92%, oklch(0.78 0.15 85 / 20%), transparent 50%);
+      linear-gradient(135deg, rgb(151 176 255 / 28%) 0%, transparent 42%),
+      linear-gradient(225deg, rgb(225 172 255 / 24%) 0%, transparent 52%),
+      radial-gradient(circle at 8% 4%, rgb(169 194 255 / 38%), transparent 50%),
+      radial-gradient(circle at 94% 12%, rgb(232 190 255 / 31%), transparent 52%);
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply border border-white/45 shadow-[0_12px_40px_-12px_rgba(20,30,60,0.35)] backdrop-blur-2xl dark:border-white/10;
-    background-color: oklch(1 0 0 / 52%);
-    background-image:
-      linear-gradient(to bottom, oklch(1 0 0 / 26%), oklch(1 0 0 / 0%) 42%),
-      linear-gradient(135deg, oklch(1 0 0 / 16%) 0%, oklch(1 0 0 / 5%) 100%);
+    @apply border-0 bg-transparent shadow-none backdrop-blur-none;
+    background-image: none;
   }
   .glass-surface {
     @apply border border-white/50 shadow-[0_20px_56px_-16px_rgba(20,30,60,0.45)] backdrop-blur-2xl dark:border-white/12;
@@ -170,6 +165,27 @@
     background-image:
       linear-gradient(to bottom, oklch(1 0 0 / 30%), oklch(1 0 0 / 0%) 40%),
       linear-gradient(135deg, oklch(1 0 0 / 20%) 0%, oklch(1 0 0 / 7%) 100%);
+  }
+
+  .config-page-header {
+    @apply border border-white/80 bg-white/85 shadow-[0_12px_28px_-24px_rgba(55,67,138,0.7)] backdrop-blur-sm dark:border-white/12 dark:bg-slate-900/75;
+  }
+
+  .config-page-shell {
+    @apply border border-[#c9d1fb] bg-white shadow-[0_24px_60px_-34px_rgba(65,78,158,0.68)] dark:border-white/12 dark:bg-slate-900;
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 100%) 0%, rgb(249 250 255 / 100%) 100%);
+  }
+
+  .config-subpanel {
+    @apply border border-[#d9dff8] bg-[#f7f8ff] shadow-[0_10px_24px_-24px_rgba(62,74,150,0.6)] dark:border-white/12 dark:bg-white/5;
+  }
+
+  .config-editor-panel {
+    @apply border border-[#d9dff8] bg-white shadow-[0_12px_28px_-26px_rgba(62,74,150,0.68)] dark:border-white/12 dark:bg-slate-900;
+  }
+
+  .config-inset {
+    @apply border border-[#e0e5fa] bg-white shadow-inner shadow-[#dfe4fa]/35 dark:border-white/10 dark:bg-white/5;
   }
 }
 
@@ -179,15 +195,49 @@
  * 说明：以下规则不放入 @layer，优先级高于 Tailwind 工具类。
  */
 @theme {
-  /* 主标题统一 20px（text-lg / text-2xl 用于页面大标题与模块大数字） */
+  /* 辅助 / 正文 / 标题 / 主标题：12 / 14 / 16 / 20px */
+  --text-xs: 12px;
+  --text-xs--line-height: 1.5;
+  --text-sm: 14px;
+  --text-sm--line-height: 1.5;
+  --text-base: 14px;
+  --text-base--line-height: 1.5;
+  /* 主标题统一 20px（text-lg / text-xl / text-2xl 用于页面大标题与模块大数字） */
   --text-lg: 20px;
   --text-lg--line-height: 1.6;
+  --text-xl: 20px;
+  --text-xl--line-height: 1.6;
   --text-2xl: 20px;
   --text-2xl--line-height: 1.6;
 }
 
 body {
   font-size: 14px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* 组件化单选下拉：展开时将箭头翻转，和触发框形成明确的开合反馈。 */
+[data-slot="select-trigger"][data-popup-open] [data-slot="select-chevron"] {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 /* 标题语义：h1 = 页面大标题；h2/h3 = 卡片、分区、表格标题 */
 h1 {
@@ -202,6 +252,11 @@ h2.text-lg,
 h2.text-xl,
 h2.text-2xl {
   font-size: 20px;
+}
+
+/* 原型中的紧凑表格辅助信息不低于 12px。 */
+.text-\[11px\] {
+  font-size: 12px;
 }
 
 /* 移动端字号梯度（不跟随 PC 端） */
@@ -230,7 +285,7 @@ h2.text-2xl {
     font-size: 16px;
   }
   .text-base {
-    font-size: 14px;
+    font-size: 12px;
   }
   .text-sm {
     font-size: 12px;

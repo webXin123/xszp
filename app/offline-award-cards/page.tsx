@@ -45,6 +45,8 @@ const DEFAULT_POINTS = 1
 interface CardEntry {
   id: string
   level1: string
+  level2: string
+  level3: string
   quantity: number
   points: number
 }
@@ -63,9 +65,15 @@ function OfflineAwardCardsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [level1, setLevel1] = useState<string>("")
+  const [level2, setLevel2] = useState<string>("")
+  const [level3, setLevel3] = useState<string>("")
   const [quantity, setQuantity] = useState<number>(1)
   const [points, setPoints] = useState<number>(DEFAULT_POINTS)
   const [exported, setExported] = useState(false)
+
+  const selectedLevel1Group = AWARD_GROUPS.find((group) => group.level1 === level1)
+  const selectedLevel2Group = selectedLevel1Group?.items.find((group) => group.level2 === level2)
+  const selectedLevel3 = selectedLevel2Group?.items.find((item) => item.id === level3)
 
   const total = useMemo(
     () => entries.reduce((sum, e) => sum + e.quantity, 0),
@@ -75,6 +83,8 @@ function OfflineAwardCardsPage() {
   const openCreateDialog = () => {
     setEditingId(null)
     setLevel1("")
+    setLevel2("")
+    setLevel3("")
     setQuantity(1)
     setPoints(DEFAULT_POINTS)
     setDialogOpen(true)
@@ -83,6 +93,8 @@ function OfflineAwardCardsPage() {
   const openEditDialog = (entry: CardEntry) => {
     setEditingId(entry.id)
     setLevel1(entry.level1)
+    setLevel2(entry.level2)
+    setLevel3(entry.level3)
     setQuantity(entry.quantity)
     setPoints(entry.points)
     setDialogOpen(true)
@@ -96,15 +108,17 @@ function OfflineAwardCardsPage() {
   const handleDialogConfirm = () => {
     const q = clampInt(quantity, 1, MAX_QTY)
     const p = clampInt(points, 0, MAX_POINTS)
-    if (!level1 || q <= 0) return
+    if (!level1 || !level2 || !level3 || !selectedLevel3 || q <= 0) return
     if (editingId) {
       setEntries((prev) =>
-        prev.map((e) => (e.id === editingId ? { ...e, level1, quantity: q, points: p } : e)),
+        prev.map((e) =>
+          e.id === editingId ? { ...e, level1, level2, level3, quantity: q, points: p } : e,
+        ),
       )
     } else {
       setEntries((prev) => [
         ...prev,
-        { id: newEntryId(), level1, quantity: q, points: p },
+        { id: newEntryId(), level1, level2, level3, quantity: q, points: p },
       ])
     }
     setExported(false)
@@ -121,7 +135,7 @@ function OfflineAwardCardsPage() {
     const rows: AwardCardExportRow[] = []
     for (const e of entries) {
       for (let i = 0; i < e.quantity; i += 1) {
-        rows.push({ level1: e.level1, points: e.points })
+        rows.push({ level1: e.level1, level2: e.level2, level3: e.level3, points: e.points })
       }
     }
     exportAwardCardsExcel(rows)
@@ -133,9 +147,10 @@ function OfflineAwardCardsPage() {
         studentId: "offline",
         studentName: "线下发放",
         classId: "offline",
-        indicatorId: `offline-${r.level1}`,
+        indicatorId: `offline-${r.level1}-${r.level2}-${r.level3}`,
         level1: r.level1,
-        level2: "线下奖卡",
+        level2: r.level2,
+        level3: r.level3,
         points: r.points,
         weekKey,
         date: today,
@@ -149,41 +164,43 @@ function OfflineAwardCardsPage() {
   // 权限门禁：仅管理员可下载奖卡
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
-        <Download className="size-10 text-muted-foreground" />
-        <p className="text-sm font-semibold text-foreground">无下载权限</p>
-        <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-3xl border border-[#cfd8f6] bg-white p-8 text-center shadow-[0_24px_50px_-34px_rgba(53,67,150,0.7)]">
+        <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Download className="size-7" /></span>
+        <p className="text-base font-bold text-foreground">无下载权限</p>
+        <p className="text-xs leading-relaxed text-muted-foreground">
           线下奖卡下载仅对管理员开放。可在右上角切换身份为「李静 · 管理员」后体验。
         </p>
         <Link
           href="/"
-          className="mt-2 rounded-xl bg-gradient-to-r from-primary to-primary-2 px-5 py-2 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/30 transition hover:shadow-lg hover:shadow-primary/40 hover:brightness-105"
+          className="mt-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
         >
           返回主页
         </Link>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col px-4 pb-4 pt-16 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-transparent px-4 pb-5 pt-16 sm:px-6">
       {/* 固定顶栏：与主站一致 */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur-xl">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-[#d8def7] bg-white/92 shadow-[0_10px_24px_-24px_rgba(55,67,145,0.74)] backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
           <div className="flex shrink-0 items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg ring-1 ring-border/40">
-              <Image src="/mzlg/images/logo.png" alt="明珠临港" width={30} height={30} />
+            <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg border border-[#d9dff5] bg-[#f7f8ff]">
+              <Image src="/xszp/images/logo.png" alt="屹力学生综评" width={30} height={30} />
             </span>
             <div className="hidden flex-col leading-tight md:flex">
-              <span className="text-sm font-bold text-foreground">明珠临港</span>
-              <span className="text-xs text-muted-foreground">学生综合评价</span>
+              <span className="text-sm font-bold text-foreground">屹力学生综评</span>
+              <span className="text-xs text-muted-foreground">综合评价平台</span>
             </div>
           </div>
 
           <nav className="flex min-w-0 items-center gap-1">
             <Link
-              href="/"
-              className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+              href="/class-evaluation"
+              className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition hover:text-primary"
             >
               <Award className="size-4" />
               班级评价
@@ -199,24 +216,25 @@ function OfflineAwardCardsPage() {
         </div>
       </header>
 
-      <div className="mx-auto flex w-full flex-1 flex-col gap-4 max-w-[1240px]">
-        <main className="glass-panel flex w-full min-w-0 flex-col gap-6 rounded-2xl p-4 sm:p-6">
+      <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col gap-4 rounded-[30px] bg-white/25 p-1">
+        <main className="flex w-full min-w-0 flex-col gap-6 rounded-[26px] border border-[#cfd8f6] bg-white p-4 shadow-[0_24px_54px_-36px_rgba(53,67,150,0.72)] sm:p-6">
           {/* ---------------- 标题 + 操作 ---------------- */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-lg font-bold text-foreground">线下奖卡下载</h1>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                点击「增加奖卡」选择一级指标、数量与积分，确认后点右上「确认导出」生成 Excel
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dee4f8] bg-gradient-to-r from-[#f1f3ff] via-white to-[#f8f4ff] p-4 sm:p-5">
+            <div className="min-w-0">
+              <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">线下发放</span>
+              <h1 className="mt-2 text-xl font-bold text-foreground">线下奖卡下载</h1>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                点击「增加奖卡」选择一级、二级、三级指标，设置数量与积分，确认后点右上「确认导出」生成 Excel
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-brand-green/15 px-3 py-1 text-sm font-semibold text-brand-green">
-                合计 {total} 张
+              <span className="rounded-xl border border-primary/15 bg-white px-3 py-2 text-sm font-bold text-primary shadow-[0_6px_14px_-14px_rgba(54,67,153,0.85)]">
+                合计 <span className="tabular-nums">{total}</span> 张
               </span>
               <Button
                 type="button"
                 size="sm"
-                className="rounded-lg"
+                className="h-10 rounded-xl px-4 shadow-[0_10px_20px_-14px_rgba(54,67,153,0.9)]"
                 disabled={total <= 0}
                 onClick={handleExport}
               >
@@ -228,19 +246,19 @@ function OfflineAwardCardsPage() {
 
           {/* ---------------- 空态 / 卡片列表 ---------------- */}
           {entries.length === 0 ? (
-            <div className="glass-panel flex flex-col items-center justify-center gap-3 rounded-2xl border-dashed py-14">
-              <span className="flex size-14 items-center justify-center rounded-full bg-muted/50">
-                <Award className="size-7 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#cbd5f5] bg-[#f8f9ff] py-16">
+              <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Award className="size-7" />
               </span>
               <div className="flex flex-col items-center gap-1">
                 <p className="text-sm font-semibold text-foreground">还未添加奖卡</p>
                 <p className="text-xs text-muted-foreground">
-                  点击下方按钮，从 10 类一级指标中选择并设置发放数量、奖卡积分
+                  点击下方按钮，选择一级、二级、三级指标并设置发放数量、奖卡积分
                 </p>
               </div>
               <Button
                 type="button"
-                className="mt-1 rounded-lg"
+                className="mt-1 h-10 rounded-xl px-4"
                 onClick={openCreateDialog}
               >
                 <Plus className="size-4" />
@@ -252,39 +270,41 @@ function OfflineAwardCardsPage() {
               <div className="flex flex-col gap-3">
                 {entries.map((entry) => {
                   const group = getAwardGroup(entry.level1)
-                  const cover = group?.items[0]?.image ?? null
+                  const level2Group = group?.items.find((item) => item.level2 === entry.level2)
+                  const indicator = level2Group?.items.find((item) => item.id === entry.level3)
+                  const cover = indicator?.image ?? null
                   return (
                     <div
                       key={entry.id}
-                      className="glass-panel flex flex-wrap items-center gap-4 rounded-2xl border-brand-green/40 p-3 transition"
+                      className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#dce3f7] bg-[#fbfcff] p-3.5 shadow-[0_10px_22px_-22px_rgba(55,67,145,0.65)] transition hover:border-primary/35 hover:bg-white"
                     >
                       {cover ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={cover}
                           alt={`${entry.level1} 奖卡封面`}
-                          className="size-16 shrink-0 rounded-xl border border-border/40 bg-white object-contain"
+                          className="size-16 shrink-0 rounded-xl border border-[#dce2f5] bg-white object-contain shadow-sm"
                         />
                       ) : (
-                        <span className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-white/5">
+                        <span className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-[#dce2f5] bg-white text-primary">
                           <Award className="size-6 text-muted-foreground" />
                         </span>
                       )}
 
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <p className="text-sm font-semibold text-foreground">
-                          {entry.level1}
+                          {entry.level1} · {entry.level2}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          二级指标：{group ? group.items.map((i) => i.level2).join("、") : "-"}
+                          三级指标：{indicator?.level3 ?? entry.level3}
                         </p>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-primary/15 px-3 py-1 text-sm font-semibold text-primary">
+                        <span className="rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-bold text-primary">
                           {entry.points} 积分
                         </span>
-                        <span className="rounded-full bg-brand-green/15 px-3 py-1 text-sm font-semibold text-brand-green">
+                        <span className="rounded-lg bg-emerald-100 px-3 py-1.5 text-sm font-bold text-emerald-700">
                           ×{entry.quantity} 张
                         </span>
                       </div>
@@ -293,7 +313,7 @@ function OfflineAwardCardsPage() {
                         <button
                           type="button"
                           onClick={() => openEditDialog(entry)}
-                          className="flex size-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition hover:bg-accent/60 hover:text-foreground"
+                          className="flex size-9 items-center justify-center rounded-lg border border-[#dce2f5] bg-white text-muted-foreground transition hover:border-primary/35 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                           aria-label={`编辑 ${entry.level1}`}
                         >
                           <Pencil className="size-3.5" />
@@ -301,7 +321,7 @@ function OfflineAwardCardsPage() {
                         <button
                           type="button"
                           onClick={() => removeEntry(entry.id)}
-                          className="flex size-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                          className="flex size-9 items-center justify-center rounded-lg border border-[#dce2f5] bg-white text-muted-foreground transition hover:border-destructive/35 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30"
                           aria-label={`删除 ${entry.level1}`}
                         >
                           <Trash2 className="size-3.5" />
@@ -316,7 +336,7 @@ function OfflineAwardCardsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-lg bg-transparent"
+                  className="h-10 rounded-xl border-[#d5dcf5] bg-[#f8f9ff] px-4 hover:bg-primary/5"
                   onClick={openCreateDialog}
                 >
                   <Plus className="size-4" />
@@ -328,7 +348,7 @@ function OfflineAwardCardsPage() {
 
           {/* ---------------- 导出成功提示 ---------------- */}
           {exported && (
-            <div className="glass-panel flex items-center gap-2 rounded-2xl p-3 text-sm font-medium text-brand-green">
+            <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
               <CheckCircle className="size-4" />
               已生成 {total} 张线下奖卡，Excel 已自动下载
             </div>
@@ -338,11 +358,11 @@ function OfflineAwardCardsPage() {
 
       {/* ---------------- 增加 / 编辑奖卡弹窗 ---------------- */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="border border-[#d4dcf7] bg-white shadow-[0_26px_60px_-30px_rgba(53,67,150,0.65)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "编辑奖卡" : "增加奖卡"}</DialogTitle>
             <DialogDescription>
-              选择一级指标，并设置本次发放的数量与每张奖卡的积分
+              一级、二级、三级指标均为必选项，再设置本次发放的数量与每张奖卡的积分
             </DialogDescription>
           </DialogHeader>
 
@@ -351,14 +371,68 @@ function OfflineAwardCardsPage() {
               <label className="text-xs font-medium text-foreground">
                 一级指标 <span className="text-destructive">*</span>
               </label>
-              <Select value={level1} onValueChange={(v) => setLevel1(String(v ?? ""))}>
-                <SelectTrigger className="w-full">
+              <Select
+                value={level1}
+                onValueChange={(v) => {
+                  setLevel1(String(v ?? ""))
+                  setLevel2("")
+                  setLevel3("")
+                }}
+              >
+                <SelectTrigger className="w-full border-[#dce2f5] bg-[#f9faff]">
                   <SelectValue placeholder="请选择一级指标" />
                 </SelectTrigger>
                 <SelectContent>
                   {AWARD_GROUPS.map((g) => (
                     <SelectItem key={g.level1} value={g.level1}>
                       {g.level1}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-foreground">
+                二级指标 <span className="text-destructive">*</span>
+              </label>
+              <Select
+                value={level2}
+                onValueChange={(v) => {
+                  setLevel2(String(v ?? ""))
+                  setLevel3("")
+                }}
+                disabled={!level1}
+              >
+                <SelectTrigger className="w-full border-[#dce2f5] bg-[#f9faff]">
+                  <SelectValue placeholder="请选择二级指标" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedLevel1Group?.items.map((group) => (
+                    <SelectItem key={group.level2} value={group.level2}>
+                      {group.level2}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-foreground">
+                三级指标 <span className="text-destructive">*</span>
+              </label>
+              <Select
+                value={selectedLevel3?.level3 ?? ""}
+                onValueChange={(v) => setLevel3(selectedLevel2Group?.items.find((item) => item.level3 === v)?.id ?? "")}
+                disabled={!level2}
+              >
+                <SelectTrigger className="w-full border-[#dce2f5] bg-[#f9faff]">
+                  <SelectValue placeholder="请选择三级指标" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedLevel2Group?.items.map((item) => (
+                    <SelectItem key={item.id} value={item.level3}>
+                      {item.level3}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -376,7 +450,7 @@ function OfflineAwardCardsPage() {
                   max={MAX_QTY}
                   value={quantity}
                   onChange={(e) => setQuantity(clampInt(e.target.value, 0, MAX_QTY))}
-                  className="glass-panel h-9 rounded-lg border-border/60 bg-transparent px-3 text-sm font-semibold text-foreground outline-none focus:border-primary/60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="h-10 rounded-lg border border-[#dce2f5] bg-[#f9faff] px-3 text-sm font-semibold text-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   aria-label="发放数量"
                 />
               </div>
@@ -390,7 +464,7 @@ function OfflineAwardCardsPage() {
                   max={MAX_POINTS}
                   value={points}
                   onChange={(e) => setPoints(clampInt(e.target.value, 0, MAX_POINTS))}
-                  className="glass-panel h-9 rounded-lg border-border/60 bg-transparent px-3 text-sm font-semibold text-foreground outline-none focus:border-primary/60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="h-10 rounded-lg border border-[#dce2f5] bg-[#f9faff] px-3 text-sm font-semibold text-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   aria-label="奖卡积分"
                 />
               </div>
@@ -412,7 +486,12 @@ function OfflineAwardCardsPage() {
             </Button>
             <Button
               type="button"
-              disabled={!level1 || clampInt(quantity, 0, MAX_QTY) <= 0}
+              disabled={
+                !level1 ||
+                !level2 ||
+                !level3 ||
+                clampInt(quantity, 0, MAX_QTY) <= 0
+              }
               onClick={handleDialogConfirm}
             >
               确认

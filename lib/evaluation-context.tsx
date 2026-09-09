@@ -2,15 +2,20 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { CLASSES, GRADES, PARENT_USERS, STUDENTS, TEACHERS } from "./mock-data"
+import { getFiveEducationLevel1 } from "./award-utils"
+import { buildPointEntries, getSemesterRange, inRange } from "./points-utils"
 import type {
   Activity,
   ActivityEvaluation,
   ActivitySubmission,
   AwardCardRecord,
   AwardSource,
+  ClassRatingConfig,
   CurrentUser,
   Enrollment,
   EnrollmentStatus,
+  FlagConfig,
+  FlagPeriod,
   HonorLevel,
   HonorRecord,
   ParentUser,
@@ -19,11 +24,13 @@ import type {
   WeeklyFlag,
 } from "./types"
 import { formatDate, getISOWeekKey, getWeekRange } from "./scoring-utils"
-import { isEnrolling } from "./activity-utils"
+import { getActivityStatus, isEnrolling, requiresActivityEnrollment, requiresActivityPointsExchange } from "./activity-utils"
 import type { PeScoreUpload } from "./pe-scores"
 
 const RECORDS_KEY = "mzlg-score-records-v1"
 const FLAGS_KEY = "mzlg-weekly-flags-v1"
+const FLAG_CONFIGS_KEY = "mzlg-flag-configs-v1"
+const CLASS_RATING_CONFIGS_KEY = "mzlg-class-rating-configs-v1"
 const AWARD_CARDS_KEY = "mzlg-award-cards-v1"
 const HONORS_KEY = "mzlg-honors-v1"
 const ACTIVITIES_KEY = "mzlg-activities-v1"
@@ -33,6 +40,19 @@ const EVALUATIONS_KEY = "mzlg-evaluations-v1"
 const CURRENT_USER_KEY = "mzlg-current-user-v1"
 const PE_SCORES_KEY = "mzlg-pe-scores-v1"
 
+const DEFAULT_FLAG_CONFIGS: FlagConfig[] = [
+  { id: "week-civility", period: "week", name: "文明礼仪示范班", enabled: true, syncFiveEducation: true, syncLevel1: "德育", syncLevel2: "文明礼仪", syncLevel3: "主动问好" },
+  { id: "week-clean", period: "week", name: "卫生流动红旗", enabled: true, syncFiveEducation: false },
+  { id: "month-excellent", period: "month", name: "月度优雅班集体", enabled: true, syncFiveEducation: true, syncLevel1: "智育", syncLevel2: "学习习惯", syncLevel3: "专注听讲" },
+  { id: "month-growth", period: "month", name: "成长示范班", enabled: false, syncFiveEducation: false },
+]
+
+const DEFAULT_CLASS_RATING_CONFIGS: ClassRatingConfig[] = [
+  { id: "rating-demonstration", name: "优雅示范", description: "表现突出、礼仪规范，持续发挥班级示范作用。", image: null, defaultImage: "smile", autoIssueDay: "saturday", rankStart: "1", rankEnd: "2", theme: "blue" },
+  { id: "rating-growth", name: "稳步成长", description: "保持稳定进步，在合作与成长中形成班级特色。", image: null, defaultImage: "smile", autoIssueDay: "sunday", rankStart: "3", rankEnd: "6", theme: "green" },
+  { id: "rating-encouragement", name: "成长加油", description: "积极参与、持续改善，在每一次努力中积累成长。", image: null, defaultImage: "cry", autoIssueDay: "monday", rankStart: "7", rankEnd: "99", theme: "orange" },
+]
+
 function seedRecords(): ScoreRecord[] {
   const now = Date.now()
   const day = 86400000
@@ -40,6 +60,8 @@ function seedRecords(): ScoreRecord[] {
   const yesterday = formatDate(new Date(now - day))
   const twoDaysAgo = formatDate(new Date(now - 2 * day))
   const threeDaysAgo = formatDate(new Date(now - 3 * day))
+  const previousWeekDate = new Date(now - 7 * day)
+  const previousWeekRankingDate = formatDate(getWeekRange(previousWeekDate).start)
 
   const mk = (
     id: string,
@@ -88,6 +110,21 @@ function seedRecords(): ScoreRecord[] {
     mk("seed-14", "class-5-2", yesterday, "早操", "进退场秩序", "zc-4", 1, -3, [], "进场队伍不整齐", "teacher-zhou", "周海峰", 1),
     mk("seed-15", "class-mz-4-1", today, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["李晓雨"], "未按要求穿校服", "teacher-gu", "顾伟", 0),
     mk("seed-16", "class-6-1", twoDaysAgo, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["王浩然"], "未穿校服", "teacher-zhao", "赵得鑫", 2),
+    // 排名演示数据：6-1 为第 1 名，6-2 与 7-1 并列第 2 名，下一名自然显示为第 4 名。
+    mk("seed-ranking-1", "class-6-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -1, [], "上周班级排名演示：轻微扣分", "teacher-zhao", "赵得鑫", 8),
+    mk("seed-ranking-2", "class-6-2", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -3, [], "上周班级排名演示：并列第 2 名", "teacher-wang", "王芳", 8),
+    mk("seed-ranking-3", "class-7-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -3, [], "上周班级排名演示：并列第 2 名", "teacher-xu", "徐蓉", 8),
+    mk("seed-ranking-4", "class-6-3", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -5, [], "上周班级排名演示：第 4 名", "teacher-shen", "沈亦菲", 8),
+    mk("seed-ranking-5", "class-6-4", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -6, [], "上周班级排名演示", "teacher-jiang", "蒋文博", 8),
+    mk("seed-ranking-6", "class-5-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -7, [], "上周班级排名演示", "teacher-he", "何淑芬", 8),
+    mk("seed-ranking-7", "class-5-2", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -8, [], "上周班级排名演示", "teacher-zhou", "周海峰", 8),
+    mk("seed-ranking-8", "class-5-3", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -9, [], "上周班级排名演示", "teacher-qiu", "邱志远", 8),
+    mk("seed-ranking-9", "class-7-2", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -10, [], "上周班级排名演示", "teacher-cui", "崔嘉禾", 8),
+    mk("seed-ranking-10", "class-7-3", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -11, [], "上周班级排名演示", "teacher-tang", "汤朗", 8),
+    mk("seed-ranking-11", "class-8-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -12, [], "上周班级排名演示", "teacher-fu", "傅逸华", 8),
+    mk("seed-ranking-12", "class-8-2", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -13, [], "上周班级排名演示", "teacher-tan", "谭雪莹", 8),
+    mk("seed-ranking-13", "class-mz-4-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -14, [], "上周班级排名演示", "teacher-gu", "顾伟", 8),
+    mk("seed-ranking-14", "class-mz-4-2", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -15, [], "上周班级排名演示", "teacher-zhang", "章丽", 8),
   ]
 }
 
@@ -128,8 +165,9 @@ function seedAwardCards(): AwardCardRecord[] {
     studentName: nameOf(studentId),
     classId,
     indicatorId,
-    level1,
-    level2,
+    level1: getFiveEducationLevel1(level1),
+    level2: level1,
+    level3: level2,
     points,
     weekKey,
     date,
@@ -155,6 +193,31 @@ function seedAwardCards(): AwardCardRecord[] {
       "flag_reward",
     ),
   )
+  // 学生榜演示数据：制造 1 名第 1 名、2 名并列第 2 名，下一名显示为第 4 名。
+  const leaderboardBoosts: AwardCardRecord[] = ([
+    ["class-6-1-stu-1", 5],
+    ["class-6-1-stu-2", 6],
+    ["class-7-1-stu-2", 4],
+    ["class-7-1-stu-1", 1],
+  ] as Array<[string, number]>).flatMap(([studentId, count], groupIndex) => {
+    const student = STUDENTS.find((s) => s.id === studentId)
+    if (!student) return []
+    return Array.from({ length: count }, (_, index) =>
+      mk(
+        `award-leaderboard-${groupIndex + 1}-${index + 1}`,
+        student.id,
+        student.classId,
+        "award-1-1",
+        "智慧小博士",
+        "乐于探究",
+        1,
+        today,
+        "system",
+        "排行榜演示数据",
+        0,
+      ),
+    )
+  })
   return [
     mk("award-seed-1", "class-6-1-stu-1", "class-6-1", "award-1-1", "智慧小博士", "乐于探究", 1, today, "teacher-zhao", "赵得鑫", 0),
     mk("award-seed-2", "class-6-1-stu-2", "class-6-1", "award-7-1", "合作创享星", "团队协作", 1, today, "teacher-zhao", "赵得鑫", 0),
@@ -174,6 +237,7 @@ function seedAwardCards(): AwardCardRecord[] {
     mk("award-seed-15", "class-6-1-stu-5", "class-6-1", "award-4-1", "健康小能手", "热爱运动", 1, yesterday, "system", "线下扫码", 1, "offline_scan"),
     mk("award-seed-16", "class-6-1-stu-6", "class-6-1", "award-6-1", "家国红五星", "家国情怀", 1, today, "system", "线下扫码", 0, "offline_scan"),
     mk("award-seed-17", "class-6-2-stu-4", "class-6-2", "award-9-2", "自信创造星", "大胆创新", 1, yesterday, "system", "线下扫码", 1, "offline_scan"),
+    ...leaderboardBoosts,
     // 流动红旗奖励
     ...flagRewards,
   ]
@@ -214,7 +278,7 @@ function seedHonors(): HonorRecord[] {
       studentId,
       studentName: s?.name ?? "",
       classId: s?.classId ?? "",
-      level1,
+      level1: getFiveEducationLevel1(level1),
       honorLevel,
       points,
       honorName,
@@ -242,6 +306,12 @@ function seedHonors(): HonorRecord[] {
   ]
 }
 
+/** 补齐后续版本新增的演示记录，不覆盖用户已有的本地数据。 */
+function mergeMissingDemoRecords<T extends { id: string }>(stored: T[], fixtures: T[]) {
+  const existingIds = new Set(stored.map((item) => item.id))
+  return [...stored, ...fixtures.filter((item) => !existingIds.has(item.id))]
+}
+
 function seedActivities(): Activity[] {
   const now = Date.now()
   const day = 86400000
@@ -253,9 +323,15 @@ function seedActivities(): Activity[] {
       title: "校园劳动实践周",
       description:
         "为期一周的校园劳动实践，参与班级卫生包干区维护、图书角整理与校园绿化养护，培养劳动意识与责任担当。",
-      level1: "责任担当星",
+      level1: "劳育",
       gradeIds: ["grade-6"],
       classIds: ["class-6-1", "class-6-2", "class-6-3", "class-6-4"],
+      requiresEnrollment: true,
+      requiresPointsExchange: true,
+      pointRequirements: [
+        { level1: "劳育", minimumPoints: 6 },
+        { level1: "德育", minimumPoints: 4 },
+      ],
       enrollStart: date(-3),
       enrollEnd: date(2),
       startDate: date(4),
@@ -273,9 +349,12 @@ function seedActivities(): Activity[] {
       title: "明珠读书会·共读《草房子》",
       description:
         "以小组共读形式开展整本书阅读，活动结束后提交读书感悟与实践成果，优秀作品在读书节展示。",
-      level1: "智慧小博士",
+      level1: "智育",
       gradeIds: ["grade-7"],
       classIds: ["class-7-1", "class-7-2", "class-7-3"],
+      requiresEnrollment: true,
+      requiresPointsExchange: true,
+      pointRequirements: [{ level1: "智育", minimumPoints: 8 }],
       enrollStart: date(-5),
       enrollEnd: date(-1),
       startDate: date(1),
@@ -292,9 +371,12 @@ function seedActivities(): Activity[] {
       id: "act-3",
       title: "阳光体育·班级拔河联赛",
       description: "以班级为单位组队参加年级拔河联赛，弘扬团队协作与拼搏精神，记录赛场精彩瞬间。",
-      level1: "健康小能手",
+      level1: "体育",
       gradeIds: ["grade-5", "grade-6"],
       classIds: ["class-5-1", "class-5-2", "class-5-3", "class-6-1", "class-6-2"],
+      requiresEnrollment: false,
+      requiresPointsExchange: false,
+      pointRequirements: [],
       enrollStart: date(-8),
       enrollEnd: date(-4),
       startDate: date(-2),
@@ -312,9 +394,12 @@ function seedActivities(): Activity[] {
       title: "校园艺术展演·班级合唱",
       description:
         "以班级合唱形式参与校园艺术展演，活动结束后提交排练照片与活动感悟，丰富美育成长记录。",
-      level1: "才艺智多星",
+      level1: "美育",
       gradeIds: ["grade-6"],
       classIds: ["class-6-1", "class-6-2", "class-6-3", "class-6-4"],
+      requiresEnrollment: true,
+      requiresPointsExchange: true,
+      pointRequirements: [{ level1: "美育", minimumPoints: 5 }],
       enrollStart: date(-14),
       enrollEnd: date(-10),
       startDate: date(-9),
@@ -327,7 +412,98 @@ function seedActivities(): Activity[] {
       publisherName: "李静",
       createdAt: iso(now - 15 * day),
     },
+    {
+      id: "act-5",
+      title: "小小志愿者·图书整理日",
+      description: "在图书馆老师指导下完成归类、上架与阅读角整理，记录服务过程并提交一张活动照片。",
+      level1: "德育",
+      gradeIds: ["grade-5"],
+      classIds: ["class-5-1"],
+      requiresEnrollment: false,
+      requiresPointsExchange: false,
+      pointRequirements: [],
+      enrollStart: "",
+      enrollEnd: "",
+      startDate: date(2),
+      endDate: date(2),
+      pointsCost: 0,
+      capacity: 0,
+      location: "图书馆一楼服务台",
+      status: "ongoing",
+      publisherId: "teacher-li",
+      publisherName: "李静",
+      createdAt: iso(now - 2 * day),
+    },
+    {
+      id: "act-6",
+      title: "科技创想工作坊·校园节水装置",
+      description: "以小组为单位完成节水装置设计、制作与展示，入选方案将在校园科技节进行集中展评。",
+      level1: "智育",
+      gradeIds: ["grade-7"],
+      classIds: ["class-7-1"],
+      requiresEnrollment: true,
+      requiresPointsExchange: true,
+      pointRequirements: [
+        { level1: "智育", minimumPoints: 10 },
+        { level1: "劳育", minimumPoints: 5 },
+      ],
+      enrollStart: date(-1),
+      enrollEnd: date(3),
+      startDate: date(5),
+      endDate: date(6),
+      pointsCost: 6,
+      capacity: 18,
+      location: "创客空间 A201",
+      status: "recruiting",
+      publisherId: "teacher-xu",
+      publisherName: "徐蓉",
+      createdAt: iso(now - 1 * day),
+    },
+    {
+      id: "act-7",
+      title: "书香午间·班级共读时光",
+      description: "利用午间阅读时间开展班级共读与好书分享，学生可直接参加并记录本周阅读收获。",
+      gradeIds: ["grade-5", "grade-6"],
+      classIds: ["class-5-1", "class-5-2", "class-6-1", "class-6-2"],
+      requiresEnrollment: false,
+      requiresPointsExchange: false,
+      pointRequirements: [],
+      enrollStart: "",
+      enrollEnd: "",
+      startDate: date(1),
+      endDate: date(5),
+      pointsCost: 0,
+      capacity: 0,
+      location: "各班教室阅读角",
+      status: "draft",
+      publisherId: "teacher-li",
+      publisherName: "李静",
+      createdAt: iso(now - 1 * day),
+    },
   ]
+}
+
+/** 兼容旧版浏览器缓存：原“已归档”活动统一归入“已结束”。 */
+function normalizeActivities(items: unknown): Activity[] {
+  if (!Array.isArray(items)) return seedActivities()
+  const normalize = (item: unknown) => {
+    const activity = item as Omit<Activity, "status"> & { status?: string }
+    const legacyStatus = activity.status === "closed" ? "ended" : (activity.status ?? "draft")
+    return {
+      ...activity,
+      status: getActivityStatus({
+        ...activity,
+        status: legacyStatus as Activity["status"],
+      }),
+    } as Activity
+  }
+  const normalized = items.map(normalize)
+  // 已有浏览器缓存时，补入新增的免报名活动示例，便于展示“可直接参加”场景。
+  const directParticipationMock = seedActivities().find((activity) => activity.id === "act-7")
+  if (directParticipationMock && !normalized.some((activity) => activity.id === directParticipationMock.id)) {
+    normalized.push(normalize(directParticipationMock))
+  }
+  return normalized
 }
 
 function seedEnrollments(): Enrollment[] {
@@ -452,7 +628,15 @@ interface EvaluationContextValue {
   records: ScoreRecord[]
   addRecord: (record: Omit<ScoreRecord, "id" | "createdAt" | "operatorId" | "operatorName">) => void
   flags: WeeklyFlag[]
-  setFlag: (classId: string, weekKey: string, awarded: boolean) => void
+  flagConfigs: FlagConfig[]
+  updateFlagConfig: (id: string, patch: Partial<FlagConfig>) => void
+  addFlagConfig: (config: FlagConfig) => void
+  removeFlagConfig: (id: string) => void
+  classRatingConfigs: ClassRatingConfig[]
+  updateClassRatingConfig: (id: string, patch: Partial<ClassRatingConfig>) => void
+  addClassRatingConfig: (config: ClassRatingConfig) => void
+  removeClassRatingConfig: (id: string) => void
+  setFlag: (classId: string, periodKey: string, awarded: boolean, configId?: string, period?: FlagPeriod) => void
   /** 为获流动红旗的班级全部学生发放“合作创享星”奖卡（+1），同一周同一班只发一次 */
   issueFlagReward: (classId: string, weekKey: string) => void
   awardCards: AwardCardRecord[]
@@ -503,6 +687,8 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<CurrentUser>(() => TEACHERS.find((t) => t.id === "teacher-chen") ?? TEACHERS[0])
   const [records, setRecords] = useState<ScoreRecord[]>([])
   const [flags, setFlags] = useState<WeeklyFlag[]>([])
+  const [flagConfigs, setFlagConfigs] = useState<FlagConfig[]>([])
+  const [classRatingConfigs, setClassRatingConfigs] = useState<ClassRatingConfig[]>([])
   const [awardCards, setAwardCards] = useState<AwardCardRecord[]>([])
   const [honors, setHonors] = useState<HonorRecord[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
@@ -517,6 +703,8 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     try {
       const rawRecords = localStorage.getItem(RECORDS_KEY)
       const rawFlags = localStorage.getItem(FLAGS_KEY)
+      const rawFlagConfigs = localStorage.getItem(FLAG_CONFIGS_KEY)
+      const rawClassRatingConfigs = localStorage.getItem(CLASS_RATING_CONFIGS_KEY)
       const rawAwardCards = localStorage.getItem(AWARD_CARDS_KEY)
       const rawHonors = localStorage.getItem(HONORS_KEY)
       const rawActivities = localStorage.getItem(ACTIVITIES_KEY)
@@ -525,11 +713,19 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       const rawEvaluations = localStorage.getItem(EVALUATIONS_KEY)
       const rawCurrentUser = localStorage.getItem(CURRENT_USER_KEY)
       const rawPeScores = localStorage.getItem(PE_SCORES_KEY)
-      setRecords(rawRecords ? JSON.parse(rawRecords) : seedRecords())
+      const storedRecords = rawRecords ? JSON.parse(rawRecords) as ScoreRecord[] : null
+      const storedAwardCards = rawAwardCards ? JSON.parse(rawAwardCards) as AwardCardRecord[] : null
+      setRecords(storedRecords
+        ? mergeMissingDemoRecords(storedRecords, seedRecords().filter((item) => item.id.startsWith("seed-ranking-")))
+        : seedRecords())
       setFlags(rawFlags ? JSON.parse(rawFlags) : seedFlags())
-      setAwardCards(rawAwardCards ? JSON.parse(rawAwardCards) : seedAwardCards())
+      setFlagConfigs(rawFlagConfigs ? JSON.parse(rawFlagConfigs) : DEFAULT_FLAG_CONFIGS)
+      setClassRatingConfigs(rawClassRatingConfigs ? JSON.parse(rawClassRatingConfigs) : DEFAULT_CLASS_RATING_CONFIGS)
+      setAwardCards(storedAwardCards
+        ? mergeMissingDemoRecords(storedAwardCards, seedAwardCards().filter((item) => item.id.startsWith("award-leaderboard-")))
+        : seedAwardCards())
       setHonors(rawHonors ? JSON.parse(rawHonors) : seedHonors())
-      setActivities(rawActivities ? JSON.parse(rawActivities) : seedActivities())
+      setActivities(rawActivities ? normalizeActivities(JSON.parse(rawActivities)) : normalizeActivities(seedActivities()))
       setEnrollments(rawEnrollments ? JSON.parse(rawEnrollments) : seedEnrollments())
       setSubmissions(rawSubmissions ? JSON.parse(rawSubmissions) : seedSubmissions())
       setEvaluations(rawEvaluations ? JSON.parse(rawEvaluations) : seedEvaluations())
@@ -549,6 +745,8 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     } catch {
       setRecords(seedRecords())
       setFlags(seedFlags())
+      setFlagConfigs(DEFAULT_FLAG_CONFIGS)
+      setClassRatingConfigs(DEFAULT_CLASS_RATING_CONFIGS)
       setAwardCards(seedAwardCards())
       setHonors(seedHonors())
       setActivities(seedActivities())
@@ -563,6 +761,25 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
+    const syncActivityStatus = () => {
+      setActivities((prev) => {
+        let changed = false
+        const next = prev.map((activity) => {
+          const status = getActivityStatus(activity)
+          if (status === activity.status) return activity
+          changed = true
+          return { ...activity, status }
+        })
+        return changed ? next : prev
+      })
+    }
+    syncActivityStatus()
+    const timer = window.setInterval(syncActivityStatus, 60_000)
+    return () => window.clearInterval(timer)
+  }, [hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
     localStorage.setItem(RECORDS_KEY, JSON.stringify(records))
   }, [records, hydrated])
 
@@ -570,6 +787,16 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return
     localStorage.setItem(FLAGS_KEY, JSON.stringify(flags))
   }, [flags, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(FLAG_CONFIGS_KEY, JSON.stringify(flagConfigs))
+  }, [flagConfigs, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(CLASS_RATING_CONFIGS_KEY, JSON.stringify(classRatingConfigs))
+  }, [classRatingConfigs, hydrated])
 
   useEffect(() => {
     if (!hydrated) return
@@ -646,14 +873,21 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
 
   const addAwardCards: EvaluationContextValue["addAwardCards"] = (cards) => {
     if (!currentTeacher) return
-    const stamped = cards.map((card) => ({
-      ...card,
-      source: "online" as const,
-      id: `award-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      operatorId: currentTeacher.id,
-      operatorName: currentTeacher.name,
-      createdAt: new Date().toISOString(),
-    }))
+    const stamped = cards.map((card) => {
+      const normalizedLevel1 = getFiveEducationLevel1(card.level1)
+      const isLegacyHierarchy = normalizedLevel1 !== card.level1
+      return {
+        ...card,
+        level1: normalizedLevel1,
+        level2: isLegacyHierarchy ? card.level1 : card.level2,
+        level3: isLegacyHierarchy ? card.level3 ?? card.level2 : card.level3,
+        source: "online" as const,
+        id: `award-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        operatorId: currentTeacher.id,
+        operatorName: currentTeacher.name,
+        createdAt: new Date().toISOString(),
+      }
+    })
     setAwardCards((prev) => [...prev, ...stamped])
   }
 
@@ -661,6 +895,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     if (!currentTeacher) return
     const stamped: HonorRecord = {
       ...honor,
+      level1: getFiveEducationLevel1(honor.level1),
       id: `honor-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       operatorId: currentTeacher.id,
       operatorName: currentTeacher.name,
@@ -669,13 +904,15 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     setHonors((prev) => [...prev, stamped])
   }
 
-  const setFlag = (classId: string, weekKey: string, awarded: boolean) => {
+  const setFlag = (classId: string, periodKey: string, awarded: boolean, configId?: string, period?: FlagPeriod) => {
     if (!currentTeacher) return
     setFlags((prev) => {
-      const existingIdx = prev.findIndex((f) => f.classId === classId && f.weekKey === weekKey)
+      const existingIdx = prev.findIndex((f) => f.classId === classId && f.weekKey === periodKey && f.configId === configId)
       const updated: WeeklyFlag = {
         classId,
-        weekKey,
+        weekKey: periodKey,
+        configId,
+        period,
         awarded,
         awardedBy: awarded ? currentTeacher.name : undefined,
         awardedAt: awarded ? new Date().toISOString() : undefined,
@@ -685,6 +922,30 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       next[existingIdx] = updated
       return next
     })
+  }
+
+  const updateFlagConfig = (id: string, patch: Partial<FlagConfig>) => {
+    setFlagConfigs((prev) => prev.map((item) => item.id === id ? { ...item, ...patch } : item))
+  }
+
+  const addFlagConfig = (config: FlagConfig) => {
+    setFlagConfigs((prev) => [...prev, config])
+  }
+
+  const removeFlagConfig = (id: string) => {
+    setFlagConfigs((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const updateClassRatingConfig = (id: string, patch: Partial<ClassRatingConfig>) => {
+    setClassRatingConfigs((prev) => prev.map((item) => item.id === id ? { ...item, ...patch } : item))
+  }
+
+  const addClassRatingConfig = (config: ClassRatingConfig) => {
+    setClassRatingConfigs((prev) => [...prev, config])
+  }
+
+  const removeClassRatingConfig = (id: string) => {
+    setClassRatingConfigs((prev) => prev.filter((item) => item.id !== id))
   }
 
   const issueFlagReward: EvaluationContextValue["issueFlagReward"] = (classId, weekKey) => {
@@ -708,8 +969,9 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       studentName: s.name,
       classId,
       indicatorId: "award-7-1",
-      level1: "合作创享星",
-      level2: "团队协作",
+      level1: "劳育",
+      level2: "合作创享星",
+      level3: "团队协作",
       points: 1,
       weekKey,
       date,
@@ -725,20 +987,25 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     if (!currentTeacher) return ""
     const id = `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     const now = new Date().toISOString()
-    const newActivity: Activity = {
+    const newActivityBase: Activity = {
       ...activity,
       id,
-      status: "recruiting",
+      status: "draft",
       publisherId: currentTeacher.id,
       publisherName: currentTeacher.name,
       createdAt: now,
     }
+    const newActivity = { ...newActivityBase, status: getActivityStatus(newActivityBase) }
     setActivities((prev) => [newActivity, ...prev])
     return id
   }
 
   const updateActivity: EvaluationContextValue["updateActivity"] = (id, patch) => {
-    setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)))
+    setActivities((prev) => prev.map((a) => {
+      if (a.id !== id) return a
+      const next = { ...a, ...patch }
+      return { ...next, status: getActivityStatus(next) }
+    }))
   }
 
   const enroll: EvaluationContextValue["enroll"] = () => {
@@ -752,8 +1019,10 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     const child = { name: s.name, classId: s.classId }
     const activity = activities.find((a) => a.id === activityId)
     if (!activity) return { ok: false, reason: "活动不存在" }
-    const today = formatDate(new Date())
-    if (!isEnrolling(activity, today)) return { ok: false, reason: "当前不在报名时间" }
+    if (!requiresActivityEnrollment(activity)) {
+      return { ok: false, reason: "该活动无需报名，可直接参加" }
+    }
+    if (!isEnrolling(activity)) return { ok: false, reason: "当前不在报名时间" }
     if (activity.classIds.length > 0 && !activity.classIds.includes(child.classId)) {
       return { ok: false, reason: "该活动不面向孩子所在班级" }
     }
@@ -767,10 +1036,26 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       ).length
       if (approvedCount >= activity.capacity) return { ok: false, reason: "名额已满" }
     }
-    if (activity.pointsCost > 0) {
+    if (requiresActivityPointsExchange(activity) && activity.pointsCost > 0) {
       const balance = getStudentEarned(childId) - getStudentSpent(childId)
       if (balance < activity.pointsCost) {
         return { ok: false, reason: `积分不足（需 ${activity.pointsCost} 分，当前 ${balance} 分）` }
+      }
+    }
+    if (requiresActivityPointsExchange(activity) && activity.pointRequirements?.length) {
+      const semester = getSemesterRange(new Date())
+      const entries = buildPointEntries(awardCards, honors)
+      for (const requirement of activity.pointRequirements) {
+        const earned = entries
+          .filter((entry) => entry.studentId === childId && entry.level1 === requirement.level1)
+          .filter((entry) => inRange(entry.date, semester.start, semester.end))
+          .reduce((sum, entry) => sum + entry.points, 0)
+        if (earned < requirement.minimumPoints) {
+          return {
+            ok: false,
+            reason: `未满足${requirement.level1}学期积分条件（需${requirement.minimumPoints}分，当前${earned}分）`,
+          }
+        }
       }
     }
     const newEnrollment: Enrollment = {
@@ -779,11 +1064,11 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       studentId: childId,
       studentName: child.name,
       classId: child.classId,
-      pointsCost: activity.pointsCost,
+      pointsCost: requiresActivityPointsExchange(activity) ? activity.pointsCost : 0,
       status: "pending",
       remark: remark.trim(),
       enrolledAt: new Date().toISOString(),
-      pointsSpent: activity.pointsCost > 0,
+      pointsSpent: requiresActivityPointsExchange(activity) && activity.pointsCost > 0,
     }
     setEnrollments((prev) => [...prev, newEnrollment])
     return { ok: true }
@@ -861,6 +1146,14 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     records,
     addRecord,
     flags,
+    flagConfigs,
+    updateFlagConfig,
+    addFlagConfig,
+    removeFlagConfig,
+    classRatingConfigs,
+    updateClassRatingConfig,
+    addClassRatingConfig,
+    removeClassRatingConfig,
     setFlag,
     issueFlagReward,
     awardCards,

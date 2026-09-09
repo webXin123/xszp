@@ -62,14 +62,14 @@ export function usePermission(): Permission {
       ? classes.filter((c) => teacher.awardClassIds!.includes(c.id))
       : classes
 
-    // 流动红旗发放：年级组长 + 管理员
-    const canManageFlags = teacher.role === "grade_leader" || teacher.role === "director"
+    // 流动红旗发放：德育主任 + 管理员
+    const canManageFlags = teacher.role === "moral_director" || teacher.role === "director"
     // 任意角色都可以查看历史周次
     const canPickHistoricalWeek = true
     // 班级评价：任课教师无权限
     const canEvaluate = scoringClasses.length > 0
-    // 活动管理：年级组长 + 管理员
-    const canManageActivities = teacher.role === "grade_leader" || teacher.role === "director"
+    // 活动管理：德育主任 + 管理员
+    const canManageActivities = teacher.role === "moral_director" || teacher.role === "director"
     // 体质健康成绩导入：管理员全量；配置了 peTeacherClassIds 的教师（体育老师 / 兼任体育的任课教师）
     const peClassIds =
       teacher.role === "director"

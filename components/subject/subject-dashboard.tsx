@@ -365,7 +365,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
                   className={cn(
                     "rounded-md px-3 py-1 text-xs font-medium transition",
                     range === k
-                      ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >

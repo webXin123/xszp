@@ -4,15 +4,51 @@ import type {
   Enrollment,
 } from "./types"
 
+/** 兼容旧活动：未配置时仍按“需要报名”处理。 */
+export function requiresActivityEnrollment(activity: Activity): boolean {
+  return activity.requiresEnrollment !== false
+}
+
+/** 兼容旧活动：已有积分门槛时视为开启积分兑换。 */
+export function requiresActivityPointsExchange(activity: Activity): boolean {
+  return requiresActivityEnrollment(activity) && (activity.requiresPointsExchange ?? activity.pointsCost > 0)
+}
+
+function toActivityDate(value: string, endOfDay = false): Date | null {
+  if (!value) return null
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T${endOfDay ? "23:59:59.999" : "00:00:00"}`
+    : value
+  const date = new Date(normalized)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function isWithinRange(now: Date, start: string, end: string) {
+  const startDate = toActivityDate(start)
+  const endDate = toActivityDate(end, true)
+  return !!startDate && !!endDate && now >= startDate && now <= endDate
+}
+
 export const ACTIVITY_STATUS_META: Record<
   ActivityStatus,
   { label: string; className: string; dot: string }
 > = {
-  draft: { label: "草稿", className: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
+  draft: { label: "未开始", className: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
   recruiting: { label: "报名中", className: "bg-brand-green/15 text-brand-green", dot: "bg-brand-green" },
   ongoing: { label: "进行中", className: "bg-brand-blue/15 text-brand-blue", dot: "bg-brand-blue" },
   ended: { label: "已结束", className: "bg-brand-orange/15 text-brand-orange", dot: "bg-brand-orange" },
-  closed: { label: "已归档", className: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
+}
+
+/** 发布活动后，状态由报名窗口与活动起止时间自动推导。 */
+export function getActivityStatus(activity: Activity, now = new Date()): ActivityStatus {
+  const endDate = toActivityDate(activity.endDate, true)
+  const startDate = toActivityDate(activity.startDate)
+  if (endDate && now > endDate) return "ended"
+  if (startDate && now >= startDate) return "ongoing"
+  if (requiresActivityEnrollment(activity) && isWithinRange(now, activity.enrollStart, activity.enrollEnd)) {
+    return "recruiting"
+  }
+  return "draft"
 }
 
 export const ENROLLMENT_STATUS_META: Record<
@@ -25,30 +61,27 @@ export const ENROLLMENT_STATUS_META: Record<
   cancelled: { label: "已取消", className: "bg-muted text-muted-foreground" },
 }
 
-export function isEnrolling(activity: Activity, today: string): boolean {
-  return activity.status === "recruiting" && today >= activity.enrollStart && today <= activity.enrollEnd
+export function isEnrolling(activity: Activity, now = new Date()): boolean {
+  return getActivityStatus(activity, now) === "recruiting"
 }
 
-export function isActive(activity: Activity, today: string): boolean {
+export function isActive(activity: Activity, now = new Date()): boolean {
+  const status = getActivityStatus(activity, now)
+  return status === "recruiting" || status === "ongoing"
+}
+
+export function canSubmit(activity: Activity, now = new Date()): boolean {
+  // 活动开始后即可提交成果，结束后仍允许补交。
   return (
-    activity.status === "recruiting" ||
-    activity.status === "ongoing" ||
-    (activity.status === "ended" && today <= activity.endDate)
+    getActivityStatus(activity, now) === "ongoing" &&
+    isWithinRange(now, activity.startDate, activity.endDate)
   )
 }
 
-export function canSubmit(activity: Activity, today: string): boolean {
-  // 活动开始后即可提交成果，结束后仍允许补交（在 closed 之前）
-  return (
-    (activity.status === "ongoing" || activity.status === "ended") &&
-    today >= activity.startDate &&
-    today <= activity.endDate
-  )
-}
-
-export function canEvaluate(activity: Activity, today: string): boolean {
+export function canEvaluate(activity: Activity, now = new Date()): boolean {
   // 活动结束后开放评价
-  return (activity.status === "ended" || activity.status === "closed") && today >= activity.endDate
+  const endDate = toActivityDate(activity.endDate, true)
+  return getActivityStatus(activity, now) === "ended" && !!endDate && now >= endDate
 }
 
 export interface ActivityProgress {
@@ -79,6 +112,8 @@ export function getEnrollmentOf(
 }
 
 export function formatActivityDateRange(start: string, end: string): string {
-  if (start === end) return start
-  return `${start} ~ ${end}`
+  const format = (value: string) => value.replace("T", " ")
+  if (!start || !end) return "无需报名"
+  if (start === end) return format(start)
+  return `${format(start)} ~ ${format(end)}`
 }

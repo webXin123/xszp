@@ -57,7 +57,7 @@ export function WeeklyFlagTab() {
 
   const rangeLabel = formatDateRangeLabel(weekKey)
 
-  // 流动红旗颁发范围：年级组长/管理员 -> 其 scoringClassIds（年级范围），班主任 -> 仅本班
+  // 流动红旗颁发范围：德育主任/管理员 -> 其 scoringClassIds（年级范围），班主任 -> 仅本班
   const scoringSet = useMemo(() => new Set(scoringClasses.map((c) => c.id)), [scoringClasses])
   const visibleGradeIds = visibleGrades.map((g) => g.id)
   const eligibleClasses = classes.filter(
@@ -126,11 +126,11 @@ export function WeeklyFlagTab() {
         <div className="flex flex-wrap items-center gap-2">
           <Select
             items={weekOptions.map((key) => ({
-              value: key,
+              value: key === currentWeekKey ? `本周（${formatWeekLabel(key)}）` : formatWeekLabel(key),
               label: key === currentWeekKey ? `本周（${formatWeekLabel(key)}）` : formatWeekLabel(key),
             }))}
-            value={weekKey}
-            onValueChange={(v) => v !== null && setWeekKey(v)}
+            value={weekKey === currentWeekKey ? `本周（${formatWeekLabel(weekKey)}）` : formatWeekLabel(weekKey)}
+            onValueChange={(v) => setWeekKey(weekOptions.find((key) => (key === currentWeekKey ? `本周（${formatWeekLabel(key)}）` : formatWeekLabel(key)) === v) ?? currentWeekKey)}
           >
             <SelectTrigger className="glass-panel h-10 w-44 rounded-xl border-border/60 bg-transparent">
               <SelectValue placeholder="周次筛选" />
@@ -138,7 +138,7 @@ export function WeeklyFlagTab() {
             <SelectContent className="glass-surface">
               <SelectGroup>
                 {weekOptions.map((key) => (
-                  <SelectItem key={key} value={key}>
+                  <SelectItem key={key} value={key === currentWeekKey ? `本周（${formatWeekLabel(key)}）` : formatWeekLabel(key)}>
                     {key === currentWeekKey ? `本周（${formatWeekLabel(key)}）` : formatWeekLabel(key)}
                   </SelectItem>
                 ))}
@@ -148,20 +148,20 @@ export function WeeklyFlagTab() {
 
           <Select
             items={[
-              { value: "all", label: "全部年级" },
-              ...visibleGrades.map((g) => ({ value: g.id, label: g.name })),
+              { value: "全部年级", label: "全部年级" },
+              ...visibleGrades.map((g) => ({ value: g.name, label: g.name })),
             ]}
-            value={gradeFilter}
-            onValueChange={(v) => v !== null && setGradeFilter(v)}
+            value={gradeFilter === "all" ? "全部年级" : visibleGrades.find((grade) => grade.id === gradeFilter)?.name ?? ""}
+            onValueChange={(v) => setGradeFilter(v === "全部年级" ? "all" : visibleGrades.find((grade) => grade.name === v)?.id ?? "all")}
           >
             <SelectTrigger className="glass-panel h-10 w-32 rounded-xl border-border/60 bg-transparent">
               <SelectValue placeholder="年级筛选" />
             </SelectTrigger>
             <SelectContent className="glass-surface">
               <SelectGroup>
-                <SelectItem value="all">全部年级</SelectItem>
+                <SelectItem value="全部年级">全部年级</SelectItem>
                 {visibleGrades.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
+                  <SelectItem key={g.id} value={g.name}>
                     {g.name}
                   </SelectItem>
                 ))}

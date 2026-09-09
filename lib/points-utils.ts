@@ -1,5 +1,5 @@
 import type { AwardCardRecord, HonorRecord, Student } from "./types"
-import { AWARD_LEVEL1_LIST } from "./award-utils"
+import { AWARD_LEVEL1_LIST, getFiveEducationLevel1 } from "./award-utils"
 import { getISOWeekKey } from "./scoring-utils"
 
 /** 积分来源标签 */
@@ -91,19 +91,19 @@ export function buildPointEntries(
     studentId: a.studentId,
     studentName: a.studentName,
     classId: a.classId,
-    level1: a.level1,
+    level1: getFiveEducationLevel1(a.level1),
     points: a.points,
     date: a.date,
     createdAt: a.createdAt,
     source: a.source,
-    detail: a.level2,
+    detail: a.level3 ? `${a.level2} · ${a.level3}` : a.level2,
   }))
   const fromHonors: PointEntry[] = honors.map((h) => ({
     id: h.id,
     studentId: h.studentId,
     studentName: h.studentName,
     classId: h.classId,
-    level1: h.level1,
+    level1: getFiveEducationLevel1(h.level1),
     points: h.points,
     date: h.awardDate,
     createdAt: h.createdAt,

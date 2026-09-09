@@ -50,8 +50,8 @@ export function AwardLineChart({ data }: AwardLineChartProps) {
         <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full min-w-[420px]" preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id="award-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--brand-green)" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="var(--brand-green)" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
             </linearGradient>
           </defs>
           {/* y 轴网格线 + 刻度 */}
@@ -78,11 +78,11 @@ export function AwardLineChart({ data }: AwardLineChartProps) {
           {/* 区域填充 */}
           <path d={areaPath} fill="url(#award-area)" />
           {/* 折线 */}
-          <path d={linePath} fill="none" stroke="var(--brand-green)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+          <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           {/* 数据点 */}
           {points.map((p, i) => (
             <g key={i}>
-              <circle cx={p.x} cy={p.y} r="3.5" fill="var(--brand-green)" stroke="var(--background)" strokeWidth="1.5" />
+              <circle cx={p.x} cy={p.y} r="3.5" fill="var(--primary)" stroke="var(--background)" strokeWidth="1.5" />
               {p.count > 0 && (
                 <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--foreground)">
                   {p.count}

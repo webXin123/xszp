@@ -103,8 +103,7 @@ export function ScanFab() {
       style={{ left: pos?.x ?? -9999, top: pos?.y ?? -9999, width: SIZE, height: SIZE }}
       className={cn(
         "absolute z-[60] flex touch-none select-none flex-col items-center justify-center gap-1 rounded-full",
-        "bg-gradient-to-br from-primary to-primary-2 text-primary-foreground",
-        "shadow-xl shadow-primary/40 ring-1 ring-white/25",
+        "bg-primary text-primary-foreground hover:bg-primary/90",
         "transition-shadow",
         dragging ? "cursor-grabbing scale-105 shadow-2xl" : "cursor-grab hover:shadow-2xl",
       )}

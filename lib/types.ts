@@ -1,4 +1,4 @@
-export type TeacherRole = "homeroom" | "subject" | "grade_leader" | "director" | "pe_teacher"
+export type TeacherRole = "homeroom" | "subject" | "moral_director" | "director" | "pe_teacher"
 
 export type Segment = "小学部" | "初中部"
 
@@ -110,19 +110,65 @@ export interface ScoreRecord {
   operatorId: string
   operatorName: string
   createdAt: string
+  /** 新版评价工作台的可选扩展字段，兼容历史扣分记录 */
+  scoreType?: "deduct" | "add"
+  targetType?: "class" | "student"
+  indicatorId?: string
+  studentIds?: string[]
+  amount?: number
 }
 
 export interface WeeklyFlag {
   classId: string
-  weekKey: string // e.g. 2026-W35
+  /** 周榜使用 ISO 周标识，月榜使用 yyyy-MM 标识，保留字段名以兼容既有数据。 */
+  weekKey: string
+  /** 对应的流动红旗配置；旧数据为空时默认归入该周期的第一个配置。 */
+  configId?: string
+  period?: FlagPeriod
   awarded: boolean
   awardedBy?: string
   awardedAt?: string
 }
 
-export interface AwardIndicatorLevel2 {
+export type FlagPeriod = "week" | "month"
+
+export interface FlagConfig {
   id: string
+  period: FlagPeriod
+  name: string
+  /** 用户上传的流动红旗展示图片；为空时使用内置发放状态图标 */
+  image?: string | null
+  enabled: boolean
+  syncFiveEducation: boolean
+  syncLevel1?: string
+  syncLevel2?: string
+  syncLevel3?: string
+}
+
+export type ClassRatingDefaultImage = "smile" | "cry"
+export type ClassRatingTheme = "blue" | "green" | "orange"
+
+export interface ClassRatingConfig {
+  id: string
+  name: string
+  description: string
+  /** 用户上传的评级图片；为空时使用 defaultImage 对应的内置图片 */
+  image: string | null
+  defaultImage: ClassRatingDefaultImage
+  autoIssueDay: "saturday" | "sunday" | "monday"
+  rankStart: string
+  rankEnd: string
+  theme: ClassRatingTheme
+}
+
+export interface AwardIndicatorLevel2 {
   level2: string
+  items: AwardIndicatorLevel3[]
+}
+
+export interface AwardIndicatorLevel3 {
+  id: string
+  level3: string
   description: string
   points: number
   /** 奖卡正面图片路径 */
@@ -145,6 +191,8 @@ export interface AwardCardRecord {
   indicatorId: string
   level1: string
   level2: string
+  /** 奖卡三级指标，旧记录可能为空。 */
+  level3?: string
   points: number
   weekKey: string
   date: string
@@ -186,7 +234,7 @@ export interface HonorRecord {
  * ------------------------------------------------------------------ */
 
 /** 活动状态：由报名/结束时间与审核流程推进 */
-export type ActivityStatus = "draft" | "recruiting" | "ongoing" | "ended" | "closed"
+export type ActivityStatus = "draft" | "recruiting" | "ongoing" | "ended"
 
 /** 报名审核状态 */
 export type EnrollmentStatus = "pending" | "approved" | "rejected" | "cancelled"
@@ -194,24 +242,36 @@ export type EnrollmentStatus = "pending" | "approved" | "rejected" | "cancelled"
 /** 成果提交类型 */
 export type SubmissionType = "photo" | "practice" | "reflection"
 
+/** 报名时需满足的本学期五育积分条件。 */
+export interface ActivityPointRequirement {
+  level1: string
+  minimumPoints: number
+}
+
 export interface Activity {
   id: string
   title: string
   /** 活动描述/简介 */
   description: string
-  /** 一级指标，用于关联综评数据来源 */
-  level1: string
+  /** 一级指标，用于兼容历史活动关联的综评数据来源。 */
+  level1?: string
   /** 参与年级 id 列表 */
   gradeIds: string[]
   /** 参与班级 id 列表（在所选年级下） */
   classIds: string[]
-  /** 报名开始日期 yyyy-MM-dd */
+  /** 是否需要活动报名；旧数据未配置时默认需要报名。 */
+  requiresEnrollment?: boolean
+  /** 是否需要积分兑换；仅在需要报名时生效。 */
+  requiresPointsExchange?: boolean
+  /** 报名时需满足的本学期一级指标积分条件。 */
+  pointRequirements?: ActivityPointRequirement[]
+  /** 报名开始时间 yyyy-MM-ddTHH:mm */
   enrollStart: string
-  /** 报名结束日期 yyyy-MM-dd */
+  /** 报名结束时间 yyyy-MM-ddTHH:mm */
   enrollEnd: string
-  /** 活动开始日期 yyyy-MM-dd */
+  /** 活动开始时间 yyyy-MM-ddTHH:mm */
   startDate: string
-  /** 活动结束日期 yyyy-MM-dd */
+  /** 活动结束时间 yyyy-MM-ddTHH:mm */
   endDate: string
   /** 报名所需消耗积分门槛；0 表示不限制 */
   pointsCost: number

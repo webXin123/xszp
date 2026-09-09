@@ -106,7 +106,7 @@ export function ClassEvaluationTable({ level1, selectedDate, gradeFilter }: Clas
                           type="button"
                           onClick={() => handleCellClick(cls, group.level2, hasRecords)}
                           className={cn(
-                            "flex min-h-9 w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-accent/50",
+                            "flex min-h-10 w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-accent/50",
                           )}
                         >
                           {hasRecords ? (

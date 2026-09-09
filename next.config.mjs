@@ -5,8 +5,8 @@ const nextConfig = {
   },
   output: "export",
   trailingSlash: true,
-  // GitHub Pages 部署在仓库子路径下：https://webxin123.github.io/mzlg/
-  basePath: "/mzlg",
+  // 项目统一运行在子路径 /xszp/：http://localhost:3000/xszp/
+  basePath: "/xszp",
   images: {
     unoptimized: true,
   },
@@ -19,8 +19,6 @@ const nextConfig = {
   generateBuildId: async () => {
     return 'static-export-' + Date.now()
   },
-  // 确保所有页面都被静态生成
-  generateStaticParams: false,
   // 禁用增量缓存
   generateEtags: false,
   // 确保所有资源都是静态的

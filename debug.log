@@ -1,0 +1,4 @@
+[0908/164648.775:ERROR:third_party\crashpad\crashpad\util\win\registration_protocol_win.cc:108] CreateFile: 拒绝访问。 (0x5)
+[0908/164648.783:INFO:gin\isolate_holder.cc:188] SetPartitionAllocOomCallback and RegisterIsolateHolder
+[0908/164704.358:ERROR:third_party\crashpad\crashpad\util\win\registration_protocol_win.cc:108] CreateFile: 拒绝访问。 (0x5)
+[0908/164704.361:INFO:gin\isolate_holder.cc:188] SetPartitionAllocOomCallback and RegisterIsolateHolder

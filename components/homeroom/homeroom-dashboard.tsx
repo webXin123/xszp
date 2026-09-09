@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import { useMemo, useState } from "react"
+import Link from "next/link"
 import { CalendarDays, ChevronDown, LayoutGrid, Medal, MinusCircle, Search, Send, TrendingDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
@@ -206,15 +207,14 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
               <span className="text-sm font-medium text-foreground">线上发卡</span>
               <span className="text-xs text-muted-foreground">为本班学生发放奖卡</span>
             </button>
-            <button
-              type="button"
-              onClick={() => onNavigate("score")}
-              className="flex flex-col items-start gap-2 rounded-xl bg-brand-blue/10 p-3 text-left transition hover:bg-brand-blue/15"
+            <Link
+              href="/class-evaluation"
+              className="flex cursor-pointer flex-col items-start gap-2 rounded-xl bg-brand-blue/10 p-3 text-left transition hover:bg-brand-blue/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
             >
               <LayoutGrid className="size-5 text-brand-blue" />
               <span className="text-sm font-medium text-foreground">班级评价</span>
               <span className="text-xs text-muted-foreground">查看/录入本班评价</span>
-            </button>
+            </Link>
             <button
               type="button"
               onClick={() => onNavigate("honor")}
@@ -250,7 +250,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
               className={cn(
                 "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
                 bottomTab === "dynamic"
-                  ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -262,7 +262,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
               className={cn(
                 "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
                 bottomTab === "ranking"
-                  ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -288,7 +288,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium transition",
                     range === r
-                      ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-sm shadow-primary/30"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "glass-panel text-muted-foreground hover:text-foreground",
                   )}
                 >

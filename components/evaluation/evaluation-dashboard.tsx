@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import {
   Award,
   CalendarRange,
   ChevronDown,
-  Flag,
   House,
   LayoutGrid,
   Medal,
@@ -25,12 +25,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { TeacherSwitcher } from "./teacher-switcher"
 import { ClassEvaluationTab } from "./class-evaluation-tab"
-import { WeeklyFlagTab } from "./weekly-flag-tab"
+import { ClassRankingTab } from "./class-ranking-tab"
 import { AwardCardTab } from "./award-card-tab"
 import { HonorUploadTab } from "./honor-upload-tab"
 import { HomeroomDashboard } from "../homeroom/homeroom-dashboard"
 import { SubjectDashboard } from "../subject/subject-dashboard"
 import { AdminDashboard } from "../admin/admin-dashboard"
+import { AdminDataDashboard } from "../admin/admin-data-dashboard"
 import { ParentDashboard } from "../parent/parent-dashboard"
 import { ActivityManageTab } from "../activity/activity-manage-tab"
 
@@ -43,8 +44,13 @@ export type MainTab =
   | "award"
   | "honor"
   | "activity"
+  | "dashboard"
 
-type ScoreSubTab = "evaluation" | "flag"
+type StandaloneView = "evaluation" | "ranking"
+
+interface EvaluationDashboardProps {
+  standaloneView?: StandaloneView
+}
 
 interface NavItem {
   key: MainTab
@@ -52,7 +58,8 @@ interface NavItem {
   icon: typeof LayoutGrid
 }
 
-export function EvaluationDashboard() {
+export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps) {
+  const router = useRouter()
   const {
     canEvaluate,
     canManageFlags,
@@ -64,22 +71,36 @@ export function EvaluationDashboard() {
   const isHomeroom = role === "homeroom"
   const isSubject = role === "subject" || role === "pe_teacher"
   const isDirector = role === "director"
-  const isGradeLeader = role === "grade_leader"
+  const isMoralDirector = role === "moral_director"
 
-  const [mainTab, setMainTab] = useState<MainTab>(
+  const [mainTab, setMainTab] = useState<MainTab>(() => standaloneView ? "score" : (
     isParent
       ? "parent_home"
       : isHomeroom
         ? "home"
         : isSubject
           ? "subject_home"
-          : isDirector || isGradeLeader
+          : isDirector || isMoralDirector
             ? "admin_home"
             : canEvaluate
               ? "score"
-              : "award",
-  )
-  const [scoreSubTab, setScoreSubTab] = useState<ScoreSubTab>("evaluation")
+              : "award"
+  ))
+  const handleNavigate = (tab: MainTab) => {
+    if (tab === "score") {
+      router.push("/class-evaluation")
+      return
+    }
+    setMainTab(tab)
+  }
+
+  const handlePrimaryNavigate = (tab: MainTab) => {
+    if (standaloneView) {
+      router.push("/")
+      return
+    }
+    setMainTab(tab)
+  }
 
   // 一级 nav：只放当前身份的"首页"
   const primaryNavItems = useMemo<NavItem[]>(() => {
@@ -92,11 +113,11 @@ export function EvaluationDashboard() {
     if (isSubject) {
       return [{ key: "subject_home", label: "任课教师首页", icon: House }]
     }
-    if (isDirector || isGradeLeader) {
-      return [{ key: "admin_home", label: "管理员首页", icon: House }]
+    if (isDirector || isMoralDirector) {
+      return [{ key: "admin_home", label: isMoralDirector ? "德育主任首页" : "管理员首页", icon: House }]
     }
     return []
-  }, [isParent, isHomeroom, isSubject, isDirector, isGradeLeader])
+  }, [isParent, isHomeroom, isSubject, isDirector, isMoralDirector])
 
   // 二级页面分组：当前角色可用的功能页
   const secondaryItems = useMemo<NavItem[]>(() => {
@@ -112,8 +133,11 @@ export function EvaluationDashboard() {
     if (canManageActivities) {
       items.push({ key: "activity", label: "活动管理", icon: CalendarRange })
     }
+    if (isDirector || isMoralDirector) {
+      items.push({ key: "dashboard", label: "数据看板", icon: Medal })
+    }
     return items
-  }, [isParent, canEvaluate, canManageFlags, canUploadHonor, canManageActivities])
+  }, [isParent, canEvaluate, canManageFlags, canUploadHonor, canManageActivities, isDirector, isMoralDirector])
 
   // 二级页面当前激活项（用于在 trigger 上显示"当前选中"状态）
   const activeSecondary = useMemo(
@@ -138,17 +162,20 @@ export function EvaluationDashboard() {
 
   return (
     <div className="flex min-h-screen flex-col px-4 pb-4 pt-16 sm:px-6">
+      <a href="#main-content" className="sr-only z-[60] rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:ring-2 focus-visible:ring-primary/50">
+        跳转到主要内容
+      </a>
       {/* 固定顶栏：logo + 导航 + 用户信息 */}
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
           <div className="flex shrink-0 items-center gap-2.5">
             <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg ring-1 ring-border/40">
-              <Image src="/mzlg/images/logo.png" alt="明珠临港" width={30} height={30} />
+              <Image src="/xszp/images/logo.png" alt="屹力学生综评" width={30} height={30} />
             </span>
             <div className="hidden flex-col leading-tight md:flex">
-              <span className="text-sm font-bold text-foreground">明珠临港</span>
+              <span className="text-sm font-bold text-foreground">屹力学生综评</span>
               <span className="text-xs text-muted-foreground">
-                {isParent ? "家长成长看板" : "学生综合评价"}
+                {isParent ? "家长成长看板" : "综合评价平台"}
               </span>
             </div>
           </div>
@@ -159,7 +186,7 @@ export function EvaluationDashboard() {
               <button
                 key={key}
                 type="button"
-                onClick={() => setMainTab(key)}
+                onClick={() => handlePrimaryNavigate(key)}
                 className={cn(
                   "relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium transition",
                   mainTab === key
@@ -230,59 +257,32 @@ export function EvaluationDashboard() {
       </header>
 
       <div className="mx-auto flex w-full flex-1 flex-col gap-4 max-w-[1240px]">
-        <main className="glass-panel flex w-full min-w-0  flex-col gap-6 rounded-2xl p-4 sm:p-6">
+        <main id="main-content" tabIndex={-1} className="glass-panel flex w-full min-w-0 flex-col gap-6 rounded-2xl border border-primary/12 bg-white/70 p-4 shadow-none sm:p-6">
           {isParent ? (
             <ParentDashboard />
           ) : mainTab === "home" && isHomeroom ? (
-            <HomeroomDashboard onNavigate={setMainTab} />
+            <HomeroomDashboard onNavigate={handleNavigate} />
           ) : mainTab === "subject_home" && isSubject ? (
-            <SubjectDashboard onNavigate={setMainTab} />
-          ) : mainTab === "admin_home" && (isDirector || isGradeLeader) ? (
-            <AdminDashboard onNavigate={setMainTab} />
+            <SubjectDashboard onNavigate={handleNavigate} />
+          ) : mainTab === "admin_home" && (isDirector || isMoralDirector) ? (
+            <AdminDashboard onNavigate={handleNavigate} />
+          ) : mainTab === "dashboard" && (isDirector || isMoralDirector) ? (
+            <AdminDataDashboard onBack={() => setMainTab("admin_home")} />
           ) : mainTab === "score" ? (
-            <div className="flex flex-col gap-6">
-              <div className="flex gap-2">
-                {canEvaluate && (
-                  <button
-                    type="button"
-                    onClick={() => setScoreSubTab("evaluation")}
-                    className={cn(
-                      "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
-                      scoreSubTab === "evaluation"
-                        ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
-                        : "glass-panel text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    班级评价
-                  </button>
-                )}
-                {canManageFlags && (
-                  <button
-                    type="button"
-                    onClick={() => setScoreSubTab("flag")}
-                    className={cn(
-                      "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
-                      scoreSubTab === "flag"
-                        ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
-                        : "glass-panel text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <Flag className="mr-1.5 inline size-4 align-[-2px]" />
-                    优雅班集体颁发
-                  </button>
-                )}
-              </div>
-
-              {scoreSubTab === "evaluation" && canEvaluate ? (
-                <ClassEvaluationTab />
-              ) : scoreSubTab === "flag" && canManageFlags ? (
-                <WeeklyFlagTab />
-              ) : canEvaluate ? (
-                <ClassEvaluationTab />
-              ) : canManageFlags ? (
-                <WeeklyFlagTab />
-              ) : null}
-            </div>
+            <>
+              {standaloneView === "evaluation" && (
+                <div className="flex items-center gap-3" aria-labelledby="class-evaluation-page-title">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <LayoutGrid className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">班级评价 / 录入中心</p>
+                    <h1 id="class-evaluation-page-title" className="text-xl font-bold tracking-tight text-foreground">班级评价</h1>
+                  </div>
+                </div>
+              )}
+              {standaloneView === "ranking" ? <ClassRankingTab /> : canEvaluate ? <ClassEvaluationTab /> : null}
+            </>
           ) : mainTab === "honor" && canUploadHonor ? (
             <HonorUploadTab />
           ) : mainTab === "activity" && canManageActivities ? (

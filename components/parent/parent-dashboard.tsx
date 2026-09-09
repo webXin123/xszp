@@ -193,7 +193,7 @@ export function ParentDashboard() {
   // 最新发布的可报名活动（页面顶部横幅）
   const latestRecruiting = useMemo(() => {
     const list = visibleActivities
-      .filter((a) => isEnrolling(a, today))
+      .filter((a) => isEnrolling(a))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     return list[0] ?? null
   }, [visibleActivities, today])
@@ -297,7 +297,7 @@ export function ParentDashboard() {
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-xs font-medium transition",
                     active
-                      ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -591,7 +591,7 @@ export function ParentDashboard() {
                   </span>
                   {my ? (
                     <EnrollmentStatusBadge status={my.status} />
-                  ) : isEnrolling(act, today) ? (
+                  ) : isEnrolling(act) ? (
                     <Link
                       href={`/activities/enroll?student=${encodeURIComponent(studentId)}&id=${encodeURIComponent(act.id)}`}
                       className="rounded-lg bg-gradient-to-r from-brand-green to-brand-blue px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:opacity-90"

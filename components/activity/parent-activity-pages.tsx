@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
-import { formatDate } from "@/lib/scoring-utils"
 import {
   ACTIVITY_STATUS_META,
   ENROLLMENT_STATUS_META,
@@ -35,6 +34,8 @@ import {
   getActivityProgress,
   getEnrollmentOf,
   isEnrolling,
+  requiresActivityEnrollment,
+  requiresActivityPointsExchange,
 } from "@/lib/activity-utils"
 import { ParentActivityDetailDialog } from "../parent/parent-activity-detail-dialog"
 import type { Activity, ParentChild } from "@/lib/types"
@@ -83,7 +84,7 @@ function StudentSwitcher({ studentId }: { studentId: string }) {
             className={cn(
               "rounded-lg px-3 py-1.5 text-xs font-medium transition",
               active
-                ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-sm shadow-primary/30"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -117,7 +118,6 @@ export function ActivityEnrollView({
 
   const student = students.find((s) => s.id === studentId) ?? null
   const { cls, grade } = useClassMeta(student?.classId ?? "")
-  const today = formatDate(new Date())
   const balance = getStudentBalance(studentId)
 
   // 面向该学生班级的全部活动（按发布时间倒序）
@@ -205,7 +205,9 @@ export function ActivityEnrollView({
         <ul className="flex flex-col gap-3">
           {visibleActivities.map((act) => {
             const meta = ACTIVITY_STATUS_META[act.status]
-            const enrolling = isEnrolling(act, today)
+            const needsEnrollment = requiresActivityEnrollment(act)
+            const needsPointsExchange = requiresActivityPointsExchange(act)
+            const enrolling = isEnrolling(act)
             const my = getEnrollmentOf(act.id, studentId, enrollments.filter((e) => e.status !== "cancelled"))
             const progress = getActivityProgress(act, enrollments)
             return (
@@ -226,18 +228,22 @@ export function ActivityEnrollView({
                     <span className={cn("size-1.5 rounded-full", meta.dot)} />
                     {meta.label}
                   </span>
-                  <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-xs font-medium text-brand-blue">
+                  {act.level1 && <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-xs font-medium text-brand-blue">
                     {act.level1}
-                  </span>
+                  </span>}
                 </div>
                 <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                   {act.description}
                 </p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <CalendarDays className="size-3.5" />
-                    报名 {formatActivityDateRange(act.enrollStart, act.enrollEnd)}
-                  </span>
+                  {needsEnrollment ? (
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="size-3.5" />
+                      报名 {formatActivityDateRange(act.enrollStart, act.enrollEnd)}
+                    </span>
+                  ) : (
+                    <span className="font-medium text-brand-green">无需报名，可直接参加</span>
+                  )}
                   <span>活动 {formatActivityDateRange(act.startDate, act.endDate)}</span>
                   {act.location && (
                     <span className="flex items-center gap-1">
@@ -245,12 +251,12 @@ export function ActivityEnrollView({
                       {act.location}
                     </span>
                   )}
-                  {act.capacity > 0 && (
+                  {needsEnrollment && act.capacity > 0 && (
                     <span>
                       名额 {progress.approved + progress.pending}/{act.capacity}
                     </span>
                   )}
-                  {act.pointsCost > 0 && (
+                  {needsPointsExchange && act.pointsCost > 0 && (
                     <span className="font-medium text-brand-orange">需 {act.pointsCost} 积分</span>
                   )}
                 </div>
@@ -269,13 +275,15 @@ export function ActivityEnrollView({
                         {my.enrolledAt.slice(0, 16).replace("T", " ")} 提交报名
                       </span>
                     </>
+                  ) : !needsEnrollment ? (
+                    <span className="text-xs font-medium text-brand-green">可直接参加</span>
                   ) : enrolling ? (
                     <Button size="sm" onClick={() => openEnroll(act)}>
                       立即报名
                     </Button>
                   ) : (
                     <span className="text-xs text-muted-foreground">
-                      {today < act.enrollStart ? "报名未开始" : "报名已结束"}
+                      当前不在报名时间
                     </span>
                   )}
                   <Link
@@ -316,7 +324,7 @@ export function ActivityEnrollView({
                   /{enrollTarget.capacity}
                 </span>
               )}
-              {enrollTarget && enrollTarget.pointsCost > 0 && (
+              {enrollTarget && requiresActivityPointsExchange(enrollTarget) && enrollTarget.pointsCost > 0 && (
                 <span className="font-medium text-brand-orange">
                   报名将预扣 {enrollTarget.pointsCost} 积分（当前剩余 {balance}）
                 </span>
@@ -377,7 +385,6 @@ export function ActivityDetailView({
   const [panelOpen, setPanelOpen] = useState(false)
   const student = students.find((s) => s.id === studentId) ?? null
   const activity = activities.find((a) => a.id === activityId) ?? null
-  const today = formatDate(new Date())
 
   if (!student || !activity) {
     return (
@@ -393,7 +400,7 @@ export function ActivityDetailView({
   const meta = ACTIVITY_STATUS_META[activity.status]
   const my = getEnrollmentOf(activity.id, studentId, enrollments.filter((e) => e.status !== "cancelled"))
   const progress = getActivityProgress(activity, enrollments)
-  const operable = canSubmit(activity, today) || canEvaluate(activity, today)
+  const operable = canSubmit(activity) || canEvaluate(activity)
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
@@ -411,16 +418,20 @@ export function ActivityDetailView({
             <span className={cn("size-1.5 rounded-full", meta.dot)} />
             {meta.label}
           </span>
-          <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-xs font-medium text-brand-blue">
+          {activity.level1 && <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-xs font-medium text-brand-blue">
             {activity.level1}
-          </span>
+          </span>}
         </div>
         <p className="text-sm leading-relaxed text-foreground">{activity.description}</p>
         <div className="grid gap-1.5 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
-          <span className="flex items-center gap-1">
-            <CalendarDays className="size-3.5" />
-            报名时间：{formatActivityDateRange(activity.enrollStart, activity.enrollEnd)}
-          </span>
+          {requiresActivityEnrollment(activity) ? (
+            <span className="flex items-center gap-1">
+              <CalendarDays className="size-3.5" />
+              报名时间：{formatActivityDateRange(activity.enrollStart, activity.enrollEnd)}
+            </span>
+          ) : (
+            <span className="font-medium text-brand-green">无需报名，可直接参加</span>
+          )}
           <span>活动时间：{formatActivityDateRange(activity.startDate, activity.endDate)}</span>
           {activity.location && (
             <span className="flex items-center gap-1">
@@ -428,13 +439,13 @@ export function ActivityDetailView({
               地点：{activity.location}
             </span>
           )}
-          {activity.capacity > 0 && (
+          {requiresActivityEnrollment(activity) && activity.capacity > 0 && (
             <span>
               名额：{progress.approved + progress.pending}/{activity.capacity}（已通过{" "}
               {progress.approved}）
             </span>
           )}
-          {activity.pointsCost > 0 && (
+          {requiresActivityPointsExchange(activity) && activity.pointsCost > 0 && (
             <span className="font-medium text-brand-orange">
               报名门槛：预扣 {activity.pointsCost} 积分
             </span>
@@ -445,9 +456,13 @@ export function ActivityDetailView({
       {/* 该生报名状态 */}
       <section className="glass-panel flex flex-col gap-2 rounded-2xl p-4 sm:p-5">
         <h3 className="text-xs font-semibold text-muted-foreground">
-          {student.name} 的报名状态
+          {requiresActivityEnrollment(activity) ? `${student.name} 的报名状态` : "参与说明"}
         </h3>
-        {my ? (
+        {!requiresActivityEnrollment(activity) ? (
+          <div className="rounded-lg bg-brand-green/10 px-3 py-2.5 text-xs text-brand-green">
+            该活动无需报名，请按活动时间和地点直接参与。
+          </div>
+        ) : my ? (
           <div
             className={cn(
               "flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs",
@@ -465,7 +480,7 @@ export function ActivityDetailView({
         ) : (
           <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted/40 px-3 py-2.5">
             <span className="text-xs text-muted-foreground">孩子暂未报名该活动</span>
-            {isEnrolling(activity, today) && (
+            {isEnrolling(activity) && (
               <Link
                 href={`/activities/enroll?student=${encodeURIComponent(studentId)}&id=${encodeURIComponent(activity.id)}`}
                 className="ml-auto"

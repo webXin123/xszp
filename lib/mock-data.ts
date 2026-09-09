@@ -144,7 +144,7 @@ const ALL_GRADE_IDS = GRADES.map((g) => g.id)
  * - 任课教师（subject）：仅对任教班级发放奖卡，无班级评价权限
  * - 体育老师（pe_teacher）：任课教师基础上负责 1-5 年级体质健康成绩导入，
  *   首页额外展示体育成绩录入入口与录入进度
- * - 年级组长（grade_leader）：本年级发卡 + 班级评价 + 流动红旗发放
+ * - 德育主任（moral_director）：本年级发卡 + 班级评价 + 流动红旗发放
  * - 管理员（director）：全部权限
  */
 export const TEACHERS: Teacher[] = [
@@ -183,13 +183,13 @@ export const TEACHERS: Teacher[] = [
     // 负责 1-5 年级体质健康成绩导入
     peTeacherClassIds: PE_CLASS_IDS,
   },
-  /* ---------------------------------- 年级组长 ---------------------------------- */
+  /* ---------------------------------- 德育主任 ---------------------------------- */
   {
     id: "teacher-chen",
     name: "陈明",
     avatar: "",
-    role: "grade_leader",
-    title: "六年级 年级组长",
+    role: "moral_director",
+    title: "六年级 德育主任",
     scoringClassIds: GRADE_6_CLASSES,
     awardClassIds: GRADE_6_CLASSES,
     viewGradeIds: ["grade-6"],
@@ -207,7 +207,7 @@ export const TEACHERS: Teacher[] = [
   },
 ]
 
-/** 首屏默认身份：年级组长，可评分班级多、榜单也有内容，演示效果最好 */
+/** 首屏默认身份：德育主任，可评分班级多、榜单也有内容，演示效果最好 */
 export const DEFAULT_TEACHER_ID = "teacher-chen"
 
 /* ------------------------------------------------------------------ *

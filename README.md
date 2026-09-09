@@ -45,7 +45,7 @@
 
 #### 部署完成后访问：
 ```
-https://[你的用户名].github.io/mzlg/
+https://[你的用户名].github.io/xszp/
 ```
 
 ### 本地开发
@@ -56,6 +56,9 @@ pnpm install
 
 # 启动开发服务器
 pnpm dev
+
+# 本地访问地址
+http://localhost:3000/xszp/
 
 # 构建生产版本
 pnpm build

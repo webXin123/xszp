@@ -30,6 +30,7 @@ import {
   canSubmit,
   formatActivityDateRange,
   getEnrollmentOf,
+  requiresActivityEnrollment,
 } from "@/lib/activity-utils"
 import type { Activity, SubmissionType } from "@/lib/types"
 
@@ -90,8 +91,8 @@ export function ParentActivityDetailDialog({
     [activity, studentId, enrollments],
   )
   const approved = myEnrollment?.status === "approved"
-  const submittable = activity ? canSubmit(activity, today) : false
-  const evaluable = activity ? canEvaluate(activity, today) : false
+  const submittable = activity ? canSubmit(activity) : false
+  const evaluable = activity ? canEvaluate(activity) : false
 
   // 当前孩子已提交的成果
   const mySubmissions = useMemo(
@@ -217,10 +218,14 @@ export function ParentActivityDetailDialog({
         <div className="flex flex-col gap-2 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
           <p className="text-sm leading-relaxed text-foreground">{activity.description}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <span className="flex items-center gap-1">
-              <CalendarDays className="size-3.5" />
-              报名：{formatActivityDateRange(activity.enrollStart, activity.enrollEnd)}
-            </span>
+            {requiresActivityEnrollment(activity) ? (
+              <span className="flex items-center gap-1">
+                <CalendarDays className="size-3.5" />
+                报名：{formatActivityDateRange(activity.enrollStart, activity.enrollEnd)}
+              </span>
+            ) : (
+              <span className="font-medium text-brand-green">无需报名，可直接参加</span>
+            )}
             <span>活动：{formatActivityDateRange(activity.startDate, activity.endDate)}</span>
             {activity.location && (
               <span className="flex items-center gap-1">
@@ -233,8 +238,14 @@ export function ParentActivityDetailDialog({
 
         {/* 报名状态 */}
         <div className="flex flex-col gap-2">
-          <h4 className="text-xs font-semibold text-muted-foreground">报名状态</h4>
-          {myEnrollment ? (
+          <h4 className="text-xs font-semibold text-muted-foreground">
+            {requiresActivityEnrollment(activity) ? "报名状态" : "参与说明"}
+          </h4>
+          {!requiresActivityEnrollment(activity) ? (
+            <p className="rounded-lg bg-brand-green/10 px-3 py-2 text-xs text-brand-green">
+              该活动无需报名，请按活动安排直接参与。
+            </p>
+          ) : myEnrollment ? (
             <div
               className={cn(
                 "flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs",
@@ -360,7 +371,7 @@ export function ParentActivityDetailDialog({
                     className={cn(
                       "rounded-xl px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5",
                       subType === t.key
-                        ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/30"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
                         : "glass-panel text-muted-foreground hover:text-foreground",
                     )}
                   >

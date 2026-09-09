@@ -9,7 +9,7 @@ export function allocatePrintCounts(total: number): Record<string, number> {
   for (const name of AWARD_LEVEL1_LIST) result[name] = 0
   if (total <= 0) return result
 
-  const capacities = AWARD_GROUPS.map((g) => g.items.length)
+  const capacities = AWARD_GROUPS.map((g) => g.items.reduce((sum, level2) => sum + level2.items.length, 0))
   const capTotal = capacities.reduce((a, b) => a + b, 0)
   let assigned = 0
 
@@ -41,18 +41,20 @@ export function allocatePrintCounts(total: number): Record<string, number> {
 
 export interface AwardCardExportRow {
   level1: string
+  level2: string
+  level3: string
   points: number
 }
 
 /**
- * 导出线下奖卡 Excel：每行一条奖卡记录，记录一级指标名称与奖卡积分
+ * 导出线下奖卡 Excel：每行一条奖卡记录，记录三级指标层级与奖卡积分
  */
 export function exportAwardCardsExcel(rows: AwardCardExportRow[]) {
   const sheet = XLSX.utils.aoa_to_sheet([
-    ["奖卡一级指标名称", "奖卡积分"],
-    ...rows.map((row) => [row.level1, row.points]),
+    ["奖卡一级指标名称", "奖卡二级指标名称", "奖卡三级指标名称", "奖卡积分"],
+    ...rows.map((row) => [row.level1, row.level2, row.level3, row.points]),
   ])
-  sheet["!cols"] = [{ wch: 22 }, { wch: 10 }]
+  sheet["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 28 }, { wch: 10 }]
   const book = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(book, sheet, "线下奖卡")
 
