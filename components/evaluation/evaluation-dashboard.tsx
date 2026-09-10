@@ -202,6 +202,15 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
               </button>
             ))}
 
+            {/* 独立页面仍保留当前页上下文，避免从首页跳转后顶部导航看起来像“失效” */}
+            {standaloneView && (
+              <span className="relative flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
+                {standaloneView === "evaluation" ? <LayoutGrid className="size-4" /> : <Medal className="size-4" />}
+                {standaloneView === "evaluation" ? "班级评价" : "班级排行榜"}
+                <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-primary to-primary-2" />
+              </span>
+            )}
+
             {/* 二级页面分组：按要求在页面中隐藏，功能仍可通过各首页快捷入口进入 */}
             {false && isTeacher && showSecondaryGroup && (
               <DropdownMenu>

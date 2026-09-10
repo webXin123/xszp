@@ -1,468 +1,323 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
-  Award,
   ArrowRight,
-  CalendarDays,
   CheckCircle2,
-  ChevronDown,
   Circle,
-  HeartPulse,
-  Inbox,
-  School,
+  FileSpreadsheet,
+  NotebookPen,
   Send,
+  Upload,
+  UsersRound,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
-import { PointSourceBadge } from "@/components/ui/point-source-badge"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
-import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
-import { formatDateRangeLabel, getISOWeekKey } from "@/lib/scoring-utils"
-import { getMonthRange, getSemesterRange, getWeekRange, inRange, TIME_RANGE_LABEL, type TimeRange } from "@/lib/points-utils"
+import { getSemesterRange, inRange } from "@/lib/points-utils"
 import { PE_CLASSES, getSemesterLabel } from "@/lib/pe-scores"
+import { readCommentRecords, type StudentCommentRecord } from "@/lib/comment-utils"
 import type { MainTab } from "../evaluation/evaluation-dashboard"
 
-const BAR_COLORS = [
-  "bg-brand-blue",
-  "bg-brand-green",
-  "bg-brand-orange",
-  "bg-brand-yellow",
-  "bg-chart-1",
-  "bg-chart-2",
-  "bg-chart-3",
-  "bg-chart-4",
-  "bg-chart-5",
-  "bg-primary",
-]
+const SCORE_ENTRY_TASKS_KEY = "mzlg-score-entry-tasks-v1"
+const COMMENT_TASKS_KEY = "mzlg-comment-entry-tasks-v1"
+
+type ProgressStatus = "未开始" | "录入中" | "已提交"
+type AwardChartRange = "sevenDays" | "semester"
+
+interface AwardTrendPoint {
+  key: string
+  label: string
+  value: number
+}
+
+interface ScoreTaskCache {
+  progress?: Array<{ teacher: string; classNames: string; status: ProgressStatus }>
+}
+
+interface CommentTaskCache {
+  progress?: Array<{ teacherName: string; classNames: string; studentCount: number; status: ProgressStatus }>
+}
 
 interface SubjectDashboardProps {
   onNavigate: (tab: MainTab) => void
 }
 
+interface WorkClass {
+  id: string
+  name: string
+  shortName?: string
+  studentCount: number
+}
+
+interface ScoreClassProgress extends WorkClass {
+  status: ProgressStatus
+  completedFiles?: number
+  totalFiles?: number
+}
+
+interface CommentClassProgress extends WorkClass {
+  completedStudents: number
+  status: ProgressStatus
+}
+
+function statusStyle(status: ProgressStatus) {
+  if (status === "已提交") return "bg-[#eaf8f1] text-brand-green"
+  if (status === "录入中") return "bg-[#eef2ff] text-primary"
+  return "bg-[#fff4e5] text-brand-orange"
+}
+
+function statusLabel(status: ProgressStatus, type: "score" | "comment") {
+  if (status === "已提交") return type === "score" ? "已上传" : "已完成"
+  return type === "score" ? "待上传" : "待录入"
+}
+
+function ProgressBar({ value, total, tone = "primary" }: { value: number; total: number; tone?: "primary" | "green" | "purple" }) {
+  const percent = total ? Math.round((value / total) * 100) : 0
+  const color = tone === "green" ? "bg-brand-green" : tone === "purple" ? "bg-[#7166b3]" : "bg-primary"
+  return <div className="flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-[#e7ebf8]"><div className={cn("h-full rounded-full transition-[width] duration-300", color)} style={{ width: `${percent}%` }} /></div><span className="w-10 text-right text-xs font-bold tabular-nums">{percent}%</span></div>
+}
+
+function commentCompleted(studentCount: number, status: ProgressStatus) {
+  if (status === "已提交") return studentCount
+  if (status === "录入中") return Math.max(1, Math.round(studentCount * 0.56))
+  return 0
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+function startOfDay(date: Date) {
+  const value = new Date(date)
+  value.setHours(0, 0, 0, 0)
+  return value
+}
+
+function dateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function formatAwardTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
+}
+
+function getRecentSevenDayRange(now = new Date()) {
+  const end = new Date(now)
+  end.setHours(23, 59, 59, 999)
+  const start = startOfDay(now)
+  start.setDate(start.getDate() - 6)
+  return { start, end }
+}
+
+function AwardTrendChart({ points, title }: { points: AwardTrendPoint[]; title: string }) {
+  const width = 640
+  const height = 220
+  const padding = { top: 18, right: 18, bottom: 38, left: 38 }
+  const chartWidth = width - padding.left - padding.right
+  const chartHeight = height - padding.top - padding.bottom
+  const maxValue = Math.max(1, ...points.map((point) => point.value))
+  const coordinates = points.map((point, index) => ({
+    ...point,
+    x: padding.left + (points.length === 1 ? chartWidth / 2 : (index / (points.length - 1)) * chartWidth),
+    y: padding.top + chartHeight - (point.value / maxValue) * chartHeight,
+  }))
+  const linePath = coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ")
+  const areaPath = coordinates.length > 0 ? `${linePath} L ${coordinates.at(-1)!.x.toFixed(2)} ${height - padding.bottom} L ${coordinates[0].x.toFixed(2)} ${height - padding.bottom} Z` : ""
+  const labelStep = Math.max(1, Math.ceil(points.length / 7))
+  const titleId = `award-trend-${title.replace(/[^a-zA-Z0-9]+/g, "-")}`
+
+  return <div className="mt-3 min-w-0 overflow-x-auto rounded-xl border border-[#e5e9f6] bg-[#fbfcff] px-2 pt-2 sm:px-3" role="img" aria-labelledby={titleId}>
+    <span id={titleId} className="sr-only">{title}，纵轴为发放奖卡张数</span>
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-[220px] w-full min-w-[520px]" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id={`${titleId}-fill`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="rgb(63 81 188)" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="rgb(63 81 188)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {[0, 0.5, 1].map((ratio) => {
+        const y = padding.top + chartHeight * ratio
+        const value = Math.round(maxValue * (1 - ratio))
+        return <g key={ratio}>
+          <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="#e4e9f8" strokeDasharray="3 5" />
+          <text x={padding.left - 8} y={y + 4} textAnchor="end" className="fill-[#8b96b5] text-[11px]">{value}</text>
+        </g>
+      })}
+      {areaPath && <path d={areaPath} fill={`url(#${titleId}-fill)`} />}
+      {linePath && <path d={linePath} fill="none" stroke="#3f51bc" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" vectorEffect="non-scaling-stroke" />}
+      {coordinates.map((point, index) => <g key={point.key}>
+        <circle cx={point.x} cy={point.y} r="4" fill="#ffffff" stroke="#3f51bc" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        {(index % labelStep === 0 || index === coordinates.length - 1) && <text x={point.x} y={height - 13} textAnchor="middle" className="fill-[#8b96b5] text-[11px]">{point.label}</text>}
+      </g>)}
+    </svg>
+  </div>
+}
+
 export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
-  const { awardCards, currentTeacher, peScoreUploads } = useEvaluation()
+  const { awardCards, currentTeacher, peScoreUploads, classes } = useEvaluation()
   const { role, awardClasses, peClassIds } = usePermission()
-  const [range, setRange] = useState<TimeRange>("week")
-  const [classId, setClassId] = useState<string>("")
-  const [classMenuOpen, setClassMenuOpen] = useState(false)
+  const [chartRange, setChartRange] = useState<AwardChartRange>("sevenDays")
+  const [scoreTasks, setScoreTasks] = useState<ScoreTaskCache[]>([])
+  const [commentTasks, setCommentTasks] = useState<CommentTaskCache[]>([])
+  const [commentRecords, setCommentRecords] = useState<StudentCommentRecord[]>([])
 
   const isPe = role === "pe_teacher"
-  // 学生身份不会进入此组件（由外层 nav 控制），这里一定存在
   const teacher = currentTeacher!
 
-  // 发卡范围班级（用于班级切换）
-  const switchClasses = useMemo(() => awardClasses, [awardClasses])
-
-  // 切换身份后若当前选中班级不在发卡范围内，回落第一个
   useEffect(() => {
-    if (switchClasses.length === 0) {
-      setClassId("")
-      return
+    try {
+      const cachedScore = JSON.parse(localStorage.getItem(SCORE_ENTRY_TASKS_KEY) ?? "[]")
+      const cachedComment = JSON.parse(localStorage.getItem(COMMENT_TASKS_KEY) ?? "[]")
+      setScoreTasks(Array.isArray(cachedScore) ? cachedScore : [])
+      setCommentTasks(Array.isArray(cachedComment) ? cachedComment : [])
+      setCommentRecords(readCommentRecords())
+    } catch {
+      setScoreTasks([])
+      setCommentTasks([])
     }
-    setClassId((prev) =>
-      switchClasses.some((c) => c.id === prev) ? prev : switchClasses[0].id,
-    )
-  }, [switchClasses])
+  }, [])
 
-  const currentClass = switchClasses.find((c) => c.id === classId)
-
-  // 仅统计当前老师发放的奖卡（operatorId 匹配），并按选中班级过滤
-  const myAwardCards = useMemo(
-    () => awardCards.filter((c) => c.operatorId === teacher.id && (!classId || c.classId === classId)),
-    [awardCards, teacher.id, classId],
-  )
-
-  const weekKey = getISOWeekKey(new Date())
-  const weekRangeLabel = formatDateRangeLabel(weekKey)
-
-  // 按时间范围过滤
-  const rangeFiltered = useMemo(() => {
-    const r =
-      range === "week"
-        ? getWeekRange(new Date())
-        : range === "month"
-          ? getMonthRange(new Date())
-          : getSemesterRange(new Date())
-    return myAwardCards.filter((c) => inRange(c.date, r.start, r.end))
-  }, [myAwardCards, range])
-
-  // 按一级指标聚合
-  const chartData = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const name of AWARD_LEVEL1_LIST) map.set(name, 0)
-    for (const c of rangeFiltered) {
-      map.set(c.level1, (map.get(c.level1) ?? 0) + c.points)
-    }
-    return AWARD_LEVEL1_LIST.map((level1) => ({ level1, points: map.get(level1) ?? 0 }))
-  }, [rangeFiltered])
-
-  const rangeTotal = useMemo(
-    () => chartData.reduce((s, d) => s + d.points, 0),
-    [chartData],
-  )
-
-  // 最近一周我发放的奖卡，按创建时间倒序
+  const myAwardCards = useMemo(() => awardCards.filter((card) => card.operatorId === teacher.id), [awardCards, teacher.id])
   const recentWeekCards = useMemo(() => {
-    const weekRange = getWeekRange(new Date())
-    return myAwardCards
-      .filter((c) => inRange(c.date, weekRange.start, weekRange.end))
-      .slice()
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    const recentRange = getRecentSevenDayRange(new Date())
+    return myAwardCards.filter((card) => inRange(card.createdAt, recentRange.start, recentRange.end)).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }, [myAwardCards])
-
-  const recentCardsLoadMore = useLoadMore(recentWeekCards, 10)
+  const recentWeekPoints = recentWeekCards.reduce((sum, card) => sum + card.points, 0)
+  const recentCardsLoadMore = useLoadMore(recentWeekCards, 6)
   const recentCardsScroll = useScrollLoadMore(recentCardsLoadMore.hasMore, recentCardsLoadMore.loadMore)
-
-  // 体育成绩录入进度（仅体育老师用）
-  const peClasses = useMemo(
-    () => (isPe ? PE_CLASSES.filter((c) => peClassIds.includes(c.id)) : []),
-    [isPe, peClassIds],
-  )
-  const peUploadMap = useMemo(() => {
-    const map = new Map<string, boolean>()
-    for (const u of peScoreUploads) map.set(`${u.classId}:${u.gender}`, true)
-    return map
-  }, [peScoreUploads])
-  const peProgress = useMemo(() => {
-    if (!isPe) return null
-    const totalFiles = peClasses.length * 2
-    const uploadedFiles = peClasses.reduce(
-      (acc, c) =>
-        acc +
-        (peUploadMap.has(`${c.id}:male`) ? 1 : 0) +
-        (peUploadMap.has(`${c.id}:female`) ? 1 : 0),
-      0,
-    )
-    const perClass = peClasses.map((c) => ({
-      cls: c,
-      male: peUploadMap.has(`${c.id}:male`),
-      female: peUploadMap.has(`${c.id}:female`),
-    }))
-    return {
-      totalFiles,
-      uploadedFiles,
-      percent: totalFiles === 0 ? 0 : Math.round((uploadedFiles / totalFiles) * 100),
-      perClass,
-      semesterLabel: getSemesterLabel(),
+  const trendPoints = useMemo<AwardTrendPoint[]>(() => {
+    const now = new Date()
+    if (chartRange === "sevenDays") {
+      const start = getRecentSevenDayRange(now).start
+      return Array.from({ length: 7 }, (_, index) => {
+        const day = new Date(start)
+        day.setDate(start.getDate() + index)
+        const key = dateKey(day)
+        return {
+          key,
+          label: `${day.getMonth() + 1}/${day.getDate()}`,
+          value: myAwardCards.filter((card) => dateKey(new Date(card.createdAt)) === key).length,
+        }
+      })
     }
-  }, [isPe, peClasses, peUploadMap])
 
-  return (
-    <div className="flex flex-col gap-6">
-      {/* 顶部：身份 + 班级切换 + 周次 */}
+    const semesterStart = startOfDay(getSemesterRange(now).start)
+    const currentDay = startOfDay(now)
+    const elapsedDays = Math.max(0, Math.floor((currentDay.getTime() - semesterStart.getTime()) / DAY_MS))
+    const weekCount = Math.max(1, Math.floor(elapsedDays / 7) + 1)
+    return Array.from({ length: weekCount }, (_, index) => {
+      const weekStart = new Date(semesterStart)
+      weekStart.setDate(semesterStart.getDate() + index * 7)
+      const nextWeekStart = new Date(weekStart)
+      nextWeekStart.setDate(weekStart.getDate() + 7)
+      return {
+        key: `semester-week-${index + 1}`,
+        label: `第${index + 1}周`,
+        value: myAwardCards.filter((card) => {
+          const createdAt = new Date(card.createdAt).getTime()
+          return createdAt >= weekStart.getTime() && createdAt < nextWeekStart.getTime()
+        }).length,
+      }
+    })
+  }, [chartRange, myAwardCards])
+  const trendTotal = trendPoints.reduce((sum, point) => sum + point.value, 0)
+  const classNameById = useMemo(() => new Map(classes.map((item) => [item.id, item.name])), [classes])
+
+  const workClasses = useMemo<WorkClass[]>(() => {
+    if (isPe) return PE_CLASSES.filter((item) => peClassIds.includes(item.id)).map((item) => ({ id: item.id, name: item.name, studentCount: item.maleCount + item.femaleCount }))
+    return awardClasses.map((item) => ({ id: item.id, name: item.name, shortName: item.shortName, studentCount: classes.find((schoolClass) => schoolClass.id === item.id)?.studentCount ?? 0 }))
+  }, [awardClasses, classes, isPe, peClassIds])
+
+  const scoreProgress = useMemo<ScoreClassProgress[]>(() => {
+    if (isPe) {
+      return workClasses.map((item) => {
+        const uploaded = Number(peScoreUploads.some((upload) => upload.classId === item.id && upload.gender === "male")) + Number(peScoreUploads.some((upload) => upload.classId === item.id && upload.gender === "female"))
+        return { ...item, completedFiles: uploaded, totalFiles: 2, status: uploaded === 2 ? "已提交" : uploaded > 0 ? "录入中" : "未开始" }
+      })
+    }
+    const entries = scoreTasks.flatMap((task) => task.progress ?? []).filter((item) => item.teacher === teacher.name)
+    return workClasses.map((item, index) => {
+      const matched = entries.find((entry) => entry.classNames.split("、").includes(item.name))
+      return { ...item, status: matched?.status ?? (index === 0 ? "录入中" : "未开始") }
+    })
+  }, [isPe, peScoreUploads, scoreTasks, teacher.name, workClasses])
+
+  const commentProgress = useMemo<CommentClassProgress[]>(() => {
+    const entries = commentTasks.flatMap((task) => task.progress ?? []).filter((item) => item.teacherName.startsWith(teacher.name))
+    return workClasses.map((item, index) => {
+      const savedForClass = commentRecords.filter((record) => record.teacherId === teacher.id && record.classId === item.id && record.comment.trim())
+      const matched = entries.find((entry) => entry.classNames.split("、").some((name) => name === item.name || name === item.shortName))
+      const studentCount = matched && matched.classNames.split("、").length === 1 ? matched.studentCount : item.studentCount
+      const fallbackStatus = matched?.status ?? (index === 0 ? "录入中" : "未开始")
+      const completedStudents = savedForClass.length > 0 ? savedForClass.length : commentCompleted(studentCount, fallbackStatus)
+      const status = completedStudents >= studentCount ? "已提交" : completedStudents > 0 ? "录入中" : "未开始"
+      return { ...item, studentCount, status, completedStudents }
+    })
+  }, [commentRecords, commentTasks, teacher.id, teacher.name, teacher.role, workClasses])
+
+  const pendingScoreClasses = scoreProgress.filter((item) => item.status !== "已提交")
+  const commentCompletedStudents = commentProgress.reduce((sum, item) => sum + item.completedStudents, 0)
+  const pendingCommentClasses = commentProgress.filter((item) => item.completedStudents < item.studentCount)
+
+  const scoreHref = isPe ? "/pe-score-import" : "/score-entry"
+
+  return <div className="-m-4 flex flex-col gap-4 bg-[#f7f8ff] p-4 sm:-m-6 sm:gap-5 sm:p-6">
+    <section className="overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]" aria-label="任课教师工作概览">
+      <div className="grid xl:grid-cols-[minmax(270px,0.68fr)_minmax(0,1.32fr)]">
+        <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] p-5 sm:p-6 xl:border-r xl:border-[#e4e9f8]">
+          <p className="text-xs font-semibold tracking-[0.16em] text-primary">教师工作台</p><h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">{isPe ? "体育教师首页" : "任课教师首页"}</h1>
+          <div className="mt-6 min-w-0"><p className="truncate text-base font-bold text-foreground">{teacher.name}</p><p className="mt-1 truncate text-xs text-muted-foreground">{workClasses.map((item) => item.name).join("、") || "暂无任教班级"}</p><span className="mt-2 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">本周工作概览</span></div>
+        </div>
+        <div className="p-5 sm:p-6"><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold text-foreground">本学期待办</p><p className="mt-1 text-xs text-muted-foreground">点击待办直接进入对应录入界面</p></div><span className="inline-flex min-h-8 items-center rounded-lg bg-[#fff1e9] px-2.5 text-xs font-bold tabular-nums text-brand-orange">{pendingScoreClasses.length + pendingCommentClasses.length} 项待处理</span></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><TodoSummary href={scoreHref} icon={FileSpreadsheet} tone="green" title={isPe ? "体质健康上传" : "成绩上传"} value={`${pendingScoreClasses.length} 个班级待处理`} description={pendingScoreClasses.length ? pendingScoreClasses.map((item) => item.name).join("、") : "所有班级均已上传"} /><TodoSummary href="/comment-entry" icon={NotebookPen} tone="purple" title="评语录入" value={`${pendingCommentClasses.length} 个班级待处理`} description={pendingCommentClasses.length ? pendingCommentClasses.map((item) => item.name).join("、") : "本学期评语已完成"} /></div></div>
+      </div>
+    </section>
+
+    <section className="rounded-2xl border border-[#cbd6f7] bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6" aria-labelledby="teacher-awards-title">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="glass-panel flex items-center gap-2 rounded-xl px-4 py-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-brand-blue text-sm font-bold text-primary-foreground shadow-sm">
-              {teacher.name.slice(0, 1)}
-            </span>
-            <span className="text-base font-bold text-foreground">{teacher.name}</span>
-            <span className="text-xs text-muted-foreground">{teacher.title}</span>
-            {isPe && (
-              <span className="rounded-md bg-brand-green/15 px-2 py-0.5 text-xs font-medium text-brand-green">
-                体育老师
-              </span>
-            )}
-          </div>
-
-          {/* 班级切换（发卡范围多班时显示） */}
-          {switchClasses.length > 1 && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setClassMenuOpen((v) => !v)}
-                className="glass-panel flex items-center gap-2 rounded-xl px-3 py-2.5 text-left"
-              >
-                <School className="size-4 text-brand-blue" />
-                <span className="text-sm font-semibold text-foreground">
-                  {currentClass?.name ?? "全部班级"}
-                </span>
-                <ChevronDown className="size-4 text-muted-foreground" />
-              </button>
-              {classMenuOpen && (
-                <div className="glass-surface absolute left-0 top-full z-20 mt-1 flex w-48 flex-col rounded-xl p-1 shadow-lg">
-                  {switchClasses.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setClassId(c.id)
-                        setClassMenuOpen(false)
-                      }}
-                      className={cn(
-                        "rounded-lg px-3 py-2 text-left text-sm transition",
-                        c.id === classId
-                          ? "bg-accent font-medium text-foreground"
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                      )}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        <div>
+          <h2 id="teacher-awards-title" className="text-base font-bold text-foreground">我发放的奖卡</h2>
+          <p className="mt-1 text-xs text-muted-foreground">查看最近七天明细与本学期发放趋势</p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-gradient-to-r from-primary/10 to-brand-blue/10 px-3 py-1.5 text-xs font-medium text-foreground">
-          <CalendarDays className="size-3.5 text-brand-blue" />
-          {weekRangeLabel}
-        </div>
+        <button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/20 transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><Send className="size-3.5" aria-hidden="true" />去发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button>
       </div>
-
-      {/* 顶部入口卡片 */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <button
-          type="button"
-          onClick={() => onNavigate("award")}
-          className="glass-panel group flex items-start gap-3 rounded-2xl p-4 text-left transition hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5"
-        >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-blue/15 text-brand-blue">
-            <Send className="size-5" />
-          </span>
-          <span className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-foreground">线上发卡</span>
-            <span className="text-xs text-muted-foreground">
-              为 {awardClasses.length} 个班级发放五育奖卡
-            </span>
-          </span>
-        </button>
-
-        {isPe && (
-          <Link
-            href="/pe-score-import"
-            className="glass-panel group flex items-start gap-3 rounded-2xl p-4 text-left transition hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5"
-          >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-green/15 text-brand-green">
-              <HeartPulse className="size-5" />
-            </span>
-            <span className="flex flex-col gap-0.5">
-              <span className="text-sm font-semibold text-foreground">体育成绩录入</span>
-              <span className="text-xs text-muted-foreground">
-                体测成绩批量导入与查看
-              </span>
-            </span>
-          </Link>
-        )}
-
-        <div className="glass-panel flex items-start gap-3 rounded-2xl p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-yellow/15 text-brand-yellow">
-            <Award className="size-5" />
-          </span>
-          <span className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-foreground">本周累计发放</span>
-            <span className="text-lg font-bold text-brand-yellow">
-              {myAwardCards.filter((c) => {
-                const r = getWeekRange(new Date())
-                return inRange(c.date, r.start, r.end)
-              }).length}
-              <span className="ml-1 text-xs font-normal text-muted-foreground">张</span>
-            </span>
-          </span>
-        </div>
-      </div>
-
-      {/* 体育成绩录入进度（仅体育老师） */}
-      {isPe && peProgress && (
-        <section className="glass-panel flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+        <div className="min-w-0 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <HeartPulse className="size-4 text-brand-green" />
-                体育成绩录入进度
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">{peProgress.semesterLabel}</p>
-            </div>
-            <Link
-              href="/pe-score-import"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-green px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-brand-green/25 transition hover:bg-brand-green/90"
-            >
-              去录入成绩
-              <ArrowRight className="size-3.5" />
-            </Link>
-          </div>
-
-          {/* 总进度条 */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between text-xs">
-              <span className="text-muted-foreground">
-                已上传 <span className="font-bold text-foreground">{peProgress.uploadedFiles}</span>
-                <span className="text-muted-foreground"> / {peProgress.totalFiles} 份</span>
-              </span>
-              <span className="font-semibold text-brand-green">{peProgress.percent}%</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
-              <div
-                className="h-full rounded-full bg-brand-green transition-all"
-                style={{ width: `${peProgress.percent}%` }}
-              />
+            <div><p className="text-sm font-bold text-foreground">奖卡发放趋势</p><p className="mt-1 text-xs text-muted-foreground">按{chartRange === "sevenDays" ? "日期" : "学期周次"}统计发放张数</p></div>
+            <div className="flex rounded-xl border border-[#d8e0f7] bg-white p-1" role="tablist" aria-label="奖卡趋势时间范围">
+              {([{ value: "sevenDays", label: "最近7天" }, { value: "semester", label: "本学期" }] as Array<{ value: AwardChartRange; label: string }>).map((item) => <button key={item.value} type="button" role="tab" aria-selected={chartRange === item.value} onClick={() => setChartRange(item.value)} className={cn("min-h-8 rounded-lg px-3 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", chartRange === item.value ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>{item.label}</button>)}
             </div>
           </div>
-
-          {/* 按班级分行进度 */}
-          <ul className="grid grid-cols-2 gap-1.5 lg:grid-cols-3">
-            {peProgress.perClass.map(({ cls, male, female }) => {
-              const done = male && female
-              const partial = !done && (male || female)
-              return (
-                <li
-                  key={cls.id}
-                  className={cn(
-                    "flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs",
-                    done
-                      ? "border-brand-green/40 bg-brand-green/10"
-                      : partial
-                        ? "border-brand-yellow/40 bg-brand-yellow/10"
-                        : "border-border/60 bg-transparent",
-                  )}
-                >
-                  <span className="font-medium text-foreground">{cls.name}</span>
-                  <span className="flex items-center gap-1.5 text-xs">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-0.5",
-                        male ? "text-brand-green" : "text-muted-foreground/60",
-                      )}
-                    >
-                      {male ? <CheckCircle2 className="size-3" /> : <Circle className="size-3" />}
-                      男
-                    </span>
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-0.5",
-                        female ? "text-brand-green" : "text-muted-foreground/60",
-                      )}
-                    >
-                      {female ? <CheckCircle2 className="size-3" /> : <Circle className="size-3" />}
-                      女
-                    </span>
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        {/* 一级指标奖卡发放柱状图（带时间范围切换） */}
-        <section className="glass-panel flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-foreground">
-              我发放的奖卡
-              <span className="ml-2 text-xs font-normal text-muted-foreground">按一级指标</span>
-            </h3>
-            <div className="flex gap-1 rounded-lg bg-muted/40 p-1">
-              {(Object.keys(TIME_RANGE_LABEL) as TimeRange[]).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setRange(k)}
-                  className={cn(
-                    "rounded-md px-3 py-1 text-xs font-medium transition",
-                    range === k
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {TIME_RANGE_LABEL[k]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-baseline justify-between border-b border-border/40 pb-3">
-            <p className="text-xs text-muted-foreground">
-              {TIME_RANGE_LABEL[range]}合计{" "}
-              <span className="text-sm font-bold text-foreground">{rangeTotal}</span> 张
-            </p>
-            <p className="text-xs text-muted-foreground">按一级指标分布</p>
-          </div>
-
-          <div className="flex h-48 items-end gap-1.5">
-            {chartData.map((d, i) => {
-              const max = Math.max(1, ...chartData.map((x) => x.points))
-              const heightPct = (d.points / max) * 100
-              return (
-                <div key={d.level1} className="flex flex-1 flex-col items-center gap-1">
-                  <span className="text-xs font-semibold text-foreground">
-                    {d.points > 0 ? d.points : ""}
-                  </span>
-                  <div className="flex h-32 w-full items-end justify-center">
-                    <div
-                      className={cn(
-                        "w-full max-w-7 rounded-t-md transition-all",
-                        BAR_COLORS[i % BAR_COLORS.length],
-                        d.points === 0 && "opacity-20",
-                      )}
-                      style={{ height: `${Math.max(heightPct, d.points > 0 ? 6 : 0)}%` }}
-                    />
-                  </div>
-                  <span className="line-clamp-2 h-7 text-center text-xs leading-tight text-muted-foreground">
-                    {d.level1}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* 最近一周发放消息 */}
-        <section className="glass-panel flex flex-col gap-3 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-              <Inbox className="size-4 text-brand-blue" />
-              本周发放动态
-            </h3>
-            <span className="text-xs text-muted-foreground">共 {recentWeekCards.length} 条</span>
-          </div>
-
-          {recentWeekCards.length === 0 ? (
-            <p className="rounded-xl bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
-              本周还未发放奖卡，去为学生发一张吧
-            </p>
-          ) : (
-            <ul
-              className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1"
-              onScroll={recentCardsScroll.onScroll}
-            >
-              {recentCardsLoadMore.visible.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex items-start gap-2.5 rounded-xl bg-muted/30 px-3 py-2.5"
-                >
-                  <PointSourceBadge source={c.source} className="size-7 rounded-lg [&_svg]:size-3.5" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-foreground">
-                      发给 <span className="font-semibold">{c.studentName}</span>{" "}
-                      <span className="text-muted-foreground">一张</span>{" "}
-                      <span className="font-medium text-brand-yellow">{c.level1}</span>
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {c.level2} · +{c.points} 分
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end text-right">
-                    <span className="text-xs text-muted-foreground">{c.date}</span>
-                  </div>
-                </li>
-              ))}
-              <li>
-                <LoadMoreFooter
-                  hasMore={recentCardsLoadMore.hasMore}
-                  loaded={recentCardsLoadMore.visible.length}
-                  total={recentCardsLoadMore.total}
-                  onLoadMore={recentCardsLoadMore.loadMore}
-                />
-              </li>
-            </ul>
-          )}
-        </section>
+          <div className="mt-3 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums text-foreground">{trendTotal}</span><span className="text-xs text-muted-foreground">{chartRange === "sevenDays" ? "最近7天发放张数" : "本学期累计发放张数"}</span></div>
+          <AwardTrendChart points={trendPoints} title={chartRange === "sevenDays" ? "最近7天奖卡发放趋势" : "本学期奖卡发放趋势"} />
+        </div>
+        <div className="flex min-h-[330px] min-w-0 flex-col rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-4">
+          <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold text-foreground">最近七天发放明细</p><p className="mt-1 text-xs text-muted-foreground">共 {recentWeekCards.length} 张 · 累计 {recentWeekPoints} 分</p></div><span className="rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">按创建时间倒序</span></div>
+          {recentWeekCards.length === 0 ? <div className="mt-4 flex flex-1 items-center justify-center rounded-xl border border-dashed border-[#d5def5] px-3 text-center text-sm text-muted-foreground">最近七天暂无奖卡发放记录</div> : <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-xl border border-[#e6eaf6] bg-white"><div className="grid grid-cols-[76px_minmax(0,1fr)_48px] gap-2 border-b border-[#edf0fa] px-3 py-2 text-[11px] font-semibold text-muted-foreground"><span>获得时间</span><span>学生 / 班级</span><span className="text-right">分值</span></div><ul tabIndex={0} aria-label="最近七天发放的奖卡列表" className="max-h-[300px] overflow-y-auto px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" onScroll={recentCardsScroll.onScroll}>{recentCardsLoadMore.visible.map((card) => <li key={card.id} className="grid grid-cols-[76px_minmax(0,1fr)_48px] items-center gap-2 border-b border-[#edf0fa] py-2.5 last:border-0"><time dateTime={card.createdAt} className="text-[11px] tabular-nums text-muted-foreground">{formatAwardTime(card.createdAt)}</time><span className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{card.studentName}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{classNameById.get(card.classId) ?? "未命名班级"}</span></span><span className="text-right text-xs font-bold tabular-nums text-brand-green">+{card.points}</span></li>)}<li><LoadMoreFooter hasMore={recentCardsLoadMore.hasMore} loaded={recentCardsLoadMore.visible.length} total={recentCardsLoadMore.total} onLoadMore={recentCardsLoadMore.loadMore} /></li></ul></div>}
+        </div>
       </div>
-    </div>
-  )
+    </section>
+  </div>
+}
+
+function TodoSummary({ icon: Icon, tone, title, value, description, href }: { icon: typeof Upload; tone: "green" | "purple"; title: string; value: string; description: string; href: string }) {
+  const toneClass = tone === "green" ? "bg-[#eaf8f1] text-brand-green" : "bg-[#f2f0ff] text-[#7166b3]"
+  return <Link href={href} className="group flex min-h-[96px] min-w-0 items-center gap-3 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-3 transition-colors hover:border-primary/35 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", toneClass)}><Icon className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-muted-foreground">{title}</span><span className="mt-0.5 block text-base font-bold tabular-nums text-foreground">{value}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{description}</span></span><ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-hover:translate-x-0.5" aria-hidden="true" /></Link>
+}
+
+function ProgressSummary({ icon: Icon, tone, title, completed, total, href }: { icon: typeof Upload; tone: "green" | "purple"; title: string; completed: number; total: number; href: string }) {
+  const percentage = total ? Math.round((completed / total) * 100) : 0
+  return <Link href={href} className="group min-w-0 rounded-xl border border-[#e5e9f6] bg-[#fbfcff] p-3 transition-colors hover:border-primary/30 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><div className="flex items-center gap-2"><span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg", tone === "green" ? "bg-[#eaf8f1] text-brand-green" : "bg-[#f2f0ff] text-[#7166b3]")}><Icon className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1 truncate text-xs font-semibold text-muted-foreground">{title}</span><ArrowRight className="size-3.5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-hover:translate-x-0.5" aria-hidden="true" /></div><div className="mt-2 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#e7ebf8]"><div className={cn("h-full rounded-full transition-[width] duration-300", tone === "green" ? "bg-brand-green" : "bg-[#7166b3]")} style={{ width: `${percentage}%` }} /></div><span className="w-10 text-right text-xs font-bold tabular-nums text-foreground">{percentage}%</span></div><p className="mt-1 text-[11px] text-muted-foreground">已完成 {completed} / {total}</p></Link>
+}
+
+function TaskProgressCard({ title, description, icon: Icon, tone, completed, total, unit, items, action }: { title: string; description: string; icon: typeof Upload; tone: "green" | "purple"; completed: number; total: number; unit: string; items: Array<{ id: string; name: string; status: ProgressStatus; meta: string }>; action?: React.ReactNode }) {
+  const toneClass = tone === "green" ? "bg-[#eaf8f1] text-brand-green" : "bg-[#f2f0ff] text-[#7166b3]"
+  return <section className={cn("flex h-[330px] min-h-0 flex-col rounded-2xl border border-[#cbd6f7] border-t-2 bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6", tone === "green" ? "border-t-brand-green" : "border-t-[#7166b3]")} aria-label={title}><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", toneClass)}><Icon className="size-5" aria-hidden="true" /></span><div className="min-w-0"><h2 className="text-base font-bold text-foreground">{title}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{description}</p></div></div>{action}</div><div className="mt-4"><div className="mb-2 flex items-baseline justify-between gap-3"><span className="text-xs text-muted-foreground">已完成 <strong className="font-bold tabular-nums text-foreground">{completed}</strong> / {total} {unit}</span><span className={cn("text-xs font-bold tabular-nums", tone === "green" ? "text-brand-green" : "text-[#7166b3]")}>{total ? Math.round((completed / total) * 100) : 0}%</span></div><ProgressBar value={completed} total={total} tone={tone === "green" ? "green" : "purple"} /></div><ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">{items.map((item) => <li key={item.id} className="flex items-center gap-2.5 rounded-xl border border-[#e5e9f6] bg-[#fbfcff] px-3 py-2.5"><span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", item.status === "已提交" ? "bg-[#eaf8f1] text-brand-green" : "bg-[#fff4e5] text-brand-orange")}>{item.status === "已提交" ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <Circle className="size-3.5" aria-hidden="true" />}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{item.name}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{item.meta}</span></span><span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold", statusStyle(item.status))}>{statusLabel(item.status, title.includes("成绩") ? "score" : "comment")}</span></li>)}</ul></section>
 }

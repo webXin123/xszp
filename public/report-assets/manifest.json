@@ -1,0 +1,30 @@
+﻿{
+    "source":  {
+                   "file":  "student-semester-report-reference.png",
+                   "width":  941,
+                   "height":  1672
+               },
+    "coordinateSystem":  "top-left origin; units are source image pixels",
+    "crops":  [
+                  {
+                      "name":  "report-header-background.png",
+                      "source":  "学生学期报告单.png",
+                      "x":  42,
+                      "y":  0,
+                      "width":  858,
+                      "height":  170,
+                      "purpose":  "report header background with school identity, sky, magnolia and skyline",
+                      "type":  "background"
+                  },
+                  {
+                      "name":  "report-footer-background.png",
+                      "source":  "学生学期报告单.png",
+                      "x":  42,
+                      "y":  1552,
+                      "width":  858,
+                      "height":  120,
+                      "purpose":  "report footer background with campus and skyline",
+                      "type":  "background"
+                  }
+              ]
+}

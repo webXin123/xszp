@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { ClassConfigTab } from "@/components/evaluation/class-config-tab"
+import { StandalonePageShell } from "@/components/evaluation/standalone-page-shell"
 import { EvaluationProvider } from "@/lib/evaluation-context"
 
 export const metadata: Metadata = {
@@ -10,7 +11,11 @@ export const metadata: Metadata = {
 export default function ClassEvaluationConfigPage() {
   return (
     <EvaluationProvider>
-      <ClassConfigTab />
+      <StandalonePageShell mainId="class-evaluation-config-main" activeLabel="评价配置" activeIcon="settings">
+        <div id="class-evaluation-config-main" tabIndex={-1} className="w-full">
+          <ClassConfigTab />
+        </div>
+      </StandalonePageShell>
     </EvaluationProvider>
   )
 }

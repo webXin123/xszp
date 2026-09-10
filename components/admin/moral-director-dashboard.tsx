@@ -124,13 +124,14 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
     }
     return AWARD_LEVEL1_LIST.map((level1) => ({ level1, points: counts.get(level1) ?? 0 }))
   }, [awardRange, currentWeek, now, onlineTeacherAwards])
-  const latestAwards = useMemo(
+  const latestAwardRecords = useMemo(
     () => onlineTeacherAwards
       .filter((award) => getISOWeekKey(new Date(award.date)) === weekKey)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, 8),
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [onlineTeacherAwards, weekKey],
   )
+  const latestAwardsLoadMore = useLoadMore(latestAwardRecords, 5)
+  const latestAwardsScroll = useScrollLoadMore(latestAwardsLoadMore.hasMore, latestAwardsLoadMore.loadMore)
 
   const shortcuts = [
     { label: "班级评价", description: "查看与录入班级表现", icon: LayoutGrid, href: "/class-evaluation", tone: "bg-[#edf1ff] text-primary" },
@@ -184,9 +185,9 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
           <p className="mt-1 text-[11px] text-muted-foreground">统计线上奖卡，不含线下扫码与流动红旗奖励。</p>
         </section>
 
-        <section className="flex min-h-[300px] flex-col rounded-2xl border border-[#cfd7f6] border-t-2 border-t-primary bg-white p-5 shadow-[0_15px_34px_-28px_rgba(48,62,139,0.68)] sm:p-6" aria-labelledby="latest-awards-title">
-          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#edf1ff] text-primary"><Award className="size-5" aria-hidden="true" /></span><div><h3 id="latest-awards-title" className="text-base font-bold text-foreground">最新一周奖卡发放动态</h3><p className="mt-1 text-xs text-muted-foreground">按发放时间倒序展示</p></div></div><button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button></div>
-          {latestAwards.length === 0 ? <div className="mt-4 flex flex-1 items-center justify-center rounded-xl border border-dashed border-[#cfd7f6] text-sm text-muted-foreground">本周暂无奖卡发放动态</div> : <ul className="mt-4 divide-y divide-[#e7ebfa] overflow-y-auto rounded-xl border border-[#e2e7f8] bg-[#fbfcff] px-3 pr-2">{latestAwards.map((award) => <li key={award.id} className="flex items-center gap-3 py-2.5"><span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#edf1ff] text-primary"><Award className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{award.studentName}<span className="font-normal text-muted-foreground"> · {classNameById.get(award.classId) ?? "未命名班级"}</span></span><span className="mt-1 block truncate text-xs text-muted-foreground">{award.level1} · {award.operatorName}</span></span><span className="shrink-0 text-right"><span className="block text-xs font-semibold text-brand-green">+{award.points} 分</span><span className="mt-1 block text-xs tabular-nums text-muted-foreground">{award.date}</span></span></li>)}</ul>}
+        <section className="flex h-[380px] min-h-0 flex-col rounded-2xl border border-[#cfd7f6] border-t-2 border-t-primary bg-white p-5 shadow-[0_15px_34px_-28px_rgba(48,62,139,0.68)] sm:h-[400px] sm:p-6" aria-labelledby="latest-awards-title">
+          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#edf1ff] text-primary"><Award className="size-5" aria-hidden="true" /></span><div><h3 id="latest-awards-title" className="text-base font-bold text-foreground">最新一周奖卡发放动态</h3><p className="mt-1 text-xs text-muted-foreground">默认显示最新 5 条 · 上拉加载更多</p></div></div><button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button></div>
+          {latestAwardRecords.length === 0 ? <div className="mt-4 flex flex-1 items-center justify-center rounded-xl border border-dashed border-[#cfd7f6] text-sm text-muted-foreground">本周暂无奖卡发放动态</div> : <ul aria-label="最新一周奖卡发放动态" tabIndex={0} className="mt-4 min-h-0 flex-1 divide-y divide-[#e7ebfa] overflow-y-auto overscroll-contain rounded-xl border border-[#e2e7f8] bg-[#fbfcff] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" onScroll={latestAwardsScroll.onScroll}>{latestAwardsLoadMore.visible.map((award) => <li key={award.id} className="flex items-center gap-3 py-2.5"><span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#edf1ff] text-primary"><Award className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{award.studentName}<span className="font-normal text-muted-foreground"> · {classNameById.get(award.classId) ?? "未命名班级"}</span></span><span className="mt-1 block truncate text-xs text-muted-foreground">{award.level1} · {award.operatorName}</span></span><span className="shrink-0 text-right"><span className="block text-xs font-semibold text-brand-green">+{award.points} 分</span><span className="mt-1 block text-xs tabular-nums text-muted-foreground">{award.date}</span></span></li>)}<li><LoadMoreFooter hasMore={latestAwardsLoadMore.hasMore} loaded={latestAwardsLoadMore.visible.length} total={latestAwardsLoadMore.total} onLoadMore={latestAwardsLoadMore.loadMore} /></li></ul>}
         </section>
       </div>
     </div>

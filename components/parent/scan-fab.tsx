@@ -17,7 +17,7 @@ export function ScanFab() {
     startY: 0,
     moved: false,
   })
-  const fabRef = useRef<HTMLDivElement>(null)
+  const fabRef = useRef<HTMLButtonElement>(null)
   const SIZE = 64
   const MARGIN = 16
 
@@ -30,7 +30,7 @@ export function ScanFab() {
       const rect = parent.getBoundingClientRect()
       setPos({
         x: Math.max(MARGIN, rect.width - SIZE - MARGIN),
-        y: Math.max(MARGIN, rect.height - SIZE - MARGIN),
+        y: Math.min(Math.max(MARGIN, rect.height * 0.62), Math.max(MARGIN, rect.height - SIZE - MARGIN)),
       })
     }
     place()
@@ -43,7 +43,7 @@ export function ScanFab() {
   }, [])
 
   const onPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
+    (e: React.PointerEvent<HTMLButtonElement>) => {
       dragState.current = {
         pointerId: e.pointerId,
         startX: e.clientX,
@@ -57,7 +57,7 @@ export function ScanFab() {
   )
 
   const onPointerMove = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
+    (e: React.PointerEvent<HTMLButtonElement>) => {
       if (!dragging || dragState.current.pointerId !== e.pointerId || !pos) return
       const dx = e.clientX - dragState.current.startX
       const dy = e.clientY - dragState.current.startY
@@ -75,35 +75,40 @@ export function ScanFab() {
   )
 
   const onPointerUp = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
+    (e: React.PointerEvent<HTMLButtonElement>) => {
       if (dragState.current.pointerId !== e.pointerId) return
       setDragging(false)
       dragState.current.pointerId = -1
-      // 未拖动视为点击 → 演示提示
-      if (!dragState.current.moved) {
-        setToast(true)
-        window.setTimeout(() => setToast(false), 2200)
-      }
     },
     [],
   )
 
+  const onClick = useCallback(() => {
+    if (dragState.current.moved) {
+      dragState.current.moved = false
+      return
+    }
+    setToast(true)
+    window.setTimeout(() => setToast(false), 2200)
+  }, [])
+
   if (!mounted) return null
 
   return (
-    <div
+    <button
+      type="button"
       ref={fabRef}
-      role="button"
       aria-label="扫描奖卡（可拖动）"
       title="扫描奖卡：点击演示，按住可拖动"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onClick={onClick}
       style={{ left: pos?.x ?? -9999, top: pos?.y ?? -9999, width: SIZE, height: SIZE }}
       className={cn(
         "absolute z-[60] flex touch-none select-none flex-col items-center justify-center gap-1 rounded-full",
-        "bg-primary text-primary-foreground hover:bg-primary/90",
+        "bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 focus-visible:ring-offset-2",
         "transition-shadow",
         dragging ? "cursor-grabbing scale-105 shadow-2xl" : "cursor-grab hover:shadow-2xl",
       )}
@@ -115,6 +120,6 @@ export function ScanFab() {
           扫描功能演示：对准奖卡二维码即可累计积分
         </span>
       )}
-    </div>
+    </button>
   )
 }

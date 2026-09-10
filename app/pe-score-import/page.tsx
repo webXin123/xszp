@@ -1,7 +1,6 @@
 ﻿"use client"
 
 import { useMemo, useRef, useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
 import { Download, Eye, HeartPulse, Upload } from "lucide-react"
 import * as XLSX from "xlsx"
@@ -16,6 +15,7 @@ import {
 import { cn } from "@/lib/utils"
 import { EvaluationProvider, useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
+import { StandalonePageShell } from "@/components/evaluation/standalone-page-shell"
 import {
   PE_CLASSES,
   PE_GRADE_NAMES,
@@ -41,9 +41,8 @@ function expectedCount(cls: PeClass, gender: PeGender) {
 }
 
 function PeScoreImportPage() {
-  const { currentTeacher, peScoreUploads, addPeScoreUpload } = useEvaluation()
-  const { canImportPeScores, peClassIds, role } = usePermission()
-  const isAdmin = role === "director"
+  const { peScoreUploads, addPeScoreUpload } = useEvaluation()
+  const { canImportPeScores, peClassIds } = usePermission()
 
   const visibleClasses = useMemo(
     () => PE_CLASSES.filter((c) => peClassIds.includes(c.id)),
@@ -167,41 +166,41 @@ function PeScoreImportPage() {
           key={gender}
           type="button"
           onClick={() => startUpload(cls.id, gender)}
-          className="flex min-h-[108px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#bfcdf5] bg-[#fbfcff] px-3 py-3.5 text-center transition-colors hover:border-primary/60 hover:bg-primary/[0.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="flex min-h-[84px] flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[#bfcdf5] bg-[#fbfcff] px-2.5 py-2.5 text-center transition-colors hover:border-primary/60 hover:bg-primary/[0.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
-          <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-            <Upload className="size-4 text-primary" aria-hidden="true" />
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <Upload className="size-3.5 text-primary" aria-hidden="true" />
             {label} · 待上传
           </span>
-          <span className="rounded-md bg-[#fff4e4] px-1.5 py-0.5 text-xs font-medium text-brand-orange">待上传 {count} 条成绩</span>
+          <span className="rounded-md bg-[#fff4e4] px-1.5 py-0.5 text-[11px] font-medium text-brand-orange">待上传 {count} 条</span>
         </button>
       )
     }
 
     return (
-      <div key={gender} className="flex min-h-[108px] flex-col gap-2 rounded-xl border border-[#bfe6d1] bg-[#f0fbf5] px-3 py-3.5">
+      <div key={gender} className="flex min-h-[84px] flex-col gap-1.5 rounded-lg border border-[#bfe6d1] bg-[#f0fbf5] px-2.5 py-2.5">
         <button type="button" onClick={() => setViewing(upload)} className="min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green/45">
           <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-sm font-semibold text-brand-green">
-              <HeartPulse className="size-4" aria-hidden="true" />
+            <span className="flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold text-brand-green">
+              <HeartPulse className="size-3.5 shrink-0" aria-hidden="true" />
               {label} · 已上传
             </span>
-            <span className="shrink-0 rounded-md bg-white/75 px-1.5 py-0.5 text-xs font-bold text-brand-green">
+            <span className="shrink-0 rounded-md bg-white/75 px-1.5 py-0.5 text-[11px] font-bold text-brand-green">
               {upload.rowCount} 条
             </span>
           </div>
-          <p className="mt-1.5 truncate text-xs text-muted-foreground" title={upload.fileName}>
+          <p className="mt-1 truncate text-[11px] text-muted-foreground" title={upload.fileName}>
             {upload.fileName}
           </p>
         </button>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
+        <div className="flex items-center justify-between gap-1 text-[11px] text-muted-foreground">
+          <span className="min-w-0 truncate">
             {upload.uploaderName} · {formatTime(upload.uploadedAt)}
           </span>
-          <span className="flex items-center gap-2">
+          <span className="flex shrink-0 items-center gap-1">
             <button
               type="button"
-              className="flex items-center gap-0.5 rounded px-1 py-0.5 text-brand-blue transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="flex min-h-7 items-center gap-0.5 rounded px-1 py-0.5 text-brand-blue transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               onClick={() => setViewing(upload)}
             >
               <Eye className="size-3.5" aria-hidden="true" />
@@ -209,7 +208,7 @@ function PeScoreImportPage() {
             </button>
             <button
               type="button"
-              className="flex items-center gap-0.5 rounded px-1 py-0.5 transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="flex min-h-7 items-center gap-0.5 rounded px-1 py-0.5 transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               onClick={() => startUpload(cls.id, gender)}
             >
               <Upload className="size-3.5" aria-hidden="true" />
@@ -221,50 +220,7 @@ function PeScoreImportPage() {
     )
   }
 
-  return (
-    <div className="flex min-h-screen flex-col bg-[#eef1ff] px-4 pb-5 pt-16 sm:px-6">
-      {/* 固定顶栏：与主站一致 */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-[#d7def8] bg-white/92 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
-          <div className="flex shrink-0 items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-[#d5ddf7]">
-              <Image src="/xszp/images/logo.png" alt="屹力学生综评" width={30} height={30} />
-            </span>
-            <div className="hidden flex-col leading-tight md:flex">
-              <span className="text-sm font-bold text-foreground">屹力学生综评</span>
-              <span className="text-xs text-muted-foreground">综合评价平台</span>
-            </div>
-          </div>
-
-          <nav className="flex min-w-0 items-center gap-1">
-            <Link
-              href="/class-evaluation"
-              className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            >
-              班级评价
-            </Link>
-            {isAdmin && (
-              <Link
-                href="/offline-award-cards"
-                className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              >
-                <Download className="size-4" aria-hidden="true" />
-                线下奖卡下载
-              </Link>
-            )}
-            <span className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-semibold text-primary">
-              <HeartPulse className="size-4" aria-hidden="true" />
-              体质健康成绩导入
-              <span className="absolute inset-x-4 bottom-1.5 h-0.5 rounded-full bg-gradient-to-r from-primary to-primary-2 shadow-[0_0_10px_-1px] shadow-primary/50" />
-            </span>
-          </nav>
-
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {currentTeacher ? `${currentTeacher.name} · 体育组` : "体育组"}
-          </span>
-        </div>
-      </header>
-
+  return <StandalonePageShell mainId="pe-score-import-main" activeLabel="体质健康成绩导入" activeIcon="heart">
       <input
         ref={fileInputRef}
         type="file"
@@ -274,8 +230,7 @@ function PeScoreImportPage() {
         aria-label="选择成绩 Excel 文件"
       />
 
-      <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col gap-4 pt-1">
-        <main className="flex w-full min-w-0 flex-col gap-5 rounded-[26px] border border-[#cbd5f5] bg-white p-4 shadow-[0_24px_52px_-34px_rgba(48,62,139,0.76)] sm:p-6">
+      <main id="pe-score-import-main" className="flex w-full min-w-0 flex-col gap-5 rounded-[26px] border border-[#cbd5f5] bg-white p-4 shadow-[0_24px_52px_-34px_rgba(48,62,139,0.76)] sm:p-6">
           {!canImportPeScores ? (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#c8d4f7] bg-[#f7f8ff] py-16 text-center">
               <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><HeartPulse className="size-7" aria-hidden="true" /></span>
@@ -292,94 +247,107 @@ function PeScoreImportPage() {
             </div>
           ) : (
             <>
-              {/* ---------------- 标题 + 统计 ---------------- */}
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dce3f8] bg-[#f6f8ff] px-4 py-3.5 sm:px-5">
-                <div className="min-w-0">
+              {/* ---------------- 标题 + 统计：合并为一张顶部信息卡 ---------------- */}
+              <section aria-labelledby="pe-score-import-title" className="flex flex-col gap-4 rounded-2xl border border-[#dce3f8] bg-[#f6f8ff] p-4 sm:p-5 lg:flex-row lg:items-center lg:gap-6">
+                <div className="min-w-0 flex-1 lg:max-w-[43%]">
                   <div className="flex items-center gap-2">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_8px_16px_-10px_rgba(63,81,188,0.9)]"><HeartPulse className="size-5" aria-hidden="true" /></span>
-                    <h1 className="text-lg font-bold text-foreground">体质健康成绩导入</h1>
+                    <h1 id="pe-score-import-title" className="text-lg font-bold text-foreground">体质健康成绩导入</h1>
                     <span className="rounded-full border border-[#d7e2ff] bg-white px-2.5 py-0.5 text-xs font-semibold text-primary">
                       {getSemesterLabel()}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     按班级分别上传 1-5 年级男生 / 女生体质健康成绩（.xlsx），点击卡片即可选择文件
                   </p>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="flex flex-col gap-1 rounded-2xl border border-[#d6e7de] bg-[#f4fcf7] p-4 shadow-[0_10px_22px_-22px_rgba(38,128,90,0.68)]">
-                  <span className="text-xs font-medium text-muted-foreground">已上传成绩条数</span>
-                  <span className="text-2xl font-bold text-brand-green">{uploadedRows}</span>
-                  <span className="text-xs text-muted-foreground">
-                    已上传 {uploadedFiles} 个文件
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 rounded-2xl border border-[#f1dec5] bg-[#fff9f2] p-4 shadow-[0_10px_22px_-22px_rgba(179,107,36,0.52)]">
-                  <span className="text-xs font-medium text-muted-foreground">待上传成绩数</span>
-                  <span className="text-2xl font-bold text-brand-orange">{pendingStudents}</span>
-                  <span className="text-xs text-muted-foreground">
-                    剩余 {totalFiles - uploadedFiles} 个文件待上传
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2 rounded-2xl border border-[#d8e0f7] bg-[#f7f9ff] p-4 shadow-[0_10px_22px_-22px_rgba(53,67,150,0.58)]">
-                  <span className="text-xs font-medium text-muted-foreground">上传进度</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-foreground">{uploadedFiles}</span>
-                    <span className="text-sm text-muted-foreground">/ {totalFiles} 个文件</span>
+                <div className="grid min-w-0 flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3 lg:min-w-[55%]">
+                  <div className="flex min-w-0 flex-col gap-1 rounded-xl border border-[#d6e7de] bg-[#f4fcf7] p-3 shadow-[0_10px_22px_-22px_rgba(38,128,90,0.68)]">
+                    <span className="truncate text-xs font-medium text-muted-foreground">已上传成绩条数</span>
+                    <span className="text-2xl font-bold tabular-nums text-brand-green">{uploadedRows}</span>
+                    <span className="truncate text-xs text-muted-foreground">已上传 {uploadedFiles} 个文件</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-[#e1e6f7]">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-brand-green to-chart-2 transition-[width] duration-300"
-                      style={{ width: totalFiles ? `${(uploadedFiles / totalFiles) * 100}%` : "0%" }}
-                    />
+                  <div className="flex min-w-0 flex-col gap-1 rounded-xl border border-[#f1dec5] bg-[#fff9f2] p-3 shadow-[0_10px_22px_-22px_rgba(179,107,36,0.52)]">
+                    <span className="truncate text-xs font-medium text-muted-foreground">待上传成绩数</span>
+                    <span className="text-2xl font-bold tabular-nums text-brand-orange">{pendingStudents}</span>
+                    <span className="truncate text-xs text-muted-foreground">剩余 {totalFiles - uploadedFiles} 个文件待上传</span>
                   </div>
-                </div>
-              </div>
-
-              {/* ---------------- 班级卡片 ---------------- */}
-              {PE_GRADE_NAMES.map((grade) => {
-                const classes = visibleClasses.filter((c) => c.gradeName === grade)
-                if (classes.length === 0) return null
-                return (
-                  <section key={grade} className="flex flex-col gap-3 rounded-2xl border border-[#dce3f8] bg-[#f5f7ff] p-3 sm:p-4">
-                    <div className="flex items-center gap-2"><span aria-hidden="true" className="flex size-7 items-center justify-center rounded-lg bg-white text-primary shadow-[0_6px_12px_-10px_rgba(63,81,188,0.8)]">{grade.slice(0, 1)}</span><h2 className="text-sm font-bold text-foreground">{grade}</h2></div>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      {classes.map((cls) => {
-                        const maleUploaded = uploadMap.has(`${cls.id}:male`)
-                        const femaleUploaded = uploadMap.has(`${cls.id}:female`)
-                        const clsDone = maleUploaded && femaleUploaded
-                        return (
-                          <div
-                            key={cls.id}
-                            className={cn(
-                              "flex flex-col gap-3 rounded-2xl border border-[#dfe5f7] bg-white p-4 shadow-[0_10px_22px_-22px_rgba(53,67,150,0.58)] transition-colors hover:border-primary/35",
-                              clsDone && "border-[#bfe6d1] bg-[#fcfffd]",
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-sm font-semibold text-foreground">{cls.name}</p>
-                              <span className="shrink-0 rounded-md bg-[#f2f4fb] px-1.5 py-0.5 text-xs text-muted-foreground">
-                                全班 {cls.maleCount + cls.femaleCount} 人 · 男 {cls.maleCount} / 女{" "}
-                                {cls.femaleCount}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                              {renderSlot(cls, "male")}
-                              {renderSlot(cls, "female")}
-                            </div>
-                          </div>
-                        )
-                      })}
+                  <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-[#d8e0f7] bg-[#f7f9ff] p-3 shadow-[0_10px_22px_-22px_rgba(53,67,150,0.58)]">
+                    <span className="truncate text-xs font-medium text-muted-foreground">上传进度</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold tabular-nums text-foreground">{uploadedFiles}</span>
+                      <span className="text-sm text-muted-foreground">/ {totalFiles} 个文件</span>
                     </div>
-                  </section>
-                )
-              })}
+                    <div role="progressbar" aria-label="文件上传进度" aria-valuemin={0} aria-valuemax={totalFiles} aria-valuenow={uploadedFiles} className="h-2 w-full overflow-hidden rounded-full bg-[#e1e6f7]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-brand-green to-chart-2 transition-[width] duration-300"
+                        style={{ width: totalFiles ? `${(uploadedFiles / totalFiles) * 100}%` : "0%" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ---------------- 成绩录入：所有年级共用一张卡片 ---------------- */}
+              <section aria-labelledby="pe-score-entry-title" className="rounded-2xl border border-[#dce3f8] bg-[#f7f9ff] p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e1e6f5] pb-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-primary shadow-[0_6px_12px_-10px_rgba(63,81,188,0.8)]"><Upload className="size-4" aria-hidden="true" /></span>
+                    <div className="min-w-0">
+                      <h2 id="pe-score-entry-title" className="text-sm font-bold text-foreground">成绩录入</h2>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">按年级查看并上传各班男生、女生成绩文件</p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-[#d8e0f7] bg-white px-2.5 py-1 text-xs font-semibold text-muted-foreground">{visibleClasses.length} 个班级 · {totalFiles} 个文件</span>
+                </div>
+
+                <div className="divide-y divide-[#e1e6f5]">
+                  {PE_GRADE_NAMES.map((grade) => {
+                    const classes = visibleClasses.filter((c) => c.gradeName === grade)
+                    if (classes.length === 0) return null
+                    return (
+                      <div key={grade} className="py-3 first:pt-3 last:pb-1 sm:py-3.5">
+                        <div className="mb-2.5 flex items-center gap-2">
+                          <span aria-hidden="true" className="flex size-6 items-center justify-center rounded-md bg-white text-xs font-bold text-primary shadow-[0_6px_12px_-10px_rgba(63,81,188,0.8)]">{grade.slice(0, 1)}</span>
+                          <h3 className="text-sm font-bold text-foreground">{grade}</h3>
+                          <span className="text-xs text-muted-foreground">{classes.length} 个班级</span>
+                        </div>
+                        <div className="grid gap-2.5 lg:grid-cols-2 2xl:grid-cols-3">
+                          {classes.map((cls) => {
+                            const maleUploaded = uploadMap.has(`${cls.id}:male`)
+                            const femaleUploaded = uploadMap.has(`${cls.id}:female`)
+                            const clsDone = maleUploaded && femaleUploaded
+                            return (
+                              <div
+                                key={cls.id}
+                                className={cn(
+                                  "flex flex-col gap-2 rounded-xl border border-[#dfe5f7] bg-white p-2.5 shadow-[0_8px_18px_-20px_rgba(53,67,150,0.58)] transition-colors hover:border-primary/35 sm:p-3",
+                                  clsDone && "border-[#bfe6d1] bg-[#fcfffd]",
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-semibold text-foreground">{cls.name}</p>
+                                  <span className="shrink-0 rounded-md bg-[#f2f4fb] px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                                    {cls.maleCount + cls.femaleCount} 人 · 男 {cls.maleCount} / 女 {cls.femaleCount}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                  {renderSlot(cls, "male")}
+                                  {renderSlot(cls, "female")}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
             </>
           )}
-        </main>
-      </div>
+      </main>
 
       {/* ---------------- 查看已上传文件 ---------------- */}
       <Dialog open={!!viewing} onOpenChange={(open) => !open && setViewing(null)}>
@@ -438,8 +406,7 @@ function PeScoreImportPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  )
+  </StandalonePageShell>
 }
 
 export default function PeScoreImportPageWithProvider() {

@@ -15,7 +15,7 @@
 - **活动管理系统**：活动发布、报名审核、提交查看
 - **评价系统**：班级评价、个人评价、学科评价
 - **奖卡系统**：在线预览、下载奖卡
-- **体育成绩导入**：Excel文件批量导入
+- **体质健康导入**：Excel文件批量导入
 - **数据可视化**：积分统计、图表展示
 
 ### 🛠️ 技术栈
@@ -73,7 +73,7 @@ pnpm start
 ├── app/                    # Next.js App Router
 │   ├── activities/        # 活动相关页面
 │   ├── offline-award-cards/  # 奖卡页面
-│   └── pe-score-import/  # 体育成绩导入
+│   └── pe-score-import/  # 体质健康导入
 ├── components/            # React组件
 │   ├── activity/         # 活动管理组件
 │   ├── admin/           # 管理员组件

@@ -25,7 +25,7 @@ import type {
 } from "./types"
 import { formatDate, getISOWeekKey, getWeekRange } from "./scoring-utils"
 import { getActivityStatus, isEnrolling, requiresActivityEnrollment, requiresActivityPointsExchange } from "./activity-utils"
-import type { PeScoreUpload } from "./pe-scores"
+import { buildPePreviewRows, PE_CLASSES, type PeScoreUpload } from "./pe-scores"
 
 const RECORDS_KEY = "mzlg-score-records-v1"
 const FLAGS_KEY = "mzlg-weekly-flags-v1"
@@ -93,6 +93,17 @@ function seedRecords(): ScoreRecord[] {
     createdAt: new Date(now - daysAgo * day).toISOString(),
   })
 
+  const moralDemoRecords = [
+    mk("moral-demo-record-1", "class-6-1", today, "卫生", "环境卫生", "hy-2", 1, -2, [], "教室后排地面有纸屑", "teacher-chen", "陈明", 0),
+    mk("moral-demo-record-2", "class-6-2", today, "礼仪形象", "文明礼仪", "ly-5", 1, -1, ["王浩然"], "楼道内未主动礼让", "teacher-chen", "陈明", 0),
+    mk("moral-demo-record-3", "class-6-3", today, "早操", "做操纪律", "zc-2", 1, -3, [], "做操时队列不整齐", "teacher-chen", "陈明", 0),
+    mk("moral-demo-record-4", "class-6-4", yesterday, "课间文明休息", "行为安全", "jj-1", 1, -3, [], "课间追逐打闹", "teacher-chen", "陈明", 1),
+    mk("moral-demo-record-5", "class-6-1", yesterday, "路队", "队伍秩序", "ld-1", 1, -3, [], "放学路队行进较慢", "teacher-chen", "陈明", 1),
+    mk("moral-demo-record-6", "class-6-2", twoDaysAgo, "卫生", "物品摆放", "hy-4", 1, -2, [], "清洁工具未按要求归位", "teacher-chen", "陈明", 2),
+    mk("moral-demo-record-7", "class-6-3", twoDaysAgo, "午休、午会", "午休管理", "wx-1", 1, -5, [], "午休铃后教室仍有喧哗", "teacher-chen", "陈明", 2),
+    mk("moral-demo-record-8", "class-6-4", threeDaysAgo, "礼仪形象", "仪容仪表", "ly-2", 1, -2, [], "少数学生未佩戴红领巾", "teacher-chen", "陈明", 3),
+  ]
+
   return [
     mk("seed-1", "class-6-1", yesterday, "礼仪形象", "仪容仪表", "ly-2", 2, -2, ["陈思远"], "晨检时红领巾未佩戴", "teacher-zhao", "赵得鑫", 1),
     mk("seed-2", "class-6-1", yesterday, "课间文明休息", "行为安全", "jj-1", 1, -3, [], "走廊追逐打闹", "teacher-zhao", "赵得鑫", 1),
@@ -110,6 +121,7 @@ function seedRecords(): ScoreRecord[] {
     mk("seed-14", "class-5-2", yesterday, "早操", "进退场秩序", "zc-4", 1, -3, [], "进场队伍不整齐", "teacher-zhou", "周海峰", 1),
     mk("seed-15", "class-mz-4-1", today, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["李晓雨"], "未按要求穿校服", "teacher-gu", "顾伟", 0),
     mk("seed-16", "class-6-1", twoDaysAgo, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["王浩然"], "未穿校服", "teacher-zhao", "赵得鑫", 2),
+    ...moralDemoRecords,
     // 排名演示数据：6-1 为第 1 名，6-2 与 7-1 并列第 2 名，下一名自然显示为第 4 名。
     mk("seed-ranking-1", "class-6-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -1, [], "上周班级排名演示：轻微扣分", "teacher-zhao", "赵得鑫", 8),
     mk("seed-ranking-2", "class-6-2", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -3, [], "上周班级排名演示：并列第 2 名", "teacher-wang", "王芳", 8),
@@ -176,6 +188,7 @@ function seedAwardCards(): AwardCardRecord[] {
     operatorName,
     createdAt: new Date(now - daysAgo * day).toISOString(),
   })
+  const dateForDaysAgo = (daysAgo: number) => formatDate(new Date(now - daysAgo * day))
   // 上周获流动红旗的班级（6-1、7-1）全部学生各获一张“合作创享星”奖卡（+1）
   const flagRewards: AwardCardRecord[] = flagRewardStudents.map((s, idx) =>
     mk(
@@ -218,6 +231,24 @@ function seedAwardCards(): AwardCardRecord[] {
       ),
     )
   })
+  const moralAwardFixtures = [
+    ["class-6-1-stu-5", "class-6-1", "award-3-1", "友善美少年", "尊重包容", 0, "teacher-chen", "陈明"],
+    ["class-6-2-stu-5", "class-6-2", "award-6-1", "家国红五星", "家国情怀", 1, "teacher-chen", "陈明"],
+    ["class-6-3-stu-5", "class-6-3", "award-1-1", "智慧小博士", "乐于探究", 0, "teacher-chen", "陈明"],
+    ["class-6-4-stu-5", "class-6-4", "award-2-1", "小小工程师", "动手实践", 1, "teacher-chen", "陈明"],
+    ["class-6-1-stu-6", "class-6-1", "award-4-1", "健康小能手", "热爱运动", 0, "teacher-chen", "陈明"],
+    ["class-6-2-stu-6", "class-6-2", "award-5-1", "才艺智多星", "感知美与欣赏美", 1, "teacher-chen", "陈明"],
+    ["class-6-3-stu-6", "class-6-3", "award-7-1", "合作创享星", "团队协作", 0, "teacher-chen", "陈明"],
+    ["class-6-4-stu-6", "class-6-4", "award-8-1", "生活阳光星", "热爱生活", 2, "teacher-chen", "陈明"],
+    ["class-6-1-stu-7", "class-6-1", "award-10-1", "责任担当星", "主动负责", 3, "teacher-zhao", "赵得鑫"],
+    ["class-6-2-stu-7", "class-6-2", "award-9-1", "自信创造星", "自信表达", 5, "teacher-wang", "王芳"],
+    ["class-6-3-stu-7", "class-6-3", "award-3-2", "友善美少年", "友爱互助", 35, "teacher-chen", "陈明"],
+    ["class-6-4-stu-7", "class-6-4", "award-4-1", "健康小能手", "热爱运动", 20, "teacher-chen", "陈明"],
+    ["class-6-1-stu-8", "class-6-1", "award-5-2", "才艺智多星", "表达美与创造美", 30, "teacher-chen", "陈明"],
+  ] as const
+  const moralDemoAwards = moralAwardFixtures.map(([studentId, classId, indicatorId, level1, level2, daysAgo, operatorId, operatorName], index) =>
+    mk(`award-moral-demo-${index + 1}`, studentId, classId, indicatorId, level1, level2, 1, dateForDaysAgo(daysAgo), operatorId, operatorName, daysAgo),
+  )
   return [
     mk("award-seed-1", "class-6-1-stu-1", "class-6-1", "award-1-1", "智慧小博士", "乐于探究", 1, today, "teacher-zhao", "赵得鑫", 0),
     mk("award-seed-2", "class-6-1-stu-2", "class-6-1", "award-7-1", "合作创享星", "团队协作", 1, today, "teacher-zhao", "赵得鑫", 0),
@@ -226,6 +257,9 @@ function seedAwardCards(): AwardCardRecord[] {
     mk("award-seed-5", "class-6-2-stu-1", "class-6-2", "award-3-1", "友善美少年", "友爱互助", 1, today, "teacher-wang", "王芳", 0),
     mk("award-seed-6", "class-6-2-stu-2", "class-6-2", "award-1-2", "智慧小博士", "勤于思考", 1, yesterday, "teacher-liu", "刘敏", 1),
     mk("award-seed-7", "class-6-2-stu-3", "class-6-2", "award-9-1", "自信创造星", "自信表达", 1, yesterday, "teacher-wang", "王芳", 1),
+    mk("award-pe-demo-1", "class-6-2-stu-4", "class-6-2", "award-4-1", "健康小能手", "热爱运动", 3, today, "teacher-qian", "钱进", 0),
+    mk("award-pe-demo-2", "class-6-3-stu-2", "class-6-3", "award-4-2", "健康小能手", "坚持锻炼", 2, yesterday, "teacher-qian", "钱进", 1),
+    mk("award-pe-demo-3", "class-6-3-stu-4", "class-6-3", "award-7-1", "合作创享星", "团队协作", 2, twoDaysAgo, "teacher-qian", "钱进", 2),
     mk("award-seed-8", "class-6-3-stu-1", "class-6-3", "award-7-2", "合作创享星", "乐于分享", 1, today, "teacher-shen", "沈亦菲", 0),
     mk("award-seed-9", "class-6-4-stu-1", "class-6-4", "award-10-1", "责任担当星", "主动负责", 1, yesterday, "teacher-jiang", "蒋文博", 1),
     mk("award-seed-10", "class-7-1-stu-1", "class-7-1", "award-1-1", "智慧小博士", "乐于探究", 1, today, "teacher-xu", "徐蓉", 0),
@@ -233,6 +267,7 @@ function seedAwardCards(): AwardCardRecord[] {
     mk("award-seed-12", "class-5-1-stu-1", "class-5-1", "award-5-2", "才艺智多星", "表达美与创造美", 1, today, "teacher-he", "何淑芬", 0),
     mk("award-seed-13", "class-5-2-stu-1", "class-5-2", "award-4-1", "健康小能手", "热爱运动", 1, yesterday, "teacher-zhou", "周海峰", 1),
     mk("award-seed-14", "class-mz-4-1-stu-1", "class-mz-4-1", "award-8-1", "生活阳光星", "热爱生活", 1, today, "teacher-gu", "顾伟", 0),
+    ...moralDemoAwards,
     // 线下扫码获得（以奖卡实际分值为准）
     mk("award-seed-15", "class-6-1-stu-5", "class-6-1", "award-4-1", "健康小能手", "热爱运动", 1, yesterday, "system", "线下扫码", 1, "offline_scan"),
     mk("award-seed-16", "class-6-1-stu-6", "class-6-1", "award-6-1", "家国红五星", "家国情怀", 1, today, "system", "线下扫码", 0, "offline_scan"),
@@ -243,6 +278,24 @@ function seedAwardCards(): AwardCardRecord[] {
   ]
 }
 
+/** 体质健康成绩导入页的演示数据：覆盖多个年级、班级和性别，保证不同身份进入页面都有可查看内容。 */
+function seedPeScoreUploads(): PeScoreUpload[] {
+  const now = Date.now()
+  return PE_CLASSES.slice(0, 6).flatMap((peClass, index) => (
+    (['male', 'female'] as const).map((gender, genderIndex) => ({
+      id: `pe-upload-demo-${peClass.id}-${gender}`,
+      classId: peClass.id,
+      gender,
+      fileName: `${peClass.name}-${gender === 'male' ? '男生' : '女生'}体质健康成绩.xlsx`,
+      rowCount: gender === 'male' ? peClass.maleCount : peClass.femaleCount,
+      uploadedAt: new Date(now - (index + genderIndex) * 86400000).toISOString(),
+      uploaderId: 'teacher-qian',
+      uploaderName: '钱进',
+      preview: buildPePreviewRows(peClass.id, gender, 4),
+    }))
+  ))
+}
+
 function seedFlags(): WeeklyFlag[] {
   const lastWeekKey = (() => {
     const d = new Date()
@@ -250,8 +303,10 @@ function seedFlags(): WeeklyFlag[] {
     return getISOWeekKey(d)
   })()
   return [
-    { classId: "class-6-1", weekKey: lastWeekKey, awarded: true, awardedBy: "周海峰", awardedAt: new Date().toISOString() },
-    { classId: "class-7-1", weekKey: lastWeekKey, awarded: true, awardedBy: "周海峰", awardedAt: new Date().toISOString() },
+    { classId: "class-6-1", weekKey: lastWeekKey, configId: "week-civility", period: "week", awarded: true, awardedBy: "周海峰", awardedAt: new Date().toISOString() },
+    { classId: "class-6-2", weekKey: lastWeekKey, configId: "week-clean", period: "week", awarded: true, awardedBy: "周海峰", awardedAt: new Date().toISOString() },
+    { classId: "class-6-3", weekKey: lastWeekKey, configId: "week-civility", period: "week", awarded: true, awardedBy: "周海峰", awardedAt: new Date().toISOString() },
+    { classId: "class-7-1", weekKey: lastWeekKey, configId: "week-clean", period: "week", awarded: true, awardedBy: "周海峰", awardedAt: new Date().toISOString() },
   ]
 }
 
@@ -303,6 +358,8 @@ function seedHonors(): HonorRecord[] {
     mk("honor-seed-10", "class-7-1-stu-1", "智慧小博士", "city", 3, "区青少年科技创新大赛科幻画一等奖", yesterday, "浦东新区青少年活动中心", 1),
     mk("honor-seed-11", "class-5-1-stu-2", "才艺智多星", "national", 4, "全国中小学生绘画书法作品比赛绘画类三等奖", twoDaysAgo, "中国教育学会美术教育专业委员会", 2),
     mk("honor-seed-12", "class-6-3-stu-1", "合作创享星", "school", 1, "校园合唱节团体一等奖", twoDaysAgo, "明珠临港校区教务处", 2),
+    mk("honor-parent-demo-1", "class-6-1-stu-2", "健康小能手", "school", 1, "六年级春季运动会接力赛优秀个人", today, "明珠临港校区体育组", 0),
+    mk("honor-parent-demo-2", "class-6-2-stu-1", "才艺智多星", "district", 2, "浦东新区少儿艺术展演优秀作品", yesterday, "浦东新区教育局", 1),
   ]
 }
 
@@ -310,6 +367,22 @@ function seedHonors(): HonorRecord[] {
 function mergeMissingDemoRecords<T extends { id: string }>(stored: T[], fixtures: T[]) {
   const existingIds = new Set(stored.map((item) => item.id))
   return [...stored, ...fixtures.filter((item) => !existingIds.has(item.id))]
+}
+
+/** 补齐新增的演示流动红旗，不覆盖用户已有的评选结果。 */
+function mergeMissingDemoFlags(stored: WeeklyFlag[], fixtures: WeeklyFlag[]) {
+  const fixtureByKey = new Map(fixtures.map((item) => [`${item.classId}-${item.weekKey}`, item]))
+  const enriched = stored.map((item) => {
+    const fixture = fixtureByKey.get(`${item.classId}-${item.weekKey}`)
+    if (!fixture) return item
+    return {
+      ...item,
+      configId: item.configId ?? fixture.configId,
+      period: item.period ?? fixture.period,
+    }
+  })
+  const existingKeys = new Set(enriched.map((item) => `${item.classId}-${item.weekKey}`))
+  return [...enriched, ...fixtures.filter((item) => !existingKeys.has(`${item.classId}-${item.weekKey}`))]
 }
 
 function seedActivities(): Activity[] {
@@ -715,16 +788,17 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       const rawPeScores = localStorage.getItem(PE_SCORES_KEY)
       const storedRecords = rawRecords ? JSON.parse(rawRecords) as ScoreRecord[] : null
       const storedAwardCards = rawAwardCards ? JSON.parse(rawAwardCards) as AwardCardRecord[] : null
+      const storedFlags = rawFlags ? JSON.parse(rawFlags) as WeeklyFlag[] : null
       setRecords(storedRecords
-        ? mergeMissingDemoRecords(storedRecords, seedRecords().filter((item) => item.id.startsWith("seed-ranking-")))
+        ? mergeMissingDemoRecords(storedRecords, seedRecords().filter((item) => item.id.startsWith("seed-ranking-") || item.id.startsWith("moral-demo-record-")))
         : seedRecords())
-      setFlags(rawFlags ? JSON.parse(rawFlags) : seedFlags())
+      setFlags(storedFlags ? mergeMissingDemoFlags(storedFlags, seedFlags()) : seedFlags())
       setFlagConfigs(rawFlagConfigs ? JSON.parse(rawFlagConfigs) : DEFAULT_FLAG_CONFIGS)
       setClassRatingConfigs(rawClassRatingConfigs ? JSON.parse(rawClassRatingConfigs) : DEFAULT_CLASS_RATING_CONFIGS)
       setAwardCards(storedAwardCards
-        ? mergeMissingDemoRecords(storedAwardCards, seedAwardCards().filter((item) => item.id.startsWith("award-leaderboard-")))
+        ? mergeMissingDemoRecords(storedAwardCards, seedAwardCards().filter((item) => item.id.startsWith("award-leaderboard-") || item.id.startsWith("award-moral-demo-")))
         : seedAwardCards())
-      setHonors(rawHonors ? JSON.parse(rawHonors) : seedHonors())
+      setHonors(rawHonors ? mergeMissingDemoRecords(JSON.parse(rawHonors) as HonorRecord[], seedHonors().filter((item) => item.id.startsWith("honor-parent-demo-"))) : seedHonors())
       setActivities(rawActivities ? normalizeActivities(JSON.parse(rawActivities)) : normalizeActivities(seedActivities()))
       setEnrollments(rawEnrollments ? JSON.parse(rawEnrollments) : seedEnrollments())
       setSubmissions(rawSubmissions ? JSON.parse(rawSubmissions) : seedSubmissions())
@@ -741,7 +815,8 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
         const matchedTeacher = TEACHERS.find((t) => t.id === parsed.id)
         setCurrentUser(matchedParent ?? matchedTeacher ?? TEACHERS.find((t) => t.id === "teacher-chen") ?? TEACHERS[0])
       }
-      setPeScoreUploads(rawPeScores ? JSON.parse(rawPeScores) : [])
+      const storedPeScores = rawPeScores ? JSON.parse(rawPeScores) as PeScoreUpload[] : null
+      setPeScoreUploads(storedPeScores && storedPeScores.length > 0 ? storedPeScores : seedPeScoreUploads())
     } catch {
       setRecords(seedRecords())
       setFlags(seedFlags())
@@ -753,7 +828,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       setEnrollments(seedEnrollments())
       setSubmissions(seedSubmissions())
       setEvaluations(seedEvaluations())
-      setPeScoreUploads([])
+      setPeScoreUploads(seedPeScoreUploads())
     } finally {
       setHydrated(true)
     }

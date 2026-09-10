@@ -1,7 +1,6 @@
 ﻿"use client"
 
 import { useMemo, useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
 import {
   Award,
@@ -31,6 +30,7 @@ import {
 import { cn } from "@/lib/utils"
 import { EvaluationProvider, useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
+import { StandalonePageShell } from "@/components/evaluation/standalone-page-shell"
 import { AWARD_GROUPS, getAwardGroup } from "@/lib/award-utils"
 import {
   exportAwardCardsExcel,
@@ -164,7 +164,8 @@ function OfflineAwardCardsPage() {
   // 权限门禁：仅管理员可下载奖卡
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4">
+      <StandalonePageShell mainId="offline-award-cards-main" activeLabel="线下奖卡下载" activeIcon="download">
+        <main id="offline-award-cards-main" className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
         <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-3xl border border-[#cfd8f6] bg-white p-8 text-center shadow-[0_24px_50px_-34px_rgba(53,67,150,0.7)]">
         <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Download className="size-7" /></span>
         <p className="text-base font-bold text-foreground">无下载权限</p>
@@ -178,46 +179,14 @@ function OfflineAwardCardsPage() {
           返回主页
         </Link>
         </div>
-      </div>
+        </main>
+      </StandalonePageShell>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-transparent px-4 pb-5 pt-16 sm:px-6">
-      {/* 固定顶栏：与主站一致 */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-[#d8def7] bg-white/92 shadow-[0_10px_24px_-24px_rgba(55,67,145,0.74)] backdrop-blur-xl">
-        <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
-          <div className="flex shrink-0 items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg border border-[#d9dff5] bg-[#f7f8ff]">
-              <Image src="/xszp/images/logo.png" alt="屹力学生综评" width={30} height={30} />
-            </span>
-            <div className="hidden flex-col leading-tight md:flex">
-              <span className="text-sm font-bold text-foreground">屹力学生综评</span>
-              <span className="text-xs text-muted-foreground">综合评价平台</span>
-            </div>
-          </div>
-
-          <nav className="flex min-w-0 items-center gap-1">
-            <Link
-              href="/class-evaluation"
-              className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition hover:text-primary"
-            >
-              <Award className="size-4" />
-              班级评价
-            </Link>
-            <span className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-semibold text-foreground">
-              <Download className="size-4" />
-              线下奖卡下载
-              <span className="absolute inset-x-4 bottom-1.5 h-0.5 rounded-full bg-gradient-to-r from-primary to-primary-2 shadow-[0_0_10px_-1px] shadow-primary/50" />
-            </span>
-          </nav>
-
-          <span className="shrink-0 text-xs text-muted-foreground">教务管理</span>
-        </div>
-      </header>
-
-      <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col gap-4 rounded-[30px] bg-white/25 p-1">
-        <main className="flex w-full min-w-0 flex-col gap-6 rounded-[26px] border border-[#cfd8f6] bg-white p-4 shadow-[0_24px_54px_-36px_rgba(53,67,150,0.72)] sm:p-6">
+    <StandalonePageShell mainId="offline-award-cards-main" activeLabel="线下奖卡下载" activeIcon="download">
+        <main id="offline-award-cards-main" className="flex w-full min-w-0 flex-col gap-6 rounded-[26px] border border-[#cfd8f6] bg-white p-4 shadow-[0_24px_54px_-36px_rgba(53,67,150,0.72)] sm:p-6">
           {/* ---------------- 标题 + 操作 ---------------- */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dee4f8] bg-gradient-to-r from-[#f1f3ff] via-white to-[#f8f4ff] p-4 sm:p-5">
             <div className="min-w-0">
@@ -354,7 +323,6 @@ function OfflineAwardCardsPage() {
             </div>
           )}
         </main>
-      </div>
 
       {/* ---------------- 增加 / 编辑奖卡弹窗 ---------------- */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -499,7 +467,7 @@ function OfflineAwardCardsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </StandalonePageShell>
   )
 }
 

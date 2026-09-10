@@ -60,13 +60,18 @@ interface OcrFormState {
   issuer: string
 }
 
-export function HonorUploadTab() {
+interface HonorUploadTabProps {
+  classId?: string
+  compact?: boolean
+}
+
+export function HonorUploadTab({ classId, compact = false }: HonorUploadTabProps = {}) {
   const { students, honors, addHonor } = useEvaluation()
   const { scoringClasses, role } = usePermission()
 
   // 仅班主任可见（已由 nav 入口控制），兜底判断
   const isHomeroom = role === "homeroom"
-  const myClass = scoringClasses[0]
+  const myClass = scoringClasses.find((item) => item.id === classId) ?? scoringClasses[0]
 
   const classStudents = useMemo(
     () => (myClass ? students.filter((s) => s.classId === myClass.id) : []),
@@ -80,6 +85,7 @@ export function HonorUploadTab() {
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
   const [ocrState, setOcrState] = useState<"idle" | "recognizing" | "done">("idle")
   const [hint, setHint] = useState<string>("")
+  const [isDragActive, setIsDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const ocrCountRef = useRef(0)
   const ocrTimerRef = useRef<number | null>(null)
@@ -110,9 +116,12 @@ export function HonorUploadTab() {
 
   const handlePickImage = () => fileInputRef.current?.click()
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleImageFile = (file: File) => {
+    setIsDragActive(false)
+    if (!file.type.startsWith("image/")) {
+      setHint("请上传 JPG 或 PNG 图片")
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => {
       setImageDataUrl(reader.result as string)
@@ -128,8 +137,31 @@ export function HonorUploadTab() {
       }, 1200)
     }
     reader.readAsDataURL(file)
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleImageFile(file)
     // 允许连续选同一文件再次触发
     e.target.value = ""
+  }
+
+  const handleImageDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "copy"
+    setIsDragActive(true)
+  }
+
+  const handleImageDragLeave = (e: React.DragEvent<HTMLButtonElement>) => {
+    if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) return
+    setIsDragActive(false)
+  }
+
+  const handleImageDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    setIsDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleImageFile(file)
   }
 
   const handleClearImage = () => {
@@ -188,22 +220,24 @@ export function HonorUploadTab() {
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(0,0.94fr)]">
       {/* 左侧：上传表单 */}
       <section className="flex flex-col gap-5 rounded-[24px] border border-[#cfd7f6] bg-white p-4 shadow-[0_22px_48px_-32px_rgba(48,62,139,0.7)] sm:p-5">
-        <div className="flex items-start justify-between gap-3 rounded-2xl border border-[#dde3f8] bg-[#f7f8ff] px-3.5 py-3">
-          <div className="flex items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_8px_16px_-10px_rgba(63,81,188,0.9)]">
-              <Medal className="size-5" />
-            </span>
-            <div>
-              <h2 className="text-base font-bold text-foreground">代学生上传荣誉</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {myClass.name} · 上传奖状后系统自动识别荣誉信息，可手动修改
-              </p>
+        {!compact && (
+          <div className="flex items-start justify-between gap-3 rounded-2xl border border-[#dde3f8] bg-[#f7f8ff] px-3.5 py-3">
+            <div className="flex items-start gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_8px_16px_-10px_rgba(63,81,188,0.9)]">
+                <Medal className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="text-base font-bold text-foreground">代学生上传荣誉</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {myClass.name} · 上传奖状后系统自动识别荣誉信息，可手动修改
+                </p>
+              </div>
             </div>
+            <span className="shrink-0 rounded-lg border border-[#d9e2ff] bg-white px-2.5 py-1 text-xs font-semibold text-primary">
+              班主任
+            </span>
           </div>
-          <span className="shrink-0 rounded-lg border border-[#d9e2ff] bg-white px-2.5 py-1 text-xs font-semibold text-primary">
-            班主任
-          </span>
-        </div>
+        )}
 
         {/* 学生选择 */}
         <div className="flex flex-col gap-2">
@@ -353,12 +387,21 @@ export function HonorUploadTab() {
             <button
               type="button"
               onClick={handlePickImage}
-              className="group flex h-36 w-full flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-[#bfcdf5] bg-gradient-to-br from-[#f0f3ff] to-[#fbfcff] text-muted-foreground transition-colors hover:border-primary/60 hover:from-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              onDragOver={handleImageDragOver}
+              onDragLeave={handleImageDragLeave}
+              onDrop={handleImageDrop}
+              aria-label="上传奖状图片，可点击或拖拽图片到此处"
+              className={cn(
+                "group flex h-36 w-full flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed text-muted-foreground transition-[background-color,border-color,box-shadow,color] hover:border-primary/60 hover:from-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                isDragActive
+                  ? "border-primary bg-primary/10 text-primary shadow-[0_12px_24px_-16px_rgba(63,81,188,0.9)]"
+                  : "border-[#bfcdf5] bg-gradient-to-br from-[#f0f3ff] to-[#fbfcff]",
+              )}
             >
               <span className="flex size-11 items-center justify-center rounded-full bg-white text-primary shadow-[0_8px_20px_-14px_rgba(63,81,188,0.8)] ring-1 ring-[#d9e1fa] transition group-hover:bg-primary/10 group-hover:ring-primary/40">
-                <ImagePlus className="size-5" />
+                {isDragActive ? <Upload className="size-5" aria-hidden="true" /> : <ImagePlus className="size-5" aria-hidden="true" />}
               </span>
-              <span className="text-xs">点击上传奖状图片</span>
+              <span className="text-xs">{isDragActive ? "松开鼠标上传奖状图片" : "拖拽或点击上传奖状图片"}</span>
               <span className="text-xs text-muted-foreground/60">支持 JPG / PNG，上传后自动识别荣誉信息</span>
             </button>
           )}
@@ -417,7 +460,7 @@ export function HonorUploadTab() {
         </div>
 
         {hint && (
-          <p className="flex items-center gap-1.5 rounded-xl border border-[#ccebdc] bg-[#effbf4] px-3 py-2 text-xs font-medium text-[#23815a]">
+          <p aria-live="polite" className="flex items-center gap-1.5 rounded-xl border border-[#ccebdc] bg-[#effbf4] px-3 py-2 text-xs font-medium text-[#23815a]">
             <Check className="size-3.5" />
             {hint}
           </p>

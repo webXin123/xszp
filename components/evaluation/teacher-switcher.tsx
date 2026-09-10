@@ -40,7 +40,7 @@ function userLabel(user: CurrentUser): { name: string; sub: string; tag?: string
 
 export function TeacherSwitcher() {
   const { teachers, parentUsers, currentUser, setCurrentUser } = useEvaluation()
-  const { name, sub } = userLabel(currentUser)
+  const { name, sub, tag, tagClass } = userLabel(currentUser)
 
   return (
     <DropdownMenu>
@@ -68,13 +68,15 @@ export function TeacherSwitcher() {
           <span className="text-sm font-semibold text-foreground">{name}</span>
           <span className="text-xs text-muted-foreground">{sub}</span>
         </div>
+        <span className={cn("hidden rounded-full px-2 py-0.5 text-[11px] font-semibold md:inline-flex", tagClass)}>{tag}</span>
         <ChevronDown className="size-4 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="glass-surface w-72">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex items-center gap-2 text-xs text-muted-foreground">
             <UserRoundCog className="size-3.5" />
-            切换身份（演示用）
+            身份与权限（演示用）
+            <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold", tagClass)}>{tag}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {teachers.map((teacher) => {

@@ -20,7 +20,10 @@ import { useEvaluation } from "@/lib/evaluation-context"
 import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
 import { buildPointEntries, getSemesterRange, inRange, POINT_SOURCE_LABEL, type PointEntry } from "@/lib/points-utils"
 import { formatDate } from "@/lib/scoring-utils"
+import { getSemesterLabel } from "@/lib/pe-scores"
 import type { Student } from "@/lib/types"
+import { StudentSemesterReportDrawer } from "@/components/parent/student-semester-report-drawer"
+import { getReportAcademicScores, getReportActivities, getReportFitnessMetrics, getReportHonors } from "@/components/report/student-report-data"
 
 interface AdminDataDashboardProps {
   onBack: () => void
@@ -51,7 +54,7 @@ function RankMark({ rank }: { rank: number }) {
 }
 
 export function AdminDataDashboard({ onBack }: AdminDataDashboardProps) {
-  const { awardCards, honors, students, classes, grades } = useEvaluation()
+  const { awardCards, honors, students, classes, grades, activities } = useEvaluation()
   const { start, end } = useMemo(() => getSemesterRange(), [])
   const [sortKey, setSortKey] = useState<SortKey>("semesterTotal")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
@@ -118,12 +121,10 @@ export function AdminDataDashboard({ onBack }: AdminDataDashboardProps) {
   const pagedRows = sortedRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const selectedRow = selectedStudentId ? rows.find((row) => row.id === selectedStudentId) ?? null : null
 
-  const selectedEntries = useMemo(() => {
-    if (!selectedStudentId) return []
-    return allEntries
-      .filter((entry) => entry.studentId === selectedStudentId && inRange(entry.date, start, end))
-      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-  }, [allEntries, end, selectedStudentId, start])
+  const selectedClass = useMemo(() => selectedRow ? classes.find((item) => item.id === selectedRow.classId) ?? null : null, [classes, selectedRow])
+  const selectedGradeName = useMemo(() => selectedClass ? grades.find((item) => item.id === selectedClass.gradeId)?.name ?? "" : "", [grades, selectedClass])
+  const selectedHonors = useMemo(() => selectedRow ? getReportHonors(honors, selectedRow.id, start, end) : [], [end, honors, selectedRow, start])
+  const selectedActivities = useMemo(() => selectedRow ? getReportActivities(activities, selectedRow.classId, start, end) : [], [activities, end, selectedRow, start])
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -144,8 +145,7 @@ export function AdminDataDashboard({ onBack }: AdminDataDashboardProps) {
   }
 
   return (
-    <section className="flex flex-col gap-5 bg-transparent p-0" aria-labelledby="data-dashboard-title">
-      <header className="rounded-2xl border border-[#cfd7f6] bg-white p-5 sm:p-6">
+    <section className="rounded-2xl border border-[#cfd7f6] bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6" aria-labelledby="data-dashboard-title">
         <button
           type="button"
           onClick={onBack}
@@ -169,23 +169,20 @@ export function AdminDataDashboard({ onBack }: AdminDataDashboardProps) {
             默认按学期积分降序
           </div>
         </div>
-      </header>
-
-      <div className="rounded-2xl border border-[#cfd7f6] bg-white p-4 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Medal className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <h3 className="text-base font-bold text-foreground">学生积分表</h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">共 {rows.length} 名学生 · 点击数值列切换升降序</p>
-            </div>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#e4e9fa] pt-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Medal className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-base font-bold text-foreground">学生积分表</h3>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">共 {rows.length} 名学生 · 点击数值列切换升降序</p>
           </div>
-          <p className="text-xs text-muted-foreground">当前显示第 {currentPage} / {pageCount} 页</p>
         </div>
+        <p className="shrink-0 text-xs text-muted-foreground">当前显示第 {currentPage} / {pageCount} 页</p>
+      </div>
 
-        <div className="mt-5 overflow-hidden rounded-2xl border border-[#dce3fa]">
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[#dce3fa]">
           <div className="overflow-x-auto">
             <table className="min-w-[1220px] w-full border-collapse text-sm">
               <caption className="sr-only">学生五育积分表，默认按学期积分从高到低排列</caption>
@@ -276,20 +273,25 @@ export function AdminDataDashboard({ onBack }: AdminDataDashboardProps) {
             onChange={setPage}
             className="border-t border-[#edf0fb]"
           />
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">说明：学期积分和五育一级指标均按 {formatDate(start)} 至 {formatDate(end)} 统计，累计积分为全部历史积分。学生报告单可查看本学期积分来源。</p>
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">说明：学期积分和五育一级指标均按 {formatDate(start)} 至 {formatDate(end)} 统计，累计积分为全部历史积分。学生报告单可查看本学期积分来源。</p>
 
-      <Dialog open={Boolean(selectedRow)} onOpenChange={(open) => !open && setSelectedStudentId(null)}>
-        {selectedRow ? (
-          <StudentReportDialog
-            row={selectedRow}
-            entries={selectedEntries}
-            semesterStart={start}
-            semesterEnd={end}
-          />
-        ) : null}
-      </Dialog>
+      {selectedRow && <StudentSemesterReportDrawer
+        open={Boolean(selectedRow)}
+        onOpenChange={(open) => !open && setSelectedStudentId(null)}
+        semesterLabel={getSemesterLabel(new Date())}
+        student={{ name: selectedRow.name, gender: selectedRow.gender, studentNo: selectedRow.studentNo }}
+        className={selectedClass?.shortName ?? ""}
+        gradeName={selectedGradeName}
+        homeroomTeacher={selectedClass?.homeroomTeacher ?? "班主任老师"}
+        semesterPoints={selectedRow.semesterTotal}
+        totalPoints={selectedRow.cumulativeTotal}
+        fiveEducation={AWARD_LEVEL1_LIST.map((name) => selectedRow.byLevel1[name] ?? 0)}
+        academicScores={getReportAcademicScores(selectedRow)}
+        fitnessMetrics={getReportFitnessMetrics(selectedRow.id)}
+        honors={selectedHonors}
+        activities={selectedActivities}
+      />}
     </section>
   )
 }

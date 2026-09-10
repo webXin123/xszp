@@ -40,11 +40,11 @@ export function LoadMoreFooter({
       type="button"
       onClick={onLoadMore}
       className={cn(
-        "flex w-full shrink-0 items-center justify-center gap-1 rounded-lg py-1.5 text-xs text-muted-foreground transition hover:bg-accent/40 hover:text-foreground",
+        "flex w-full shrink-0 items-center justify-center gap-1 rounded-lg py-1.5 text-xs text-muted-foreground transition hover:bg-accent/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
         className,
       )}
     >
-      <ChevronsDown className="size-3.5 animate-bounce" />
+      <ChevronsDown className="size-3.5 animate-bounce motion-reduce:animate-none" aria-hidden="true" />
       上拉加载更多（{loaded}/{total}）
     </button>
   )
