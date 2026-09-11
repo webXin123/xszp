@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   Award,
   CalendarRange,
+  ChartNoAxesCombined,
   ChevronDown,
   House,
   LayoutGrid,
@@ -201,6 +203,16 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
                 )}
               </button>
             ))}
+
+            {(isDirector || isMoralDirector) && !standaloneView && (
+              <Link
+                href="/school-command-center"
+                className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+              >
+                <ChartNoAxesCombined className="size-4" aria-hidden="true" />
+                数据大屏
+              </Link>
+            )}
 
             {/* 独立页面仍保留当前页上下文，避免从首页跳转后顶部导航看起来像“失效” */}
             {standaloneView && (
