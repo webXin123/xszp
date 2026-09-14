@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { getSemesterLabel } from "@/lib/pe-scores"
@@ -65,6 +66,24 @@ const SUBJECT_TEACHER_POOL = [
 ]
 
 const COMMENT_TASKS_KEY = "mzlg-comment-entry-tasks-v1"
+const EVALUATION_TASKS_KEY = "mzlg-semester-evaluation-tasks-v1"
+
+export type SemesterTaskMode = "comment" | "evaluation"
+
+const TASK_COPY = {
+  comment: {
+    name: "学期评语",
+    shortName: "评语",
+    storageKey: COMMENT_TASKS_KEY,
+    seedRemark: "请结合学生本学期五育积分表现撰写评语，突出个人成长与改进建议。",
+  },
+  evaluation: {
+    name: "学期评价",
+    shortName: "评价",
+    storageKey: EVALUATION_TASKS_KEY,
+    seedRemark: "请结合学生本学期在校表现完成综合评价，关注成长过程与发展建议。",
+  },
+} as const
 
 function localDateTime(offset: number, hour: number) {
   const date = new Date()
@@ -153,18 +172,19 @@ function buildProgress(
   return entries
 }
 
-function createSeedTask(grades: Grade[], classes: SchoolClass[]): CommentTask {
+function createSeedTask(grades: Grade[], classes: SchoolClass[], mode: SemesterTaskMode): CommentTask {
   const targetGrades = grades.slice(-2)
+  const copy = TASK_COPY[mode]
   return {
-    id: "comment-task-seed",
+    id: `${mode}-task-seed`,
     semester: getSemesterLabel(),
     teacherRoles: ["homeroom", "subject"],
     gradeIds: targetGrades.map((g) => g.id),
     startAt: localDateTime(-2, 8),
     endAt: localDateTime(5, 18),
-    remark: "请结合学生本学期五育积分表现撰写评语，突出个人成长与改进建议。",
+    remark: copy.seedRemark,
     progress: buildProgress(
-      "comment-task-seed",
+      `${mode}-task-seed`,
       ["homeroom", "subject"],
       targetGrades.map((g) => g.id),
       grades,
@@ -177,11 +197,15 @@ function createSeedTask(grades: Grade[], classes: SchoolClass[]): CommentTask {
 export function CommentEntryManagement({
   grades,
   classes,
+  mode = "comment",
 }: {
   grades: Grade[]
   classes: SchoolClass[]
+  mode?: SemesterTaskMode
 }) {
-  const [tasks, setTasks] = useState<CommentTask[]>(() => [createSeedTask(grades, classes)])
+  const copy = TASK_COPY[mode]
+  const isEvaluation = mode === "evaluation"
+  const [tasks, setTasks] = useState<CommentTask[]>(() => [createSeedTask(grades, classes, mode)])
   const [hydrated, setHydrated] = useState(false)
   const [publishOpen, setPublishOpen] = useState(false)
   const [detailTask, setDetailTask] = useState<CommentTask | null>(null)
@@ -200,19 +224,19 @@ export function CommentEntryManagement({
 
   useEffect(() => {
     try {
-      const cached = localStorage.getItem(COMMENT_TASKS_KEY)
+      const cached = localStorage.getItem(copy.storageKey)
       const parsed = cached ? JSON.parse(cached) : null
       if (Array.isArray(parsed) && parsed.length > 0) setTasks(parsed as CommentTask[])
     } catch {
-      setTasks([createSeedTask(grades, classes)])
+      setTasks([createSeedTask(grades, classes, mode)])
     } finally {
       setHydrated(true)
     }
-  }, [grades, classes])
+  }, [grades, classes, copy.storageKey, mode])
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem(COMMENT_TASKS_KEY, JSON.stringify(tasks))
-  }, [tasks, hydrated])
+    if (hydrated) localStorage.setItem(copy.storageKey, JSON.stringify(tasks))
+  }, [tasks, hydrated, copy.storageKey])
 
   const toggleRole = (role: CommentTeacherRole) => {
     setFormRoles((prev) =>
@@ -236,11 +260,11 @@ export function CommentEntryManagement({
   }
 
   const publishTask = () => {
-    if (formRoles.length === 0) return setError("请选择至少一类评语录入教师")
-    if (formGradeIds.length === 0) return setError("请选择至少一个录入年级")
+    if (formRoles.length === 0) return setError(`请选择至少一类${copy.shortName}录入教师`)
+    if (formGradeIds.length === 0) return setError(`请选择至少一个${copy.shortName}年级`)
     if (!formStart || !formEnd || formStart >= formEnd) return setError("请正确设置开始与截止时间")
 
-    const id = `comment-task-${Date.now()}`
+    const id = `${mode}-task-${Date.now()}`
     const next: CommentTask = {
       id,
       semester: getSemesterLabel(),
@@ -320,9 +344,9 @@ export function CommentEntryManagement({
             <NotebookPen className="size-5" aria-hidden="true" />
           </span>
           <div>
-            <h3 className="text-base font-bold text-foreground">学期评语录入发布</h3>
+            <h3 className="text-base font-bold text-foreground">{copy.name}录入发布</h3>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {getSemesterLabel()} · 发布班主任 / 任课教师评语录入任务，统览进度并可提醒。
+              {getSemesterLabel()} · 发布班主任 / 任课教师{copy.shortName}录入任务，统览进度并可提醒。
             </p>
           </div>
         </div>
@@ -335,7 +359,7 @@ export function CommentEntryManagement({
           className="h-10 rounded-xl px-4 shadow-[0_9px_18px_-12px_rgba(63,81,188,0.88)]"
         >
           <Plus className="size-4" />
-          发布评语任务
+          {isEvaluation ? "发布评价" : "发布评语任务"}
         </Button>
       </div>
 
@@ -356,7 +380,7 @@ export function CommentEntryManagement({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-base font-bold text-foreground">学期评语</span>
+                    <span className="truncate text-base font-bold text-foreground">{copy.name}</span>
                     <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", status.className)}>
                       {status.label}
                     </span>
@@ -378,7 +402,7 @@ export function CommentEntryManagement({
               </div>
               <div className="border-t border-[#edf0fa] pt-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">教师评语录入进度</span>
+                  <span className="text-muted-foreground">{isEvaluation ? "教师 + 班主任评价进度" : "教师评语录入进度"}</span>
                   <span className="font-bold text-foreground">
                     {done} / {total}
                   </span>
@@ -411,16 +435,16 @@ export function CommentEntryManagement({
               <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-brand-blue text-white shadow-md shadow-primary/30">
                 <NotebookPen className="size-4" />
               </span>
-              发布学期评语录入任务
+              发布{copy.name}录入任务
             </DialogTitle>
             <DialogDescription>
-              选择评语录入教师与年级，发布后对应教师可开始录入评语
+              {isEvaluation ? "选择评价年级并设置评价时间，发布后班主任与任课教师可开始录入评价" : "选择评语录入教师与年级，发布后对应教师可开始录入评语"}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
             {/* 评语录入教师 */}
-            <div className="glass-panel flex flex-col gap-2.5 rounded-xl p-3.5">
+            {!isEvaluation && <div className="glass-panel flex flex-col gap-2.5 rounded-xl p-3.5">
               <div className="flex items-center justify-between">
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                   <UsersRound className="size-3.5 text-brand-blue" />
@@ -451,7 +475,7 @@ export function CommentEntryManagement({
                   )
                 })}
               </div>
-            </div>
+            </div>}
 
             {/* 录入年级 */}
             <div className="glass-panel flex flex-col gap-2.5 rounded-xl p-3.5">
@@ -462,7 +486,15 @@ export function CommentEntryManagement({
                 </p>
                 <span className="text-xs text-muted-foreground">可多选</span>
               </div>
-              <div className="flex flex-wrap gap-2">
+              {isEvaluation ? (
+                <MultiSelectDropdown
+                  label="评价年级"
+                  description="可选择多个需要开展学期评价的年级。"
+                  items={grades.map((grade) => ({ id: grade.id, name: grade.name }))}
+                  selectedIds={formGradeIds}
+                  onToggle={toggleGrade}
+                />
+              ) : <div className="flex flex-wrap gap-2">
                 {grades.map((grade) => {
                   const checked = formGradeIds.includes(grade.id)
                   return (
@@ -484,7 +516,7 @@ export function CommentEntryManagement({
                     </label>
                   )
                 })}
-              </div>
+              </div>}
             </div>
 
             {/* 录入时间 */}
@@ -495,9 +527,9 @@ export function CommentEntryManagement({
               </p>
               <div className="flex flex-col gap-3">
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted-foreground">开始录入时间</span>
+                  <span className="text-xs text-muted-foreground">{isEvaluation ? "评价开始时间" : "开始录入时间"}</span>
                   <Input
-                    name="comment-task-start"
+                    name={`${mode}-task-start`}
                     autoComplete="off"
                     type="datetime-local"
                     value={formStart}
@@ -506,9 +538,9 @@ export function CommentEntryManagement({
                   />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted-foreground">截止录入时间</span>
+                  <span className="text-xs text-muted-foreground">{isEvaluation ? "评价结束时间" : "截止录入时间"}</span>
                   <Input
-                    name="comment-task-end"
+                    name={`${mode}-task-end`}
                     autoComplete="off"
                     type="datetime-local"
                     value={formEnd}
@@ -534,7 +566,7 @@ export function CommentEntryManagement({
                 autoComplete="off"
                 value={formRemark}
                 onChange={(e) => setFormRemark(e.target.value)}
-                placeholder="请输入评语录入要求说明（选填），如评语字数、撰写角度等…"
+                placeholder={isEvaluation ? "请输入评价要求说明（选填），如评价维度、完成规范等…" : "请输入评语录入要求说明（选填），如评语字数、撰写角度等…"}
                 rows={4}
                 className="min-h-24 rounded-lg border-border/60 bg-white/70 px-3 py-2.5 text-sm shadow-sm transition hover:border-primary/50 dark:bg-card/60"
               />
@@ -560,7 +592,7 @@ export function CommentEntryManagement({
               className="h-11 min-w-32 rounded-xl bg-gradient-to-r from-primary to-primary-2 px-8 text-sm font-semibold text-white shadow-lg shadow-primary/40 ring-1 ring-white/20 transition hover:brightness-110 hover:shadow-xl hover:shadow-primary/50"
             >
               <Send className="size-4" />
-              发布任务
+              {isEvaluation ? "发布评价" : "发布任务"}
             </Button>
           </div>
         </DialogContent>
@@ -577,7 +609,7 @@ export function CommentEntryManagement({
                     <NotebookPen className="size-5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <DialogTitle className="text-lg font-bold text-foreground">学期评语录入进度</DialogTitle>
+                    <DialogTitle className="text-lg font-bold text-foreground">{copy.name}录入进度</DialogTitle>
                     <DialogDescription className="mt-1 text-xs leading-5">
                       {detailTask.semester} · {detailTask.teacherRoles.map((r) => TEACHER_ROLE_LABEL[r]).join("、")} · 截止 {detailTask.endAt.replace("T", " ")}
                     </DialogDescription>
@@ -636,7 +668,7 @@ export function CommentEntryManagement({
                   <div className="overflow-hidden rounded-2xl border border-[#dce4fa] bg-white shadow-[0_12px_28px_-26px_rgba(62,74,150,0.68)]">
                     <div className="overflow-x-auto">
                       <table className="min-w-[860px] w-full text-left text-xs">
-                        <caption className="sr-only">教师与班主任评语录入进度</caption>
+                        <caption className="sr-only">教师与班主任{copy.shortName}录入进度</caption>
                         <thead className="bg-[#f5f7ff] text-muted-foreground">
                           <tr className="border-b border-[#e6eafa]">
                             <th scope="col" className="w-12 px-4 py-3">
@@ -651,7 +683,7 @@ export function CommentEntryManagement({
                             <th scope="col" className="px-3 py-3 font-semibold">教师 / 角色</th>
                             <th scope="col" className="px-3 py-3 font-semibold">年级</th>
                             <th scope="col" className="px-3 py-3 font-semibold">负责班级</th>
-                            <th scope="col" className="px-3 py-3 font-semibold">评语进度</th>
+                            <th scope="col" className="px-3 py-3 font-semibold">{copy.shortName}进度</th>
                             <th scope="col" className="w-44 px-3 py-3 font-semibold">完成率</th>
                             <th scope="col" className="px-3 py-3 font-semibold">状态</th>
                             <th scope="col" className="px-4 py-3 text-right font-semibold">操作</th>

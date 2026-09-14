@@ -6,15 +6,15 @@ import { PE_CLASS_IDS } from "./pe-scores"
  * 校区 / 学段 / 年级 / 班级
  * ------------------------------------------------------------------ */
 
-export const CAMPUSES = ["临港校区", "明珠校区"] as const
+export const CAMPUSES = ["屹力校区", "屹力校区"] as const
 export const SEGMENTS = ["小学部", "初中部"] as const
 
 export const GRADES: Grade[] = [
-  { id: "grade-5", name: "五年级", segment: "小学部", campus: "临港校区", order: 1 },
-  { id: "grade-6", name: "六年级", segment: "小学部", campus: "临港校区", order: 2 },
-  { id: "grade-7", name: "七年级", segment: "初中部", campus: "临港校区", order: 3 },
-  { id: "grade-8", name: "八年级", segment: "初中部", campus: "临港校区", order: 4 },
-  { id: "grade-mz-4", name: "四年级", segment: "小学部", campus: "明珠校区", order: 5 },
+  { id: "grade-5", name: "五年级", segment: "小学部", campus: "屹力校区", order: 1 },
+  { id: "grade-6", name: "六年级", segment: "小学部", campus: "屹力校区", order: 2 },
+  { id: "grade-7", name: "七年级", segment: "初中部", campus: "屹力校区", order: 3 },
+  { id: "grade-8", name: "八年级", segment: "初中部", campus: "屹力校区", order: 4 },
+  { id: "grade-mz-4", name: "四年级", segment: "小学部", campus: "屹力校区", order: 5 },
 ]
 
 interface ClassSeed {

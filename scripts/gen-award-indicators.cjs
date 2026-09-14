@@ -1,9 +1,9 @@
-/* Generates lib/data/award-card-indicators.json from 明珠临港-五育奖卡.xlsx */
+/* Generates lib/data/award-card-indicators.json from 屹力学校-五育奖卡.xlsx */
 const XLSX = require("xlsx")
 const fs = require("fs")
 const path = require("path")
 
-const wb = XLSX.readFile(path.join(__dirname, "../明珠临港-五育奖卡.xlsx"))
+const wb = XLSX.readFile(path.join(__dirname, "../屹力学校-五育奖卡.xlsx"))
 const rows = XLSX.utils.sheet_to_json(wb.Sheets["Sheet1"], { defval: "" })
 
 // 提取脚本按 id_<DISP_ID>.jpg 命名（见 public/images/award-cards/）

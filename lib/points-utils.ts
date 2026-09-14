@@ -98,7 +98,7 @@ export function buildPointEntries(
     source: a.source,
     detail: a.level3 ? `${a.level2} · ${a.level3}` : a.level2,
   }))
-  const fromHonors: PointEntry[] = honors.map((h) => ({
+  const fromHonors: PointEntry[] = honors.filter((h) => h.reviewStatus !== "pending" && h.reviewStatus !== "rejected").map((h) => ({
     id: h.id,
     studentId: h.studentId,
     studentName: h.studentName,

@@ -163,12 +163,12 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
   const showSecondaryGroup = secondaryItems.length > 0
 
   return (
-    <div className="flex min-h-screen flex-col px-4 pb-4 pt-16 sm:px-6">
+    <div className="app-page-shell flex min-h-screen flex-col px-4 pb-4 pt-16 sm:px-6">
       <a href="#main-content" className="sr-only z-[60] rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:ring-2 focus-visible:ring-primary/50">
         跳转到主要内容
       </a>
       {/* 固定顶栏：logo + 导航 + 用户信息 */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur-xl">
+      <header className="app-header fixed inset-x-0 top-0 z-50 border-b bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
           <div className="flex shrink-0 items-center gap-2.5">
             <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg ring-1 ring-border/40">
@@ -277,8 +277,8 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
         </div>
       </header>
 
-      <div className="mx-auto flex w-full flex-1 flex-col gap-4 max-w-[1240px]">
-        <main id="main-content" tabIndex={-1} className="glass-panel flex w-full min-w-0 flex-col gap-6 rounded-2xl border border-primary/12 bg-white/70 p-4 shadow-none sm:p-6">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-5">
+        <main id="main-content" tabIndex={-1} className="app-content glass-panel flex w-full min-w-0 flex-col gap-6 rounded-2xl p-4 sm:p-6">
           {isParent ? (
             <ParentDashboard />
           ) : mainTab === "home" && isHomeroom ? (

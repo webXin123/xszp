@@ -47,9 +47,9 @@ const HONOR_LEVEL_STYLE: Record<HonorLevel, string> = {
 /** 模拟 OCR 预置识别结果池（原型展示用，按上传次数轮换） */
 const OCR_MOCK_POOL: { honorName: string; awardDate: string; issuer: string }[] = [
   { honorName: "2025年上海市青少年科技创新大赛一等奖", awardDate: "2025-11-18", issuer: "上海市教育委员会" },
-  { honorName: "第二十一届“明珠杯”小学生数学思维竞赛金奖", awardDate: "2025-12-05", issuer: "浦东新区教育局" },
+  { honorName: "第二十一届“屹力杯”小学生数学思维竞赛金奖", awardDate: "2025-12-05", issuer: "浦东新区教育局" },
   { honorName: "2025年全国青少年人工智能创新挑战赛二等奖", awardDate: "2025-08-22", issuer: "中国少年儿童发展服务中心" },
-  { honorName: "明珠临港校区第十二届艺术节优秀表演奖", awardDate: "2025-10-30", issuer: "明珠临港校区德育处" },
+  { honorName: "屹力学校校区第十二届艺术节优秀表演奖", awardDate: "2025-10-30", issuer: "屹力学校校区德育处" },
   { honorName: "2025年浦东新区中小学田径运动会男子400米季军", awardDate: "2025-10-12", issuer: "浦东新区体育总会" },
   { honorName: "上海市中小学生书法比赛（硬笔组）三等奖", awardDate: "2025-09-25", issuer: "上海市书法家协会青少年工作委员会" },
 ]

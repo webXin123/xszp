@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ClipboardCheck,
   LayoutGrid,
   Medal,
   MinusCircle,
@@ -26,9 +27,12 @@ import { usePermission } from "@/lib/use-permission"
 import { getActivityStatus, requiresActivityEnrollment } from "@/lib/activity-utils"
 import { formatDate, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek, getWeekRange } from "@/lib/scoring-utils"
 import { TIME_RANGE_LABEL, type TimeRange } from "@/lib/points-utils"
+import { readSemesterEvaluationRecords } from "@/lib/semester-evaluation-utils"
 import { PointsRankingTab } from "./points-ranking-tab"
 import { HonorUploadTab } from "../evaluation/honor-upload-tab"
+import { ParentHonorReview } from "./parent-honor-review"
 import type { MainTab } from "../evaluation/evaluation-dashboard"
+import styles from "../role-home.module.css"
 
 interface HomeroomDashboardProps {
   onNavigate: (tab: MainTab) => void
@@ -74,7 +78,7 @@ const FALLBACK_COMMENT_PROGRESS: CommentProgressItem[] = [
 ]
 
 export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
-  const { records, awardCards, classes, flags, flagConfigs, activities } = useEvaluation()
+  const { records, awardCards, classes, flags, flagConfigs, activities, currentTeacher, students } = useEvaluation()
   const { scoringClasses } = usePermission()
   const [classId, setClassId] = useState(scoringClasses[0]?.id ?? "")
   const [range, setRange] = useState<TimeRange>("semester")
@@ -84,6 +88,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
   const [topPanelTab, setTopPanelTab] = useState<"messages" | "todos">("messages")
   const [honorDrawerOpen, setHonorDrawerOpen] = useState(false)
   const [commentProgress, setCommentProgress] = useState<CommentProgressItem[]>(FALLBACK_COMMENT_PROGRESS)
+  const [pendingEvaluationCount, setPendingEvaluationCount] = useState(0)
 
   const currentClass = classes.find((item) => item.id === classId) ?? scoringClasses[0]
   const now = new Date()
@@ -112,6 +117,16 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
       setCommentProgress(FALLBACK_COMMENT_PROGRESS)
     }
   }, [currentClass])
+
+  useEffect(() => {
+    if (!currentClass || !currentTeacher) return
+    const roster = students.filter((student) => student.classId === currentClass.id)
+    const completed = roster.filter((student) => {
+      const record = readSemesterEvaluationRecords().find((item) => item.teacherId === currentTeacher.id && item.classId === currentClass.id && item.studentId === student.id)
+      return Object.keys(record?.ratings ?? {}).length >= 10
+    }).length
+    setPendingEvaluationCount(Math.max(roster.length - completed, 0))
+  }, [currentClass, currentTeacher, students])
 
   const classFlagConfigs = useMemo(() => new Map(flagConfigs.map((item) => [item.id, item])), [flagConfigs])
 
@@ -200,7 +215,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
 
   const commentCompleted = commentProgress.filter((item) => item.status === "已提交").length
   const pendingCommentCount = commentProgress.length - commentCompleted
-  const pendingTodoCount = weekDeductions.length + pendingCommentCount
+  const pendingTodoCount = weekDeductions.length + pendingCommentCount + pendingEvaluationCount
   const dashboardTodos = useMemo<DashboardTodo[]>(() => [
     {
       id: "score-review",
@@ -221,6 +236,15 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
       href: "/comment-entry",
     },
     {
+      id: "semester-evaluation",
+      title: "学期评价待完成",
+      description: pendingEvaluationCount > 0 ? `还有 ${pendingEvaluationCount} 名学生待完成学期评价` : "本班学期评价已完成",
+      count: pendingEvaluationCount,
+      icon: ClipboardCheck,
+      actionLabel: "去评价",
+      href: "/semester-evaluation",
+    },
+    {
       id: "honor-entry",
       title: "班级荣誉记录",
       description: "为获奖学生补录荣誉信息并同步加分",
@@ -238,7 +262,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
       actionLabel: "去查看",
       onClick: () => onNavigate("activity"),
     },
-  ], [classActivities.length, onNavigate, pendingCommentCount, weekDeductions.length])
+  ], [classActivities.length, onNavigate, pendingCommentCount, pendingEvaluationCount, weekDeductions.length])
   const todosLoadMore = useLoadMore(dashboardTodos, 3)
   const todosScroll = useScrollLoadMore(todosLoadMore.hasMore, todosLoadMore.loadMore)
 
@@ -247,7 +271,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
   }
 
   return (
-    <div className="relative -m-4 flex flex-col gap-4 bg-[#f7f8ff] p-4 sm:-m-6 sm:gap-5 sm:p-6">
+    <div className={cn("relative -m-4 flex flex-col gap-4 p-4 sm:-m-6 sm:gap-5 sm:p-6", styles.teacherHome, styles.homeroomHome)}>
       <section className="overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]" aria-label="班主任信息、最新消息与待办事项">
         <div className="grid xl:grid-cols-[minmax(340px,0.82fr)_minmax(0,1.18fr)]">
           <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] p-5 sm:p-6 xl:border-r xl:border-[#e4e9f8]">
@@ -323,6 +347,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
             <DialogTitle className="text-xl font-bold text-foreground">荣誉录入</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+            <ParentHonorReview classId={currentClass.id} />
             <HonorUploadTab classId={currentClass.id} compact />
           </div>
         </DialogContent>

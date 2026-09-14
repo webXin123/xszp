@@ -1,0 +1,92 @@
+.dashboard {
+  --admin-card-border: rgb(207 220 239 / 92%);
+  --admin-card-shadow: 0 18px 42px -31px rgb(35 67 122 / 55%);
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--admin-card-border);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: var(--admin-card-shadow);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.card::before {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: 3px;
+  content: "";
+  background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary-2) 70%, white));
+}
+
+.card:hover {
+  border-color: rgb(174 198 237 / 95%);
+  box-shadow: 0 22px 46px -31px rgb(35 67 122 / 62%);
+}
+
+.overviewCard {
+  background:
+    radial-gradient(circle at 92% 8%, rgb(217 232 255 / 62%), transparent 19rem),
+    linear-gradient(145deg, #fff 0%, #f8fbff 100%);
+}
+
+.overviewCard::before {
+  background: linear-gradient(90deg, #416fe1, #78a0f3 56%, #6abca7);
+}
+
+.statsGrid {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(222 231 243 / 95%);
+  border-radius: 15px;
+  background: rgb(248 251 255 / 88%);
+}
+
+.statItem {
+  position: relative;
+  transition: background-color 180ms ease;
+}
+
+.statItem:hover {
+  background: rgb(255 255 255 / 74%);
+}
+
+.statItem::after {
+  position: absolute;
+  right: 16px;
+  bottom: 0;
+  left: 16px;
+  height: 1px;
+  content: "";
+  background: rgb(221 230 243 / 80%);
+}
+
+.contentCard {
+  background: linear-gradient(180deg, #fff 0%, #fcfdff 100%);
+}
+
+@media (min-width: 640px) {
+  .statItem::after {
+    right: 0;
+    bottom: 16px;
+    left: auto;
+    width: 1px;
+    height: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    border-radius: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .statItem {
+    transition: none;
+  }
+}

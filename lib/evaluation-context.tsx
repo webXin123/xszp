@@ -18,6 +18,10 @@ import type {
   FlagPeriod,
   HonorLevel,
   HonorRecord,
+  MallCartItem,
+  MallConfig,
+  MallProduct,
+  MallRedemption,
   ParentUser,
   ScoreRecord,
   Teacher,
@@ -39,6 +43,10 @@ const SUBMISSIONS_KEY = "mzlg-submissions-v1"
 const EVALUATIONS_KEY = "mzlg-evaluations-v1"
 const CURRENT_USER_KEY = "mzlg-current-user-v1"
 const PE_SCORES_KEY = "mzlg-pe-scores-v1"
+const MALL_PRODUCTS_KEY = "mzlg-mall-products-v1"
+const MALL_CONFIG_KEY = "mzlg-mall-config-v1"
+const MALL_CART_KEY = "mzlg-mall-cart-v1"
+const MALL_REDEMPTIONS_KEY = "mzlg-mall-redemptions-v1"
 
 const DEFAULT_FLAG_CONFIGS: FlagConfig[] = [
   { id: "week-civility", period: "week", name: "文明礼仪示范班", enabled: true, syncFiveEducation: true, syncLevel1: "德育", syncLevel2: "文明礼仪", syncLevel3: "主动问好" },
@@ -52,6 +60,75 @@ const DEFAULT_CLASS_RATING_CONFIGS: ClassRatingConfig[] = [
   { id: "rating-growth", name: "稳步成长", description: "保持稳定进步，在合作与成长中形成班级特色。", image: null, defaultImage: "smile", autoIssueDay: "sunday", rankStart: "3", rankEnd: "6", theme: "green" },
   { id: "rating-encouragement", name: "成长加油", description: "积极参与、持续改善，在每一次努力中积累成长。", image: null, defaultImage: "cry", autoIssueDay: "monday", rankStart: "7", rankEnd: "99", theme: "orange" },
 ]
+
+const MALL_IMAGES = [
+  "/xszp/images/activity-gallery/activity-storybook.png",
+  "/xszp/images/activity-gallery/activity-sports.png",
+  "/xszp/images/activity-gallery/activity-recycling.png",
+  "/xszp/images/activity-gallery/activity-makerspace.png",
+  "/xszp/images/activity-gallery/activity-garden.png",
+] as const
+
+function seedMallConfig(): MallConfig {
+  const now = new Date()
+  const start = new Date(now)
+  start.setDate(start.getDate() - 14)
+  start.setHours(8, 0, 0, 0)
+  const end = new Date(now)
+  end.setDate(end.getDate() + 90)
+  end.setHours(18, 0, 0, 0)
+  return {
+    startAt: start.toISOString().slice(0, 16),
+    endAt: end.toISOString().slice(0, 16),
+    exchangeLocation: "综合楼一层学生服务中心",
+    notice: "兑换成功后请凭兑换凭证在开放时间内到学生服务中心领取商品。",
+  }
+}
+
+function seedMallProducts(): MallProduct[] {
+  const now = new Date().toISOString()
+  return [
+    { id: "mall-bookmark", name: "校园阅读书签", category: "学习用品", description: "校园主题阅读书签，一套 6 枚，陪伴每日阅读时光。", image: MALL_IMAGES[0], stock: 48, initialStock: 60, pointsCost: 12, status: "listed", gradeIds: [], requirementsEnabled: false, requirementMode: "all", requirements: [], createdAt: now, updatedAt: now },
+    { id: "mall-wristband", name: "活力运动护腕", category: "健康生活", description: "轻盈透气的运动护腕，适合课间运动与体育活动使用。", image: MALL_IMAGES[1], stock: 24, initialStock: 36, pointsCost: 28, status: "listed", gradeIds: ["grade-5", "grade-6"], requirementsEnabled: true, requirementMode: "all", requirements: [{ level1: "体育", minimumPoints: 5 }], createdAt: now, updatedAt: now },
+    { id: "mall-plant-kit", name: "小小园丁种植套装", category: "生活好物", description: "含种子、花盆与种植记录卡，记录一次耐心的成长实验。", image: MALL_IMAGES[4], stock: 18, initialStock: 24, pointsCost: 35, status: "listed", gradeIds: [], requirementsEnabled: true, requirementMode: "any", requirements: [{ level1: "劳育", minimumPoints: 8 }, { level1: "智育", minimumPoints: 10 }], createdAt: now, updatedAt: now },
+    { id: "mall-maker-badge", name: "创客主题徽章", category: "文创周边", description: "校园创客主题金属徽章，可别在书包或校服外套上。", image: MALL_IMAGES[3], stock: 30, initialStock: 40, pointsCost: 20, status: "listed", gradeIds: ["grade-6", "grade-7"], requirementsEnabled: false, requirementMode: "all", requirements: [], createdAt: now, updatedAt: now },
+    { id: "mall-eco-sticker", name: "环保行动贴纸包", category: "文创周边", description: "用一套贴纸为自己的环保行动留下纪念。", image: MALL_IMAGES[2], stock: 56, initialStock: 80, pointsCost: 8, status: "listed", gradeIds: [], requirementsEnabled: false, requirementMode: "all", requirements: [], createdAt: now, updatedAt: now },
+    { id: "mall-notebook", name: "成长记录笔记本", category: "学习用品", description: "横线与方格混排内页，适合记录灵感、阅读与成长计划。", image: MALL_IMAGES[0], stock: 0, initialStock: 30, pointsCost: 45, status: "unlisted", gradeIds: [], requirementsEnabled: false, requirementMode: "all", requirements: [], createdAt: now, updatedAt: now },
+  ]
+}
+
+function seedMallRedemptions(): MallRedemption[] {
+  const now = Date.now()
+  const make = (id: string, product: MallProduct, studentId: string, daysAgo: number, offlineRedeemed: boolean): MallRedemption => {
+    const student = STUDENTS.find((item) => item.id === studentId)!
+    const gradeId = CLASSES.find((item) => item.id === student.classId)?.gradeId ?? ""
+    const redeemedAt = new Date(now - daysAgo * 86400000).toISOString()
+    return {
+      id,
+      orderNo: `SC${new Date(now - daysAgo * 86400000).toISOString().slice(0, 10).replaceAll("-", "")}${id.slice(-3).toUpperCase()}`,
+      productId: product.id,
+      productName: product.name,
+      productImage: product.image,
+      productPoints: product.pointsCost,
+      quantity: 1,
+      totalPoints: product.pointsCost,
+      studentId,
+      studentName: student.name,
+      classId: student.classId,
+      gradeId,
+      redeemedAt,
+      offlineRedeemed,
+      offlineRedeemedAt: offlineRedeemed ? new Date(now - Math.max(daysAgo - 1, 0) * 86400000).toISOString() : undefined,
+    }
+  }
+  const products = seedMallProducts()
+  return [
+    make("mall-order-001", products[0], "class-6-1-stu-1", 8, true),
+    make("mall-order-002", products[4], "class-6-1-stu-1", 2, false),
+    make("mall-order-003", products[1], "class-6-2-stu-1", 5, true),
+    make("mall-order-004", products[3], "class-7-1-stu-2", 1, false),
+  ]
+}
 
 function seedRecords(): ScoreRecord[] {
   const now = Date.now()
@@ -103,6 +180,31 @@ function seedRecords(): ScoreRecord[] {
     mk("moral-demo-record-7", "class-6-3", twoDaysAgo, "午休、午会", "午休管理", "wx-1", 1, -5, [], "午休铃后教室仍有喧哗", "teacher-chen", "陈明", 2),
     mk("moral-demo-record-8", "class-6-4", threeDaysAgo, "礼仪形象", "仪容仪表", "ly-2", 1, -2, [], "少数学生未佩戴红领巾", "teacher-chen", "陈明", 3),
   ]
+  const homeroomDashboardRecords = Array.from({ length: 18 }, (_, index) => {
+    const templates = [
+      ["卫生", "环境卫生", "hy-2", "值日区域发现纸屑，已提醒及时整理"],
+      ["课间文明休息", "行为安全", "jj-1", "课间活动音量偏大，已完成班级提醒"],
+      ["礼仪形象", "文明礼仪", "ly-5", "上下楼梯未做到主动礼让"],
+      ["早操", "做操纪律", "zc-2", "队列衔接稍慢，已安排小组长跟进"],
+      ["路队", "队伍秩序", "ld-1", "放学队伍转弯处间距不够整齐"],
+    ] as const
+    const [level1, level2, itemId, note] = templates[index % templates.length]
+    return mk(
+      `homeroom-dashboard-record-${index + 1}`,
+      "class-6-1",
+      today,
+      level1,
+      level2,
+      itemId,
+      1,
+      -(index % 3 + 1),
+      index % 2 === 0 ? ["陈思远", "王浩然"].slice(0, index % 3 === 0 ? 2 : 1) : [],
+      note,
+      "teacher-zhao",
+      "赵得鑫",
+      index / 48,
+    )
+  })
 
   return [
     mk("seed-1", "class-6-1", yesterday, "礼仪形象", "仪容仪表", "ly-2", 2, -2, ["陈思远"], "晨检时红领巾未佩戴", "teacher-zhao", "赵得鑫", 1),
@@ -122,6 +224,7 @@ function seedRecords(): ScoreRecord[] {
     mk("seed-15", "class-mz-4-1", today, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["李晓雨"], "未按要求穿校服", "teacher-gu", "顾伟", 0),
     mk("seed-16", "class-6-1", twoDaysAgo, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["王浩然"], "未穿校服", "teacher-zhao", "赵得鑫", 2),
     ...moralDemoRecords,
+    ...homeroomDashboardRecords,
     // 排名演示数据：6-1 为第 1 名，6-2 与 7-1 并列第 2 名，下一名自然显示为第 4 名。
     mk("seed-ranking-1", "class-6-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -1, [], "上周班级排名演示：轻微扣分", "teacher-zhao", "赵得鑫", 8),
     mk("seed-ranking-2", "class-6-2", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -3, [], "上周班级排名演示：并列第 2 名", "teacher-wang", "王芳", 8),
@@ -249,6 +352,48 @@ function seedAwardCards(): AwardCardRecord[] {
   const moralDemoAwards = moralAwardFixtures.map(([studentId, classId, indicatorId, level1, level2, daysAgo, operatorId, operatorName], index) =>
     mk(`award-moral-demo-${index + 1}`, studentId, classId, indicatorId, level1, level2, 1, dateForDaysAgo(daysAgo), operatorId, operatorName, daysAgo),
   )
+  const roleDashboardAwards = Array.from({ length: 42 }, (_, index) => {
+    const templates = [
+      ["award-1-1", "智慧小博士", "乐于探究"],
+      ["award-3-2", "友善美少年", "友爱互助"],
+      ["award-4-1", "健康小能手", "热爱运动"],
+      ["award-7-1", "合作创享星", "团队协作"],
+      ["award-10-1", "责任担当星", "主动负责"],
+    ] as const
+    const [indicatorId, level1, level2] = templates[index % templates.length]
+    const operator = index % 3 === 1 ? ["teacher-liu", "刘敏"] as const : ["teacher-zhao", "赵得鑫"] as const
+    const student = STUDENTS.filter((item) => item.classId === "class-6-1")[index % 36]
+    return mk(
+      `award-role-dashboard-${index + 1}`,
+      student.id,
+      "class-6-1",
+      indicatorId,
+      level1,
+      level2,
+      index % 5 === 0 ? 2 : 1,
+      today,
+      operator[0],
+      operator[1],
+      index / 72,
+    )
+  })
+  const parentDashboardAwards = Array.from({ length: 18 }, (_, index) => {
+    const studentId = ["class-6-1-stu-1", "class-6-1-stu-2", "class-6-2-stu-1"][index % 3]
+    const student = STUDENTS.find((item) => item.id === studentId)!
+    return mk(
+      `award-parent-dashboard-${index + 1}`,
+      student.id,
+      student.classId,
+      index % 2 === 0 ? "award-5-1" : "award-6-1",
+      index % 2 === 0 ? "才艺智多星" : "家国红五星",
+      index % 2 === 0 ? "感知美与欣赏美" : "家国情怀",
+      1,
+      dateForDaysAgo(index % 6),
+      index % 2 === 0 ? "teacher-zhao" : "teacher-liu",
+      index % 2 === 0 ? "赵得鑫" : "刘敏",
+      index % 6 + index / 80,
+    )
+  })
   return [
     mk("award-seed-1", "class-6-1-stu-1", "class-6-1", "award-1-1", "智慧小博士", "乐于探究", 1, today, "teacher-zhao", "赵得鑫", 0),
     mk("award-seed-2", "class-6-1-stu-2", "class-6-1", "award-7-1", "合作创享星", "团队协作", 1, today, "teacher-zhao", "赵得鑫", 0),
@@ -268,6 +413,8 @@ function seedAwardCards(): AwardCardRecord[] {
     mk("award-seed-13", "class-5-2-stu-1", "class-5-2", "award-4-1", "健康小能手", "热爱运动", 1, yesterday, "teacher-zhou", "周海峰", 1),
     mk("award-seed-14", "class-mz-4-1-stu-1", "class-mz-4-1", "award-8-1", "生活阳光星", "热爱生活", 1, today, "teacher-gu", "顾伟", 0),
     ...moralDemoAwards,
+    ...roleDashboardAwards,
+    ...parentDashboardAwards,
     // 线下扫码获得（以奖卡实际分值为准）
     mk("award-seed-15", "class-6-1-stu-5", "class-6-1", "award-4-1", "健康小能手", "热爱运动", 1, yesterday, "system", "线下扫码", 1, "offline_scan"),
     mk("award-seed-16", "class-6-1-stu-6", "class-6-1", "award-6-1", "家国红五星", "家国情怀", 1, today, "system", "线下扫码", 0, "offline_scan"),
@@ -345,21 +492,39 @@ function seedHonors(): HonorRecord[] {
       createdAt: new Date(now - daysAgo * day).toISOString(),
     }
   }
+  const parentDashboardHonors = Array.from({ length: 12 }, (_, index) => {
+    const studentId = ["class-6-1-stu-1", "class-6-1-stu-2", "class-6-2-stu-1"][index % 3]
+    const levels: HonorLevel[] = ["school", "district", "city"]
+    const subjects = ["阅读", "劳动", "科技", "体育"]
+    const subject = subjects[index % subjects.length]
+    return mk(
+      `honor-parent-dashboard-${index + 1}`,
+      studentId,
+      index % 2 === 0 ? "智慧小博士" : "责任担当星",
+      levels[index % levels.length],
+      index % 3 + 1,
+      `${subject}主题成长活动优秀作品${index + 1}号`,
+      formatDate(new Date(now - (index % 8) * day)),
+      index % 2 === 0 ? "屹力学校校区教务处" : "屹力学校校区德育处",
+      index % 8 + index / 80,
+    )
+  })
   return [
     mk("honor-seed-1", "class-6-1-stu-1", "智慧小博士", "city", 3, "2025年浦东新区中小学Scratch编程挑战赛一等奖", today, "浦东新区教育发展研究院", 0),
-    mk("honor-seed-2", "class-6-2-stu-2", "才艺智多星", "district", 2, "明珠临港校区第十二届艺术节钢琴独奏金奖", yesterday, "明珠临港校区德育处", 1),
+    mk("honor-seed-2", "class-6-2-stu-2", "才艺智多星", "district", 2, "屹力学校校区第十二届艺术节钢琴独奏金奖", yesterday, "屹力学校校区德育处", 1),
     mk("honor-seed-3", "class-7-1-stu-2", "健康小能手", "city", 3, "2025年浦东新区中小学生田径运动会男子100米冠军", today, "浦东新区体育总会", 0),
-    mk("honor-seed-4", "class-5-1-stu-1", "智慧小博士", "school", 1, "五年级数学速算竞赛一等奖", twoDaysAgo, "明珠临港校区教务处", 2),
+    mk("honor-seed-4", "class-5-1-stu-1", "智慧小博士", "school", 1, "五年级数学速算竞赛一等奖", twoDaysAgo, "屹力学校校区教务处", 2),
     mk("honor-seed-5", "class-6-3-stu-2", "家国红五星", "national", 4, "2025年全国青少年人工智能创新挑战赛二等奖", yesterday, "中国少年儿童发展服务中心", 1),
-    mk("honor-seed-6", "class-7-2-stu-1", "小小工程师", "district", 2, "第二十一届明珠杯小学生科技创新大赛一等奖", today, "浦东新区教育局", 0),
-    mk("honor-seed-7", "class-6-1-stu-3", "友善美少年", "school", 1, "校级“友善之星”评选一等奖", twoDaysAgo, "明珠临港校区德育处", 2),
+    mk("honor-seed-6", "class-7-2-stu-1", "小小工程师", "district", 2, "第二十一届屹力杯小学生科技创新大赛一等奖", today, "浦东新区教育局", 0),
+    mk("honor-seed-7", "class-6-1-stu-3", "友善美少年", "school", 1, "校级“友善之星”评选一等奖", twoDaysAgo, "屹力学校校区德育处", 2),
     mk("honor-seed-8", "class-5-2-stu-1", "健康小能手", "district", 2, "区级中小学生游泳锦标赛自由泳第二名", twoDaysAgo, "浦东新区体育局", 2),
-    mk("honor-seed-9", "class-6-2-stu-1", "自信创造星", "school", 1, "校园演讲比赛低年级组一等奖", yesterday, "明珠临港校区大队部", 1),
+    mk("honor-seed-9", "class-6-2-stu-1", "自信创造星", "school", 1, "校园演讲比赛低年级组一等奖", yesterday, "屹力学校校区大队部", 1),
     mk("honor-seed-10", "class-7-1-stu-1", "智慧小博士", "city", 3, "区青少年科技创新大赛科幻画一等奖", yesterday, "浦东新区青少年活动中心", 1),
     mk("honor-seed-11", "class-5-1-stu-2", "才艺智多星", "national", 4, "全国中小学生绘画书法作品比赛绘画类三等奖", twoDaysAgo, "中国教育学会美术教育专业委员会", 2),
-    mk("honor-seed-12", "class-6-3-stu-1", "合作创享星", "school", 1, "校园合唱节团体一等奖", twoDaysAgo, "明珠临港校区教务处", 2),
-    mk("honor-parent-demo-1", "class-6-1-stu-2", "健康小能手", "school", 1, "六年级春季运动会接力赛优秀个人", today, "明珠临港校区体育组", 0),
+    mk("honor-seed-12", "class-6-3-stu-1", "合作创享星", "school", 1, "校园合唱节团体一等奖", twoDaysAgo, "屹力学校校区教务处", 2),
+    mk("honor-parent-demo-1", "class-6-1-stu-2", "健康小能手", "school", 1, "六年级春季运动会接力赛优秀个人", today, "屹力学校校区体育组", 0),
     mk("honor-parent-demo-2", "class-6-2-stu-1", "才艺智多星", "district", 2, "浦东新区少儿艺术展演优秀作品", yesterday, "浦东新区教育局", 1),
+    ...parentDashboardHonors,
   ]
 }
 
@@ -419,7 +584,7 @@ function seedActivities(): Activity[] {
     },
     {
       id: "act-2",
-      title: "明珠读书会·共读《草房子》",
+      title: "屹力读书会·共读《草房子》",
       description:
         "以小组共读形式开展整本书阅读，活动结束后提交读书感悟与实践成果，优秀作品在读书节展示。",
       level1: "智育",
@@ -720,6 +885,10 @@ interface EvaluationContextValue {
   addHonor: (
     honor: Omit<HonorRecord, "id" | "createdAt" | "operatorId" | "operatorName">,
   ) => void
+  submitParentHonor: (
+    honor: Omit<HonorRecord, "id" | "createdAt" | "operatorId" | "operatorName" | "reviewStatus" | "submittedByParent">,
+  ) => { ok: boolean; reason?: string }
+  reviewParentHonor: (id: string, status: "approved" | "rejected", note?: string) => void
   selectedDate: Date
   setSelectedDate: (d: Date) => void
   /* 活动管理 */
@@ -747,6 +916,21 @@ interface EvaluationContextValue {
   getStudentEarned: (studentId: string) => number
   /** 学生可用积分（剩余积分） = 累计获得积分 - 已被报名占用的积分 */
   getStudentBalance: (studentId: string) => number
+  /* 积分商城 */
+  mallProducts: MallProduct[]
+  mallConfig: MallConfig
+  mallCartItems: MallCartItem[]
+  mallRedemptions: MallRedemption[]
+  updateMallConfig: (patch: Partial<MallConfig>) => void
+  addMallProduct: (product: Omit<MallProduct, "id" | "createdAt" | "updatedAt">) => void
+  updateMallProduct: (id: string, patch: Partial<MallProduct>) => void
+  removeMallProduct: (id: string) => void
+  addMallCartItem: (studentId: string, productId: string, quantity?: number) => void
+  updateMallCartItem: (studentId: string, productId: string, quantity: number) => void
+  removeMallCartItem: (studentId: string, productId: string) => void
+  clearMallCart: (studentId: string) => void
+  redeemMallOrder: (studentId: string, items: Array<{ productId: string; quantity: number }>) => { ok: boolean; reason?: string; orderIds?: string[] }
+  updateMallOfflineRedeemed: (ids: string[], offlineRedeemed: boolean) => void
   /* 体质健康成绩导入 */
   peScoreUploads: PeScoreUpload[]
   addPeScoreUpload: (
@@ -768,6 +952,10 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [submissions, setSubmissions] = useState<ActivitySubmission[]>([])
   const [evaluations, setEvaluations] = useState<ActivityEvaluation[]>([])
+  const [mallProducts, setMallProducts] = useState<MallProduct[]>([])
+  const [mallConfig, setMallConfig] = useState<MallConfig>(() => seedMallConfig())
+  const [mallCartItems, setMallCartItems] = useState<MallCartItem[]>([])
+  const [mallRedemptions, setMallRedemptions] = useState<MallRedemption[]>([])
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [peScoreUploads, setPeScoreUploads] = useState<PeScoreUpload[]>([])
   const [hydrated, setHydrated] = useState(false)
@@ -786,23 +974,31 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       const rawEvaluations = localStorage.getItem(EVALUATIONS_KEY)
       const rawCurrentUser = localStorage.getItem(CURRENT_USER_KEY)
       const rawPeScores = localStorage.getItem(PE_SCORES_KEY)
+      const rawMallProducts = localStorage.getItem(MALL_PRODUCTS_KEY)
+      const rawMallConfig = localStorage.getItem(MALL_CONFIG_KEY)
+      const rawMallCart = localStorage.getItem(MALL_CART_KEY)
+      const rawMallRedemptions = localStorage.getItem(MALL_REDEMPTIONS_KEY)
       const storedRecords = rawRecords ? JSON.parse(rawRecords) as ScoreRecord[] : null
       const storedAwardCards = rawAwardCards ? JSON.parse(rawAwardCards) as AwardCardRecord[] : null
       const storedFlags = rawFlags ? JSON.parse(rawFlags) as WeeklyFlag[] : null
       setRecords(storedRecords
-        ? mergeMissingDemoRecords(storedRecords, seedRecords().filter((item) => item.id.startsWith("seed-ranking-") || item.id.startsWith("moral-demo-record-")))
+        ? mergeMissingDemoRecords(storedRecords, seedRecords().filter((item) => item.id.startsWith("seed-ranking-") || item.id.startsWith("moral-demo-record-") || item.id.startsWith("homeroom-dashboard-record-")))
         : seedRecords())
       setFlags(storedFlags ? mergeMissingDemoFlags(storedFlags, seedFlags()) : seedFlags())
       setFlagConfigs(rawFlagConfigs ? JSON.parse(rawFlagConfigs) : DEFAULT_FLAG_CONFIGS)
       setClassRatingConfigs(rawClassRatingConfigs ? JSON.parse(rawClassRatingConfigs) : DEFAULT_CLASS_RATING_CONFIGS)
       setAwardCards(storedAwardCards
-        ? mergeMissingDemoRecords(storedAwardCards, seedAwardCards().filter((item) => item.id.startsWith("award-leaderboard-") || item.id.startsWith("award-moral-demo-")))
+        ? mergeMissingDemoRecords(storedAwardCards, seedAwardCards().filter((item) => item.id.startsWith("award-leaderboard-") || item.id.startsWith("award-moral-demo-") || item.id.startsWith("award-role-dashboard-") || item.id.startsWith("award-parent-dashboard-")))
         : seedAwardCards())
-      setHonors(rawHonors ? mergeMissingDemoRecords(JSON.parse(rawHonors) as HonorRecord[], seedHonors().filter((item) => item.id.startsWith("honor-parent-demo-"))) : seedHonors())
+      setHonors(rawHonors ? mergeMissingDemoRecords(JSON.parse(rawHonors) as HonorRecord[], seedHonors().filter((item) => item.id.startsWith("honor-parent-demo-") || item.id.startsWith("honor-parent-dashboard-"))) : seedHonors())
       setActivities(rawActivities ? normalizeActivities(JSON.parse(rawActivities)) : normalizeActivities(seedActivities()))
       setEnrollments(rawEnrollments ? JSON.parse(rawEnrollments) : seedEnrollments())
       setSubmissions(rawSubmissions ? JSON.parse(rawSubmissions) : seedSubmissions())
       setEvaluations(rawEvaluations ? JSON.parse(rawEvaluations) : seedEvaluations())
+      setMallProducts(rawMallProducts ? JSON.parse(rawMallProducts) : seedMallProducts())
+      setMallConfig(rawMallConfig ? JSON.parse(rawMallConfig) : seedMallConfig())
+      setMallCartItems(rawMallCart ? JSON.parse(rawMallCart) : [])
+      setMallRedemptions(rawMallRedemptions ? JSON.parse(rawMallRedemptions) : seedMallRedemptions())
       if (rawCurrentUser) {
         const parsed = JSON.parse(rawCurrentUser) as CurrentUser
         // 校验持久化的身份：必须存在于种子数据中
@@ -828,6 +1024,10 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       setEnrollments(seedEnrollments())
       setSubmissions(seedSubmissions())
       setEvaluations(seedEvaluations())
+      setMallProducts(seedMallProducts())
+      setMallConfig(seedMallConfig())
+      setMallCartItems([])
+      setMallRedemptions(seedMallRedemptions())
       setPeScoreUploads(seedPeScoreUploads())
     } finally {
       setHydrated(true)
@@ -905,6 +1105,26 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
+    localStorage.setItem(MALL_PRODUCTS_KEY, JSON.stringify(mallProducts))
+  }, [mallProducts, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(MALL_CONFIG_KEY, JSON.stringify(mallConfig))
+  }, [mallConfig, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(MALL_CART_KEY, JSON.stringify(mallCartItems))
+  }, [mallCartItems, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(MALL_REDEMPTIONS_KEY, JSON.stringify(mallRedemptions))
+  }, [mallRedemptions, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(currentUser))
   }, [currentUser, hydrated])
 
@@ -924,15 +1144,149 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
   /** 累计获得积分 = 奖卡积分 + 荣誉加分 */
   const getStudentEarned = (studentId: string) =>
     getStudentPoints(studentId) +
-    honors.filter((h) => h.studentId === studentId).reduce((sum, h) => sum + h.points, 0)
+    honors.filter((h) => h.studentId === studentId && h.reviewStatus !== "pending" && h.reviewStatus !== "rejected").reduce((sum, h) => sum + h.points, 0)
 
   /** 已被占用（报名预扣且未退还）的积分 */
-  const getStudentSpent = (studentId: string) =>
+  const getStudentEnrollmentSpent = (studentId: string) =>
     enrollments
       .filter((e) => e.studentId === studentId && e.pointsSpent)
       .reduce((sum, e) => sum + e.pointsCost, 0)
 
+  /** 商城兑换已经消耗的积分 */
+  const getStudentMallSpent = (studentId: string) =>
+    mallRedemptions
+      .filter((item) => item.studentId === studentId)
+      .reduce((sum, item) => sum + item.totalPoints, 0)
+
+  const getStudentSpent = (studentId: string) => getStudentEnrollmentSpent(studentId) + getStudentMallSpent(studentId)
+
   const getStudentBalance = (studentId: string) => getStudentEarned(studentId) - getStudentSpent(studentId)
+
+  const updateMallConfig: EvaluationContextValue["updateMallConfig"] = (patch) => {
+    setMallConfig((prev) => ({ ...prev, ...patch }))
+  }
+
+  const addMallProduct: EvaluationContextValue["addMallProduct"] = (product) => {
+    const now = new Date().toISOString()
+    setMallProducts((prev) => [{
+      ...product,
+      id: `mall-product-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: now,
+      updatedAt: now,
+    }, ...prev])
+  }
+
+  const updateMallProduct: EvaluationContextValue["updateMallProduct"] = (id, patch) => {
+    setMallProducts((prev) => prev.map((product) => product.id === id
+      ? { ...product, ...patch, stock: Math.max(0, Number(patch.stock ?? product.stock)), updatedAt: new Date().toISOString() }
+      : product,
+    ))
+  }
+
+  const removeMallProduct: EvaluationContextValue["removeMallProduct"] = (id) => {
+    setMallProducts((prev) => prev.filter((product) => product.id !== id))
+    setMallCartItems((prev) => prev.filter((item) => item.productId !== id))
+  }
+
+  const addMallCartItem: EvaluationContextValue["addMallCartItem"] = (studentId, productId, quantity = 1) => {
+    const safeQuantity = Math.max(1, Math.floor(quantity))
+    setMallCartItems((prev) => {
+      const existing = prev.find((item) => item.studentId === studentId && item.productId === productId)
+      if (!existing) return [...prev, { studentId, productId, quantity: safeQuantity }]
+      return prev.map((item) => item.studentId === studentId && item.productId === productId
+        ? { ...item, quantity: item.quantity + safeQuantity }
+        : item,
+      )
+    })
+  }
+
+  const updateMallCartItem: EvaluationContextValue["updateMallCartItem"] = (studentId, productId, quantity) => {
+    const safeQuantity = Math.floor(quantity)
+    setMallCartItems((prev) => safeQuantity <= 0
+      ? prev.filter((item) => !(item.studentId === studentId && item.productId === productId))
+      : prev.map((item) => item.studentId === studentId && item.productId === productId ? { ...item, quantity: safeQuantity } : item),
+    )
+  }
+
+  const removeMallCartItem: EvaluationContextValue["removeMallCartItem"] = (studentId, productId) => {
+    setMallCartItems((prev) => prev.filter((item) => !(item.studentId === studentId && item.productId === productId)))
+  }
+
+  const clearMallCart: EvaluationContextValue["clearMallCart"] = (studentId) => {
+    setMallCartItems((prev) => prev.filter((item) => item.studentId !== studentId))
+  }
+
+  const getStudentSemesterLevelPoints = (studentId: string) => {
+    const semester = getSemesterRange(new Date())
+    const points = new Map<string, number>()
+    buildPointEntries(awardCards, honors)
+      .filter((entry) => entry.studentId === studentId && inRange(entry.date, semester.start, semester.end))
+      .forEach((entry) => points.set(entry.level1, (points.get(entry.level1) ?? 0) + entry.points))
+    return points
+  }
+
+  const redeemMallOrder: EvaluationContextValue["redeemMallOrder"] = (studentId, items) => {
+    const student = STUDENTS.find((item) => item.id === studentId)
+    if (!student) return { ok: false, reason: "未找到学生信息" }
+    const schoolClass = CLASSES.find((item) => item.id === student.classId)
+    if (!schoolClass) return { ok: false, reason: "未找到学生班级信息" }
+    const now = new Date()
+    const start = mallConfig.startAt ? new Date(mallConfig.startAt) : null
+    const end = mallConfig.endAt ? new Date(mallConfig.endAt) : null
+    if ((start && now < start) || (end && now > end)) return { ok: false, reason: "当前不在商城开放时间内" }
+    const grouped = new Map<string, number>()
+    items.forEach((item) => grouped.set(item.productId, (grouped.get(item.productId) ?? 0) + Math.max(1, Math.floor(item.quantity))))
+    if (grouped.size === 0) return { ok: false, reason: "请先选择需要兑换的商品" }
+    const semesterPoints = getStudentSemesterLevelPoints(studentId)
+    const snapshots: Array<{ product: MallProduct; quantity: number }> = []
+    let totalPoints = 0
+    for (const [productId, quantity] of grouped) {
+      const product = mallProducts.find((item) => item.id === productId)
+      if (!product || product.status !== "listed") return { ok: false, reason: "有商品已下架，请刷新后重试" }
+      if (product.stock < quantity) return { ok: false, reason: `${product.name} 库存不足` }
+      if (product.gradeIds.length > 0 && !product.gradeIds.includes(schoolClass.gradeId)) return { ok: false, reason: `${product.name} 暂不面向该年级兑换` }
+      if (product.requirementsEnabled && product.requirements.length > 0) {
+        const checks = product.requirements.map((requirement) => (semesterPoints.get(requirement.level1) ?? 0) >= requirement.minimumPoints)
+        const passed = product.requirementMode === "all" ? checks.every(Boolean) : checks.some(Boolean)
+        if (!passed) return { ok: false, reason: `${product.name} 未满足本学期积分条件` }
+      }
+      totalPoints += product.pointsCost * quantity
+      snapshots.push({ product, quantity })
+    }
+    if (getStudentBalance(studentId) < totalPoints) return { ok: false, reason: `可用积分不足（需要 ${totalPoints} 分）` }
+    const orderPrefix = `SC${formatDate(now).replaceAll("-", "")}${Math.random().toString().slice(2, 7)}`
+    const created: MallRedemption[] = snapshots.map(({ product, quantity }, index) => ({
+      id: `mall-redemption-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+      orderNo: `${orderPrefix}${String(index + 1).padStart(2, "0")}`,
+      productId: product.id,
+      productName: product.name,
+      productImage: product.image,
+      productPoints: product.pointsCost,
+      quantity,
+      totalPoints: product.pointsCost * quantity,
+      studentId,
+      studentName: student.name,
+      classId: student.classId,
+      gradeId: schoolClass.gradeId,
+      redeemedAt: now.toISOString(),
+      offlineRedeemed: false,
+    }))
+    setMallProducts((prev) => prev.map((product) => {
+      const entry = snapshots.find((snapshot) => snapshot.product.id === product.id)
+      return entry ? { ...product, stock: product.stock - entry.quantity, updatedAt: now.toISOString() } : product
+    }))
+    setMallRedemptions((prev) => [...created, ...prev])
+    return { ok: true, orderIds: created.map((item) => item.id) }
+  }
+
+  const updateMallOfflineRedeemed: EvaluationContextValue["updateMallOfflineRedeemed"] = (ids, offlineRedeemed) => {
+    if (!currentTeacher) return
+    const idSet = new Set(ids)
+    setMallRedemptions((prev) => prev.map((item) => idSet.has(item.id)
+      ? { ...item, offlineRedeemed, offlineRedeemedAt: offlineRedeemed ? new Date().toISOString() : undefined }
+      : item,
+    ))
+  }
 
   const addRecord: EvaluationContextValue["addRecord"] = (record) => {
     if (!currentTeacher) return
@@ -977,6 +1331,32 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     }
     setHonors((prev) => [...prev, stamped])
+  }
+
+  const submitParentHonor: EvaluationContextValue["submitParentHonor"] = (honor) => {
+    if (currentUser.kind !== "parent") return { ok: false, reason: "请使用家长身份提交荣誉" }
+    const child = currentUser.children.find((item) => item.studentId === honor.studentId && item.classId === honor.classId)
+    if (!child) return { ok: false, reason: "仅可为已绑定的孩子提交荣誉" }
+    const stamped: HonorRecord = {
+      ...honor,
+      level1: getFiveEducationLevel1(honor.level1),
+      id: `honor-parent-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      operatorId: currentUser.id,
+      operatorName: currentUser.name,
+      createdAt: new Date().toISOString(),
+      reviewStatus: "pending",
+      submittedByParent: true,
+    }
+    setHonors((prev) => [...prev, stamped])
+    return { ok: true }
+  }
+
+  const reviewParentHonor: EvaluationContextValue["reviewParentHonor"] = (id, status, note = "") => {
+    if (!currentTeacher || currentTeacher.role !== "homeroom") return
+    setHonors((prev) => prev.map((honor) => {
+      if (honor.id !== id || honor.reviewStatus !== "pending" || !currentTeacher.scoringClassIds.includes(honor.classId)) return honor
+      return { ...honor, reviewStatus: status, reviewNote: note, reviewedAt: new Date().toISOString(), reviewedBy: currentTeacher.name }
+    }))
   }
 
   const setFlag = (classId: string, periodKey: string, awarded: boolean, configId?: string, period?: FlagPeriod) => {
@@ -1235,6 +1615,8 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     addAwardCards,
     honors,
     addHonor,
+    submitParentHonor,
+    reviewParentHonor,
     selectedDate,
     setSelectedDate,
     activities,
@@ -1251,6 +1633,20 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     getStudentPoints,
     getStudentEarned,
     getStudentBalance,
+    mallProducts,
+    mallConfig,
+    mallCartItems,
+    mallRedemptions,
+    updateMallConfig,
+    addMallProduct,
+    updateMallProduct,
+    removeMallProduct,
+    addMallCartItem,
+    updateMallCartItem,
+    removeMallCartItem,
+    clearMallCart,
+    redeemMallOrder,
+    updateMallOfflineRedeemed,
     peScoreUploads,
     addPeScoreUpload,
   }

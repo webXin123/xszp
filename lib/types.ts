@@ -2,7 +2,7 @@ export type TeacherRole = "homeroom" | "subject" | "moral_director" | "director"
 
 export type Segment = "小学部" | "初中部"
 
-export type Campus = "临港校区" | "明珠校区"
+export type Campus = "屹力校区" | "屹力校区"
 
 /** 当前登录身份：教师或家长。家长身份用于查看自己孩子的积分/奖卡/荣誉/活动（只读）。 */
 export type UserKind = "teacher" | "parent"
@@ -205,6 +205,7 @@ export interface AwardCardRecord {
 
 /** 荣誉级别：分值即加分 */
 export type HonorLevel = "school" | "district" | "city" | "national"
+export type HonorReviewStatus = "pending" | "approved" | "rejected"
 
 export interface HonorRecord {
   id: string
@@ -227,6 +228,77 @@ export interface HonorRecord {
   operatorId: string
   operatorName: string
   createdAt: string
+  /** 家长上传的荣誉需班主任审核后才计入积分；历史记录默认为已通过。 */
+  reviewStatus?: HonorReviewStatus
+  reviewNote?: string
+  reviewedAt?: string
+  reviewedBy?: string
+  submittedByParent?: boolean
+}
+
+/* ------------------------------------------------------------------ *
+ * 积分商城
+ * ------------------------------------------------------------------ */
+
+export type MallProductStatus = "listed" | "unlisted"
+export type MallRequirementMode = "all" | "any"
+
+/** 商品兑换需要达到的本学期一级指标积分。 */
+export interface MallPointRequirement {
+  level1: string
+  minimumPoints: number
+}
+
+export interface MallProduct {
+  id: string
+  name: string
+  category: string
+  description: string
+  image: string
+  /** 当前可兑换库存 */
+  stock: number
+  /** 发布时设置的初始库存，用于后台统计 */
+  initialStock: number
+  pointsCost: number
+  status: MallProductStatus
+  /** 可兑换年级；为空时表示全部年级 */
+  gradeIds: string[]
+  requirementsEnabled: boolean
+  requirementMode: MallRequirementMode
+  requirements: MallPointRequirement[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MallConfig {
+  startAt: string
+  endAt: string
+  exchangeLocation: string
+  notice: string
+}
+
+export interface MallCartItem {
+  studentId: string
+  productId: string
+  quantity: number
+}
+
+export interface MallRedemption {
+  id: string
+  orderNo: string
+  productId: string
+  productName: string
+  productImage: string
+  productPoints: number
+  quantity: number
+  totalPoints: number
+  studentId: string
+  studentName: string
+  classId: string
+  gradeId: string
+  redeemedAt: string
+  offlineRedeemed: boolean
+  offlineRedeemedAt?: string
 }
 
 /* ------------------------------------------------------------------ *

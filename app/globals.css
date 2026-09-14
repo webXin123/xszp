@@ -2,6 +2,11 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+@keyframes pet-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(1.5deg); }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -54,41 +59,41 @@
 
 :root {
   color-scheme: light;
-  --background: #f3f1ff;
-  --foreground: #323c70;
-  --card: transparent;
-  --card-foreground: #323c70;
+  --background: #f4f7fb;
+  --foreground: #243452;
+  --card: #ffffff;
+  --card-foreground: #243452;
   --popover: #ffffff;
-  --popover-foreground: #323c70;
-  --primary: #718cff;
-  --primary-2: #ad9df5;
+  --popover-foreground: #243452;
+  --primary: #416fe1;
+  --primary-2: #6d8ff0;
   --primary-foreground: #ffffff;
-  --secondary: #ececff;
-  --secondary-foreground: #5969c3;
-  --muted: #eff0ff;
-  --muted-foreground: #747fa7;
-  --accent: #e4e1ff;
-  --accent-foreground: #5969c3;
+  --secondary: #eaf1ff;
+  --secondary-foreground: #3156b2;
+  --muted: #eef3f9;
+  --muted-foreground: #6d7c98;
+  --accent: #e5edff;
+  --accent-foreground: #3156b2;
   --destructive: oklch(0.6 0.2 25);
-  --border: #cfd5ff;
-  --input: #d7dcff;
-  --ring: #718cff;
-  --chart-1: #718cff;
+  --border: #d7e1f0;
+  --input: #d2ddeb;
+  --ring: #416fe1;
+  --chart-1: #416fe1;
   --chart-2: oklch(0.62 0.14 145);
   --chart-3: oklch(0.68 0.17 55);
   --chart-4: oklch(0.75 0.15 85);
-  --chart-5: #747fa7;
-  --radius: 1rem;
-  --sidebar: #fbfaff;
-  --sidebar-foreground: #323c70;
-  --sidebar-primary: #718cff;
+  --chart-5: #6d7c98;
+  --radius: 0.875rem;
+  --sidebar: #fbfdff;
+  --sidebar-foreground: #243452;
+  --sidebar-primary: #416fe1;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ececff;
-  --sidebar-accent-foreground: #5969c3;
-  --sidebar-border: #dde0ff;
-  --sidebar-ring: #718cff;
+  --sidebar-accent: #eaf1ff;
+  --sidebar-accent-foreground: #3156b2;
+  --sidebar-border: #dce5f2;
+  --sidebar-ring: #416fe1;
 
-  --brand-blue: #718cff;
+  --brand-blue: #416fe1;
   --brand-green: oklch(0.62 0.14 145);
   --brand-orange: oklch(0.6 0.19 40);
   --brand-yellow: oklch(0.75 0.15 85);
@@ -146,46 +151,104 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    letter-spacing: 0.005em;
+    overflow-x: hidden;
     background-image:
-      linear-gradient(135deg, rgb(151 176 255 / 28%) 0%, transparent 42%),
-      linear-gradient(225deg, rgb(225 172 255 / 24%) 0%, transparent 52%),
-      radial-gradient(circle at 8% 4%, rgb(169 194 255 / 38%), transparent 50%),
-      radial-gradient(circle at 94% 12%, rgb(232 190 255 / 31%), transparent 52%);
+      linear-gradient(135deg, rgb(145 179 247 / 16%) 0%, transparent 42%),
+      linear-gradient(225deg, rgb(175 225 214 / 12%) 0%, transparent 52%),
+      radial-gradient(circle at 8% 4%, rgb(194 216 255 / 30%), transparent 46%),
+      radial-gradient(circle at 94% 12%, rgb(205 238 229 / 23%), transparent 48%);
+  }
+
+  :where(input, textarea, select, [data-slot="select-trigger"]):focus-visible {
+    border-color: var(--input) !important;
+    box-shadow: 0 0 0 3px rgb(65 111 225 / 10%), 0 4px 12px rgb(57 78 116 / 10%) !important;
+    outline: none;
+  }
+
+  :where(input, textarea, select):focus {
+    border-color: var(--input) !important;
+    box-shadow: 0 0 0 3px rgb(65 111 225 / 10%), 0 4px 12px rgb(57 78 116 / 10%) !important;
+    outline: none;
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply border-0 bg-transparent shadow-none backdrop-blur-none;
-    background-image: none;
+    @apply border border-white/80 bg-white/70 shadow-[0_18px_48px_-34px_rgba(43,72,130,0.62)] backdrop-blur-xl;
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 78%) 0%, rgb(248 251 255 / 66%) 100%);
   }
   .glass-surface {
-    @apply border border-white/50 shadow-[0_20px_56px_-16px_rgba(20,30,60,0.45)] backdrop-blur-2xl dark:border-white/12;
-    background-color: oklch(1 0 0 / 72%);
+    @apply border border-white/80 shadow-[0_20px_56px_-20px_rgba(43,72,130,0.38)] backdrop-blur-2xl dark:border-white/12;
+    background-color: oklch(1 0 0 / 86%);
     background-image:
-      linear-gradient(to bottom, oklch(1 0 0 / 30%), oklch(1 0 0 / 0%) 40%),
-      linear-gradient(135deg, oklch(1 0 0 / 20%) 0%, oklch(1 0 0 / 7%) 100%);
+      linear-gradient(to bottom, oklch(1 0 0 / 56%), oklch(1 0 0 / 0%) 40%),
+      linear-gradient(135deg, oklch(1 0 0 / 18%) 0%, oklch(1 0 0 / 4%) 100%);
+  }
+
+  .app-page-shell {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .app-page-shell::before {
+    position: fixed;
+    z-index: 0;
+    inset: 3.5rem 0 auto;
+    height: 18rem;
+    pointer-events: none;
+    content: "";
+    background: radial-gradient(circle at 50% 0%, rgb(122 166 242 / 13%), transparent 62%);
+  }
+
+  .app-page-shell > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .app-header {
+    border-color: rgb(214 225 241 / 88%);
+    background: rgb(248 251 255 / 84%);
+    box-shadow: 0 10px 28px -26px rgb(40 70 125 / 62%);
+  }
+
+  .app-content {
+    border-color: rgb(213 225 241 / 90%);
+    box-shadow: 0 24px 60px -42px rgb(40 70 125 / 62%);
+  }
+
+  .surface-card {
+    border: 1px solid rgb(217 228 241 / 92%);
+    border-radius: 1rem;
+    background: rgb(255 255 255 / 88%);
+    box-shadow: 0 14px 32px -28px rgb(38 67 118 / 60%);
+  }
+
+  .surface-card:hover {
+    border-color: rgb(174 198 237 / 92%);
+    box-shadow: 0 18px 34px -28px rgb(38 67 118 / 62%);
   }
 
   .config-page-header {
-    @apply border border-white/80 bg-white/85 shadow-[0_12px_28px_-24px_rgba(55,67,138,0.7)] backdrop-blur-sm dark:border-white/12 dark:bg-slate-900/75;
+    @apply border border-white/85 bg-white/88 shadow-[0_12px_28px_-24px_rgba(43,72,130,0.58)] backdrop-blur-sm dark:border-white/12 dark:bg-slate-900/75;
   }
 
   .config-page-shell {
-    @apply border border-[#c9d1fb] bg-white shadow-[0_24px_60px_-34px_rgba(65,78,158,0.68)] dark:border-white/12 dark:bg-slate-900;
-    background-image: linear-gradient(180deg, rgb(255 255 255 / 100%) 0%, rgb(249 250 255 / 100%) 100%);
+    @apply border border-[#d3dfef] bg-white shadow-[0_24px_60px_-34px_rgba(43,72,130,0.52)] dark:border-white/12 dark:bg-slate-900;
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 100%) 0%, rgb(248 251 255 / 100%) 100%);
   }
 
   .config-subpanel {
-    @apply border border-[#d9dff8] bg-[#f7f8ff] shadow-[0_10px_24px_-24px_rgba(62,74,150,0.6)] dark:border-white/12 dark:bg-white/5;
+    @apply border border-[#dce6f3] bg-[#f6f9fd] shadow-[0_10px_24px_-24px_rgba(43,72,130,0.44)] dark:border-white/12 dark:bg-white/5;
   }
 
   .config-editor-panel {
-    @apply border border-[#d9dff8] bg-white shadow-[0_12px_28px_-26px_rgba(62,74,150,0.68)] dark:border-white/12 dark:bg-slate-900;
+    @apply border border-[#dce6f3] bg-white shadow-[0_12px_28px_-26px_rgba(43,72,130,0.48)] dark:border-white/12 dark:bg-slate-900;
   }
 
   .config-inset {
-    @apply border border-[#e0e5fa] bg-white shadow-inner shadow-[#dfe4fa]/35 dark:border-white/10 dark:bg-white/5;
+    @apply border border-[#e2eaf4] bg-white shadow-inner shadow-[#dbe6f4]/35 dark:border-white/10 dark:bg-white/5;
   }
 }
 
@@ -212,7 +275,21 @@
 }
 
 body {
-  font-size: 14px;
+    font-size: 14px;
+}
+
+button:not(:disabled),
+a,
+select,
+label[for] {
+  cursor: pointer;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 button:focus-visible,

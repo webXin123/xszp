@@ -119,7 +119,7 @@ export function ClassRankingTab() {
                 <th className="px-4 py-3">加分</th>
                 <th className="px-4 py-3">扣分</th>
                 <th className="px-4 py-3">{period === "day" ? "今日净分" : period === "week" ? "班级总分" : "月综合分"}</th>
-                {period !== "day" && <th className="px-4 py-3">班级评级</th>}
+                {period === "week" && <th className="px-4 py-3">班级评级</th>}
                 {activeFlagConfigs.map((config) => <th key={config.id} className="min-w-[108px] px-3 py-3 text-center"><span className="line-clamp-2 inline-block max-w-[96px] leading-4">{config.name}</span></th>)}
               </tr>
             </thead>
@@ -132,7 +132,7 @@ export function ClassRankingTab() {
                   <td className="px-4 py-2.5 font-medium text-emerald-700">{row.addition > 0 ? `+${row.addition.toFixed(1)}` : "—"}</td>
                   <td className="px-4 py-2.5 font-medium text-rose-700">{row.deduction > 0 ? `-${row.deduction.toFixed(1)}` : "—"}</td>
                   <td className="px-4 py-2.5"><button type="button" onClick={() => setDetailClassId(row.cls.id)} className="rounded-sm font-bold text-primary transition-colors hover:text-primary-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">{row.total > 0 ? "+" : ""}{row.total.toFixed(1)}</button></td>
-                  {period !== "day" && <td className="px-4 py-2.5"><span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.05] py-1 pl-1 pr-2.5 text-xs font-medium text-primary shadow-[0_4px_10px_-9px_rgba(95,102,205,0.9)]"><img src={rating.image} alt="" width={24} height={24} loading="lazy" className="size-6 rounded-full object-cover" />{rating.label}</span></td>}
+                  {period === "week" && <td className="px-4 py-2.5"><span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.05] py-1 pl-1 pr-2.5 text-xs font-medium text-primary shadow-[0_4px_10px_-9px_rgba(95,102,205,0.9)]"><img src={rating.image} alt="" width="24" height="24" loading="lazy" className="size-6 rounded-full object-cover" />{rating.label}</span></td>}
                   {activeFlagConfigs.map((config, configIndex) => {
                     const awarded = isFlagAwarded(row.cls.id, config.id, configIndex)
                     const image = config.image ?? (awarded ? `${DEFAULT_ICON_PATH}/flag-issued.svg` : `${DEFAULT_ICON_PATH}/flag-unissued.svg`)

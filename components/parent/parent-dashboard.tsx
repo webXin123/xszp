@@ -37,13 +37,15 @@ import { AWARD_LEVEL1_LIST, getAwardIndicator } from "@/lib/award-utils"
 import { getAcademicScores, ACADEMIC_SUBJECTS } from "@/lib/academic-scores"
 import { getSemesterLabel } from "@/lib/pe-scores"
 import { buildPointEntries, getSemesterRange, inRange } from "@/lib/points-utils"
-import { ACTIVITY_STATUS_META, canSubmit, isEnrolling } from "@/lib/activity-utils"
+import { ACTIVITY_STATUS_META, canSubmit, isEnrolling, requiresActivityEnrollment } from "@/lib/activity-utils"
+import styles from "../role-home.module.css"
 import type { Activity } from "@/lib/types"
 import { PointsRadarChart, type RadarSeries } from "./points-radar-chart"
 import { SemesterGrowthChart } from "./semester-growth-chart"
 import { ParentActivityDetailDialog } from "./parent-activity-detail-dialog"
 import { ScanFab } from "./scan-fab"
 import { StudentSemesterReportDrawer } from "./student-semester-report-drawer"
+import { ParentHonorUploadDrawer } from "./parent-honor-upload-drawer"
 
 const HONOR_LEVEL_LABEL: Record<string, string> = {
   school: "校级",
@@ -73,45 +75,37 @@ const GROWTH_STAGES = [
   { min: 350, max: Number.POSITIVE_INFINITY, title: "卓越领航", mascot: "小龙领航员", tone: "purple" },
 ] as const
 
-type QuickPanel = "academic" | "fitness" | "mall" | null
+type QuickPanel = "academic" | "fitness" | null
 type RecordTab = "awards" | "honors" | "activities"
 
-function GrowthMascot({ tone, name }: { tone: (typeof GROWTH_STAGES)[number]["tone"]; name: string }) {
-  const colors = {
-    blue: { face: "#d9e6ff", ear: "#7d9cff", accent: "#516fe8" },
-    green: { face: "#d8f4db", ear: "#6fc678", accent: "#369b48" },
-    yellow: { face: "#fff0c9", ear: "#f3b94f", accent: "#d98713" },
-    orange: { face: "#ffe0cd", ear: "#f08b57", accent: "#d95e25" },
-    purple: { face: "#e9ddff", ear: "#a784ef", accent: "#7450c5" },
-  }[tone]
+function formatPublishedDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "发布时间待定"
+  return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date)
+}
 
+function GrowthMascot({ name }: { name: string }) {
   return (
-    <svg viewBox="0 0 120 120" role="img" aria-label={`${name}卡通成长形象`} className="size-24 drop-shadow-[0_10px_16px_rgba(70,88,160,0.16)] sm:size-28">
-      <path d="M29 39 22 18c-1-4 4-7 8-4l15 11M91 39l7-21c1-4-4-7-8-4L75 25" fill={colors.ear} />
-      <circle cx="60" cy="61" r="39" fill={colors.face} />
-      <circle cx="45" cy="56" r="4.4" fill="#26315c" />
-      <circle cx="75" cy="56" r="4.4" fill="#26315c" />
-      <ellipse cx="60" cy="67" rx="7" ry="5.5" fill={colors.accent} />
-      <path d="M48 76c7 8 17 8 24 0" fill="none" stroke="#26315c" strokeLinecap="round" strokeWidth="3" />
-      <path d="M45 43c8-7 22-7 30 0" fill="none" stroke={colors.accent} strokeLinecap="round" strokeWidth="5" />
-      <circle cx="30" cy="68" r="7" fill="#fff" opacity=".5" />
-      <circle cx="90" cy="68" r="7" fill="#fff" opacity=".5" />
-    </svg>
+    <img
+      src="/xszp/images/student-pet-mascot.png"
+      alt={`${name}成长萌宠`}
+      width={112}
+      height={112}
+      className="size-20 rounded-full object-cover drop-shadow-[0_10px_16px_rgba(70,88,160,0.18)] motion-safe:animate-[pet-bob_3s_ease-in-out_infinite] sm:size-[5.25rem]"
+    />
   )
 }
 
-function QuickEntry({ icon: Icon, label, color, onClick }: {
+function QuickEntry({ icon: Icon, label, color, onClick, href }: {
   icon: typeof HeartPulse
   label: string
   color: string
-  onClick: () => void
+  onClick?: () => void
+  href?: string
 }) {
-  return (
-    <button type="button" onClick={onClick} className="group flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border border-[#dce3f8] bg-white px-2 py-2 text-center transition hover:-translate-y-0.5 hover:border-primary/45 hover:bg-[#fafbff] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">
-      <span className={cn("flex size-10 items-center justify-center rounded-xl transition group-hover:scale-105", color)}><Icon className="size-5" aria-hidden="true" /></span>
-      <span className="text-xs font-semibold text-foreground">{label}</span>
-    </button>
-  )
+  const content = <><span className={cn("flex size-10 items-center justify-center rounded-xl transition group-hover:scale-105", color)}><Icon className="size-5" aria-hidden="true" /></span><span className="text-xs font-semibold text-foreground">{label}</span></>
+  const className = "group flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border border-[#dce3f8] bg-white px-2 py-2 text-center transition hover:-translate-y-0.5 hover:border-primary/45 hover:bg-[#fafbff] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+  return href ? <Link href={href} className={className}>{content}</Link> : <button type="button" onClick={onClick} className={className}>{content}</button>
 }
 
 export function ParentDashboard() {
@@ -197,7 +191,13 @@ export function ParentDashboard() {
 
   const visibleActivities = useMemo(() => {
     const classId = currentChild?.classId ?? ""
-    return classId ? activities.filter((item) => item.status !== "draft" && item.classIds.includes(classId)) : []
+    const gradeId = currentChild?.gradeId ?? ""
+    return classId
+      ? activities
+        .filter((item) => item.classIds.length > 0 ? item.classIds.includes(classId) : item.gradeIds.length === 0 || item.gradeIds.includes(gradeId))
+        .slice()
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      : []
   }, [activities, currentChild])
   const semesterActivities = useMemo(() => visibleActivities.filter((item) => inRange(item.startDate, semester.start, semester.end)).sort((a, b) => b.startDate.localeCompare(a.startDate)), [semester, visibleActivities])
   const latestRecruiting = useMemo(() => visibleActivities.filter((item) => isEnrolling(item)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null, [visibleActivities])
@@ -219,7 +219,7 @@ export function ParentDashboard() {
   const awardCardsScroll = useScrollLoadMore(awardCardsLoadMore.hasMore, awardCardsLoadMore.loadMore)
   const honorsLoadMore = useLoadMore(semesterHonors, 6)
   const honorsScroll = useScrollLoadMore(honorsLoadMore.hasMore, honorsLoadMore.loadMore)
-  const activitiesLoadMore = useLoadMore(semesterActivities, 6)
+  const activitiesLoadMore = useLoadMore(visibleActivities, 6)
   const activitiesScroll = useScrollLoadMore(activitiesLoadMore.hasMore, activitiesLoadMore.loadMore)
 
   const historyTrend = useMemo(() => {
@@ -244,7 +244,7 @@ export function ParentDashboard() {
   const progressOffset = circumference * (1 - stageProgress / 100)
 
   return (
-    <div className="relative flex flex-col gap-3 pb-6 lg:gap-3">
+    <div className={cn("relative flex flex-col gap-3 pb-6 lg:gap-3", styles.parentHome)}>
       <div aria-label="最新动态" className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#dde3f8] bg-white px-3 py-2.5 shadow-[0_12px_26px_-26px_rgba(64,80,166,0.75)]">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Megaphone className="size-4" aria-hidden="true" /></span>
         {notifications[0] ? (() => {
@@ -269,9 +269,9 @@ export function ParentDashboard() {
             <section aria-label="积分情况" className="rounded-2xl bg-[#fbfcff] p-2 sm:p-2.5"><div className="grid grid-cols-4 gap-1.5"><Metric label="学期累计积分" value={semesterEarned} tone="blue" /><Metric label="兑换消耗积分" value={spent} tone="orange" /><Metric label="可用积分" value={balance} tone="green" /><Metric label="累计积分" value={totalEarned} tone="purple" /></div></section>
           </div>
 
-          <section aria-label={`成长阶段：${stage.title}`} className="flex min-h-[175px] flex-col items-center justify-center rounded-2xl bg-[#fbfcff] p-2 text-center sm:p-2.5"><div className="relative shrink-0"><svg viewBox="0 0 110 110" className="size-[6.5rem] -rotate-90 sm:size-28" aria-hidden="true"><circle cx="55" cy="55" r="44" fill="none" stroke="rgba(112,140,185,.15)" strokeWidth="10" /><circle cx="55" cy="55" r="44" fill="none" stroke="var(--color-primary)" strokeLinecap="round" strokeWidth="10" strokeDasharray={circumference} strokeDashoffset={progressOffset} /></svg><span className="absolute inset-0 flex items-center justify-center"><GrowthMascot tone={stage.tone} name={stage.mascot} /></span><span className="absolute inset-x-1 bottom-0 rounded-full bg-white/90 px-2 py-0.5 text-xs font-bold text-foreground shadow-sm">{stage.title}</span></div><p className="mt-1 text-[10px] text-muted-foreground">{nextStage ? <>距下一阶段 <span className="font-bold text-primary">{pointsToNextStage} 分</span></> : "已达最高阶段"}</p></section>
+          <section aria-label={`成长阶段：${stage.title}`} className="flex min-h-[175px] flex-col items-center justify-center rounded-2xl bg-[#fbfcff] p-2 text-center sm:p-2.5"><div className="relative shrink-0"><svg viewBox="0 0 110 110" className="size-[6.5rem] -rotate-90 sm:size-28" aria-hidden="true"><circle cx="55" cy="55" r="44" fill="none" stroke="rgba(112,140,185,.15)" strokeWidth="10" /><circle cx="55" cy="55" r="44" fill="none" stroke="var(--color-primary)" strokeLinecap="round" strokeWidth="10" strokeDasharray={circumference} strokeDashoffset={progressOffset} /></svg><span className="absolute inset-0 flex items-center justify-center"><GrowthMascot name={stage.mascot} /></span><span className="absolute inset-x-1 bottom-0 rounded-full bg-white/90 px-2 py-0.5 text-xs font-bold text-foreground shadow-sm">{stage.title}</span></div><p className="mt-1 text-[10px] text-muted-foreground">{nextStage ? <>距下一阶段 <span className="font-bold text-primary">{pointsToNextStage} 分</span></> : "已达最高阶段"}</p></section>
 
-          <section aria-label="学生服务入口" className="flex min-h-[175px] items-center rounded-2xl bg-[#fbfcff] p-2 sm:p-2.5"><div className="grid w-full grid-cols-2 gap-1.5"><QuickEntry icon={BookOpenCheck} label="学科成绩" color="bg-primary/12 text-primary" onClick={() => setQuickPanel("academic")} /><QuickEntry icon={HeartPulse} label="体质健康" color="bg-[#8fa2ff]/14 text-[#6178e9]" onClick={() => setQuickPanel("fitness")} /><QuickEntry icon={FileText} label="学期报告" color="bg-[#ad9df5]/15 text-[#8571db]" onClick={() => setReportDrawerOpen(true)} /><QuickEntry icon={ShoppingBag} label="积分商城" color="bg-primary/12 text-primary" onClick={() => setQuickPanel("mall")} /></div></section>
+          <section aria-label="学生服务入口" className="flex min-h-[175px] items-center rounded-2xl bg-[#fbfcff] p-2 sm:p-2.5"><div className="grid w-full grid-cols-2 gap-1.5"><QuickEntry icon={BookOpenCheck} label="学科成绩" color="bg-primary/12 text-primary" onClick={() => setQuickPanel("academic")} /><QuickEntry icon={HeartPulse} label="体质健康" color="bg-[#8fa2ff]/14 text-[#6178e9]" onClick={() => setQuickPanel("fitness")} /><QuickEntry icon={FileText} label="学期报告" color="bg-[#ad9df5]/15 text-[#8571db]" onClick={() => setReportDrawerOpen(true)} /><QuickEntry icon={ShoppingBag} label="积分商城" color="bg-primary/12 text-primary" href={`/points-mall?student=${encodeURIComponent(studentId)}`} /></div></section>
         </div>
       </section>
 
@@ -284,15 +284,15 @@ export function ParentDashboard() {
         <div role="tablist" aria-label="本学期成长记录分类" className="inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-[#d5ddf8] bg-white p-1 shadow-[0_8px_18px_-14px_rgba(64,80,166,.75)]">
           <button type="button" role="tab" aria-selected={recordTab === "awards"} onClick={() => setRecordTab("awards")} className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", recordTab === "awards" ? "bg-primary text-primary-foreground shadow-[0_5px_12px_rgba(113,140,255,.35)]" : "text-primary hover:bg-primary/8")}><Gift className="size-4" aria-hidden="true" />奖卡记录</button>
           <button type="button" role="tab" aria-selected={recordTab === "honors"} onClick={() => setRecordTab("honors")} className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", recordTab === "honors" ? "bg-primary text-primary-foreground shadow-[0_5px_12px_rgba(113,140,255,.35)]" : "text-primary hover:bg-primary/8")}><Medal className="size-4" aria-hidden="true" />荣誉记录</button>
-          <button type="button" role="tab" aria-selected={recordTab === "activities"} onClick={() => setRecordTab("activities")} className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", recordTab === "activities" ? "bg-primary text-primary-foreground shadow-[0_5px_12px_rgba(113,140,255,.35)]" : "text-primary hover:bg-primary/8")}><CalendarRange className="size-4" aria-hidden="true" />参加活动</button>
+          <button type="button" role="tab" aria-selected={recordTab === "activities"} onClick={() => setRecordTab("activities")} className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", recordTab === "activities" ? "bg-primary text-primary-foreground shadow-[0_5px_12px_rgba(113,140,255,.35)]" : "text-primary hover:bg-primary/8")}><CalendarRange className="size-4" aria-hidden="true" />活动列表</button>
         </div>
         <div className="contents">
           <section className={cn("flex min-h-[360px] flex-col pt-4", recordTab !== "awards" && "hidden")}><div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-foreground">最近获得的奖卡</p><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{semesterAwardCards.length} 张</span></div>{semesterAwardCards.length === 0 ? <EmptyState text="本学期暂无奖卡记录" /> : <ul className="mt-4 flex max-h-[430px] flex-col gap-2 overflow-y-auto pr-1" onScroll={awardCardsScroll.onScroll}>{awardCardsLoadMore.visible.map((award) => { const cover = getAwardIndicator(award.indicatorId)?.image; return <li key={award.id} className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[#e0e5f8] bg-[#fbfcff] p-2.5 transition hover:border-primary/35 hover:bg-white"><span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-primary/15 bg-primary/10">{cover ? <img src={cover} alt={`${award.level2}奖卡`} width={48} height={48} loading="lazy" className="size-full object-cover" /> : <Gift className="size-5 text-primary" aria-hidden="true" />}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-foreground">{award.level2 || award.level1}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{award.date} · {AWARD_SOURCE_LABEL[award.source]} · {award.operatorName}</p></div><span className="shrink-0 text-sm font-bold text-primary">+{award.points} 分</span></li> })}<li><LoadMoreFooter hasMore={awardCardsLoadMore.hasMore} loaded={awardCardsLoadMore.visible.length} total={awardCardsLoadMore.total} onLoadMore={awardCardsLoadMore.loadMore} /></li></ul>}</section>
 
-          <section className={cn("flex min-h-[360px] flex-col pt-4", recordTab !== "honors" && "hidden")}><div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-foreground">最近获得的荣誉</p><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{semesterHonors.length} 项</span></div>{semesterHonors.length === 0 ? <EmptyState text="本学期暂无荣誉记录" /> : <ul className="mt-4 flex max-h-[430px] flex-col gap-2 overflow-y-auto pr-1" onScroll={honorsScroll.onScroll}>{honorsLoadMore.visible.map((honor) => <li key={honor.id} className="relative flex min-h-[70px] items-center gap-3 overflow-hidden rounded-xl border border-[#e0e5f8] bg-[#fbfcff] p-3"><span className={cn("absolute inset-y-2 left-0.5 w-1 rounded-full", honor.honorLevel === "school" && "bg-brand-blue", honor.honorLevel === "district" && "bg-brand-green", honor.honorLevel === "city" && "bg-brand-orange", honor.honorLevel === "national" && "bg-brand-yellow")} /><span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Trophy className="size-5" aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-foreground">{honor.honorName}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{HONOR_LEVEL_LABEL[honor.honorLevel]} · {honor.awardDate}</p></div><span className={cn("shrink-0 rounded-full px-2 py-1 text-xs font-semibold", HONOR_LEVEL_STYLE[honor.honorLevel])}>+{honor.points}</span></li>)}<li><LoadMoreFooter hasMore={honorsLoadMore.hasMore} loaded={honorsLoadMore.visible.length} total={honorsLoadMore.total} onLoadMore={honorsLoadMore.loadMore} /></li></ul>}</section>
+          <section className={cn("flex min-h-[360px] flex-col pt-4", recordTab !== "honors" && "hidden")}><div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-foreground">最近获得的荣誉</p><div className="flex shrink-0 items-center gap-2"><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{semesterHonors.length} 项</span><ParentHonorUploadDrawer child={currentChild} /></div></div>{semesterHonors.length === 0 ? <EmptyState text="本学期暂无荣誉记录" /> : <ul className="mt-4 flex max-h-[430px] flex-col gap-2 overflow-y-auto pr-1" onScroll={honorsScroll.onScroll}>{honorsLoadMore.visible.map((honor) => <li key={honor.id} className="relative flex min-h-[70px] items-center gap-3 overflow-hidden rounded-xl border border-[#e0e5f8] bg-[#fbfcff] p-3"><span className={cn("absolute inset-y-2 left-0.5 w-1 rounded-full", honor.honorLevel === "school" && "bg-brand-blue", honor.honorLevel === "district" && "bg-brand-green", honor.honorLevel === "city" && "bg-brand-orange", honor.honorLevel === "national" && "bg-brand-yellow")} /><span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Trophy className="size-5" aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-foreground">{honor.honorName}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{HONOR_LEVEL_LABEL[honor.honorLevel]} · {honor.awardDate}</p></div><span className={cn("shrink-0 rounded-full px-2 py-1 text-xs font-semibold", HONOR_LEVEL_STYLE[honor.honorLevel])}>+{honor.points}</span></li>)}<li><LoadMoreFooter hasMore={honorsLoadMore.hasMore} loaded={honorsLoadMore.visible.length} total={honorsLoadMore.total} onLoadMore={honorsLoadMore.loadMore} /></li></ul>}</section>
       </div>
 
-        <section className={cn("flex min-h-[300px] flex-col pt-4", recordTab !== "activities" && "hidden")}><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-semibold text-foreground">最近参加的活动</p><Link href={`/activities/enroll?student=${encodeURIComponent(studentId)}`} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-primary/20 bg-white px-3 text-xs font-semibold text-primary transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">全部活动<ChevronRight className="size-3.5" aria-hidden="true" /></Link></div>{semesterActivities.length === 0 ? <EmptyState text="本学期暂无可参与活动" /> : <ul className="mt-4 flex max-h-[440px] flex-col gap-2 overflow-y-auto pr-1" onScroll={activitiesScroll.onScroll}>{activitiesLoadMore.visible.map((activity) => { const meta = ACTIVITY_STATUS_META[activity.status]; const enrolled = enrollments.find((item) => item.activityId === activity.id && item.studentId === studentId && item.status !== "cancelled"); return <li key={activity.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#e0e5f8] bg-[#fbfcff] px-3 py-3 transition hover:border-primary/35 hover:bg-white"><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-foreground">{activity.title}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{activity.startDate} · {activity.location || "待通知地点"}</p></div><span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold", meta.className)}><span className={cn("size-1.5 rounded-full", meta.dot)} />{meta.label}</span>{enrolled && <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">已报名</span>}{canSubmit(activity) && <button type="button" onClick={() => setActivityDialogTarget(activity)} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><Upload className="size-3.5" aria-hidden="true" />上传成果</button>}</li> })}<li><LoadMoreFooter hasMore={activitiesLoadMore.hasMore} loaded={activitiesLoadMore.visible.length} total={activitiesLoadMore.total} onLoadMore={activitiesLoadMore.loadMore} /></li></ul>}</section>
+        <section className={cn("flex min-h-[300px] flex-col pt-4", recordTab !== "activities" && "hidden")}><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold text-foreground">活动列表</p><p className="mt-0.5 text-xs text-muted-foreground">{clazz?.name ?? currentChild.className}可参与活动，按发布时间排序</p></div><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{visibleActivities.length} 个活动</span></div>{visibleActivities.length === 0 ? <EmptyState text="当前班级暂无可参与活动" /> : <ul className="mt-4 flex max-h-[440px] flex-col gap-2 overflow-y-auto pr-1" onScroll={activitiesScroll.onScroll}>{activitiesLoadMore.visible.map((activity) => { const meta = ACTIVITY_STATUS_META[activity.status]; const enrollment = enrollments.find((item) => item.activityId === activity.id && item.studentId === studentId && item.status !== "cancelled"); const needsEnrollment = requiresActivityEnrollment(activity); const canEnroll = needsEnrollment && !enrollment && isEnrolling(activity); const detailHref = `/activities/detail?student=${encodeURIComponent(studentId)}&id=${encodeURIComponent(activity.id)}`; const enrollHref = `/activities/enroll?student=${encodeURIComponent(studentId)}&id=${encodeURIComponent(activity.id)}`; return <li key={activity.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#e0e5f8] bg-[#fbfcff] px-3 py-3 transition hover:border-primary/35 hover:bg-white"><div className="min-w-0 flex-1"><Link href={detailHref} className="block truncate text-sm font-semibold text-foreground transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">{activity.title}</Link><p className="mt-0.5 truncate text-xs text-muted-foreground">发布于 {formatPublishedDate(activity.createdAt)} · {activity.startDate} · {activity.location || "待通知地点"}</p></div><span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold", meta.className)}><span className={cn("size-1.5 rounded-full", meta.dot)} />{meta.label}</span>{!needsEnrollment && <span className="rounded-full bg-brand-green/15 px-2 py-1 text-xs font-semibold text-brand-green">无需报名</span>}{enrollment && <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">已报名</span>}{canSubmit(activity) ? <button type="button" onClick={() => setActivityDialogTarget(activity)} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><Upload className="size-3.5" aria-hidden="true" />上传成果</button> : canEnroll ? <Link href={enrollHref} className="inline-flex min-h-9 shrink-0 items-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">立即报名</Link> : <Link href={detailHref} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-primary/20 bg-white px-3 text-xs font-semibold text-primary transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看详情<ChevronRight className="size-3.5" aria-hidden="true" /></Link>}</li> })}<li><LoadMoreFooter hasMore={activitiesLoadMore.hasMore} loaded={activitiesLoadMore.visible.length} total={activitiesLoadMore.total} onLoadMore={activitiesLoadMore.loadMore} /></li></ul>}</section>
       </section>
 
       <ScanFab />
@@ -327,10 +327,9 @@ export function ParentDashboard() {
 
       <Dialog open={!!quickPanel} onOpenChange={(open) => !open && setQuickPanel(null)}>
         <DialogContent className="glass-surface sm:max-w-lg">
-          <DialogHeader><DialogTitle>{quickPanel === "academic" ? "学科成绩" : quickPanel === "fitness" ? "体质健康" : "积分商城"}</DialogTitle><DialogDescription>{currentChild.name} · {semesterLabel}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{quickPanel === "academic" ? "学科成绩" : "体质健康"}</DialogTitle><DialogDescription>{currentChild.name} · {semesterLabel}</DialogDescription></DialogHeader>
           {quickPanel === "academic" && <div className="overflow-hidden rounded-xl border border-[#dce3f8]"><table className="w-full text-sm"><caption className="sr-only">{currentChild.name}本学期各科成绩</caption><thead className="bg-primary/[0.06] text-xs text-muted-foreground"><tr><th className="px-3 py-2 text-left font-semibold">科目</th><th className="px-3 py-2 text-right font-semibold">成绩</th><th className="px-3 py-2 text-right font-semibold">等级</th></tr></thead><tbody>{academicScores.map((score) => <tr key={score.subject} className="border-t border-[#e5e9f9]"><th className="px-3 py-2.5 text-left font-medium text-foreground">{score.subject}</th><td className="px-3 py-2.5 text-right font-bold tabular-nums text-foreground">{score.score}</td><td className="px-3 py-2.5 text-right text-xs font-semibold text-primary">{score.level}</td></tr>)}</tbody></table></div>}
           {quickPanel === "fitness" && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><InfoTile label="身高" value={`${fitnessMetrics.height} cm`} /><InfoTile label="体重" value={`${fitnessMetrics.weight} kg`} /><InfoTile label="50米跑" value={`${fitnessMetrics.run} 秒`} /><InfoTile label="综合等级" value={fitnessMetrics.level} tone="green" /></div>}
-          {quickPanel === "mall" && <div className="flex flex-col gap-3"><div className="rounded-2xl bg-brand-green/10 p-4"><p className="text-xs text-muted-foreground">当前可用积分</p><p className="mt-1 text-3xl font-bold tabular-nums text-brand-green">{balance}<span className="ml-1 text-sm font-medium">分</span></p></div><div className="grid grid-cols-3 gap-2">{["成长徽章", "阅读书签", "文具礼包"].map((name, index) => <div key={name} className="rounded-xl border border-border/55 bg-white/80 p-3 text-center"><Gift className="mx-auto size-5 text-brand-orange" aria-hidden="true" /><p className="mt-2 text-xs font-semibold text-foreground">{name}</p><p className="mt-1 text-xs text-muted-foreground">{20 + index * 15} 积分</p></div>)}</div></div>}
           <DialogFooter><Button type="button" variant="outline" onClick={() => setQuickPanel(null)}>关闭</Button></DialogFooter>
         </DialogContent>
       </Dialog>

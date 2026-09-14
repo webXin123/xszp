@@ -37,6 +37,7 @@ type ScoreValueType = "number" | "grade"
 type ConversionMode = "score" | "rank"
 type ScoreName = "daily" | "midterm" | "final" | "semester" | "other"
 type ScoreEntryTab = "subject" | "pe"
+type CalculationStatus = "计算中" | "计算完成"
 
 interface PeScoreTask {
   classIds: string[]
@@ -78,6 +79,7 @@ interface ScoreEntryTask {
   startAt: string
   endAt: string
   method: EntryMethod
+  calculationStatus?: CalculationStatus
   valueType?: ScoreValueType
   gradeRules: ConversionRule[]
   calculationItems: CalculationItem[]
@@ -150,6 +152,12 @@ function localDateTime(offset: number, hour: number) {
 }
 
 function taskStatus(task: ScoreEntryTask) {
+  if (task.method === "automatic") {
+    const calculationStatus = task.calculationStatus ?? "计算完成"
+    return calculationStatus === "计算中"
+      ? { label: "计算中", className: "bg-[#fff4e5] text-brand-orange" }
+      : { label: "计算完成", className: "bg-[#effbf4] text-brand-green" }
+  }
   const now = new Date()
   if (now > new Date(task.endAt)) return { label: "已截止", className: "bg-[#fff1e9] text-brand-orange" }
   if (now >= new Date(task.startAt)) return { label: "录入中", className: "bg-[#effbf4] text-brand-green" }
@@ -241,6 +249,16 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
     if (hydrated) localStorage.setItem(SCORE_ENTRY_TASKS_KEY, JSON.stringify(tasks))
   }, [tasks, hydrated])
 
+  useEffect(() => {
+    if (!hydrated) return
+    const calculatingIds = tasks.filter((task) => task.method === "automatic" && (task.calculationStatus ?? "计算完成") === "计算中").map((task) => task.id)
+    if (calculatingIds.length === 0) return
+    const timer = window.setTimeout(() => {
+      setTasks((current) => current.map((task) => calculatingIds.includes(task.id) ? { ...task, calculationStatus: "计算完成" } : task))
+    }, 1500)
+    return () => window.clearTimeout(timer)
+  }, [hydrated, tasks])
+
   const resetForm = () => {
     setScoreName("daily")
     setOtherScoreName("")
@@ -286,6 +304,7 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
       startAt,
       endAt,
       method,
+      calculationStatus: method === "automatic" ? "计算中" : undefined,
       valueType: method === "teacher" ? valueType : undefined,
       gradeRules: method === "teacher" && valueType === "grade" ? gradeRules : [],
       calculationItems: method === "automatic" ? calculationItems : [],
@@ -329,7 +348,7 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
               <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </div>
             <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-lg bg-[#f0f3ff] px-2 py-1 text-primary">{gradeNames.join("、")}</span><span className="rounded-lg bg-[#f6f7fb] px-2 py-1 text-muted-foreground">{task.subjects.join("、")}</span>{task.method === "teacher" && <span className="rounded-lg bg-[#fff5e9] px-2 py-1 text-brand-orange">{task.valueType === "grade" ? "等第录入" : "数值录入"}</span>}</div>
-            <div className="border-t border-[#edf0fa] pt-3"><div className="flex items-center justify-between text-xs"><span className="text-muted-foreground">任课教师录入进度</span><span className="font-bold text-foreground">{done} / {total}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e5e9f7]"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: total ? `${(done / total) * 100}%` : "0%" }} /></div></div>
+            {task.method === "automatic" ? <div className="border-t border-[#edf0fa] pt-3" aria-live="polite"><div className="flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">计算状态</span><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", (task.calculationStatus ?? "计算完成") === "计算中" ? "bg-[#fff4e5] text-brand-orange" : "bg-[#effbf4] text-brand-green")}>{task.calculationStatus ?? "计算完成"}</span></div><p className="mt-2 text-xs text-muted-foreground">{(task.calculationStatus ?? "计算完成") === "计算中" ? "正在根据来源成绩与权重生成结果…" : "自动计算已完成，可打开查看任务详情。"}</p></div> : <div className="border-t border-[#edf0fa] pt-3"><div className="flex items-center justify-between text-xs"><span className="text-muted-foreground">任课教师录入进度</span><span className="font-bold text-foreground">{done} / {total}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e5e9f7]"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: total ? `${(done / total) * 100}%` : "0%" }} /></div></div>}
             <p className="text-xs text-muted-foreground">录入：{task.startAt.replace("T", " ")} ~ {task.endAt.replace("T", " ")}</p>
           </button>
         })}
