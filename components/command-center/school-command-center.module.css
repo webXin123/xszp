@@ -183,6 +183,7 @@
 .rankingRow span { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .rankingRow b { color: #ffe5a6; font-family: "JetBrains Mono", "Cascadia Mono", monospace; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rankingRow small { margin-left: 2px; color: rgba(255, 229, 166, .64); font-family: inherit; font-size: 8px; }
+.rollingList :is(time, strong, span, em, b, small), .rankingList :is(strong, span, b, small) { font-size: 12px; }
 .leftColumn .chartTall, .leftColumn .chartMedium { min-height: 0; }
 .gradeLegend { display: flex; gap: 12px; margin-top: 3px; padding: 7px 3px 0; border-top: 1px solid rgba(120, 195, 255, 0.08); color: var(--muted); font-size: 10px; }.gradeLegend span { display: inline-flex; align-items: center; gap: 5px; }.gradeLegend i { width: 6px; height: 6px; border-radius: 50%; }.legendExcellent { background: #a2f6e9; }.legendGood { background: #46d8ee; }.legendStandard { background: #7b9bd1; }
 .chartNote { padding-top: 5px; color: var(--muted); font-size: 10px; }.notePulse { display: inline-block; width: 6px; height: 6px; margin-right: 5px; background: var(--amber); border-radius: 50%; box-shadow: 0 0 9px var(--amber); }

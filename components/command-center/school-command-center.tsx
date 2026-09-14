@@ -447,15 +447,15 @@ export function SchoolCommandCenter() {
   const honorOption = useMemo<EChartsOption>(() => ({
     animationDuration: 900,
     animationEasing: "cubicOut",
-    tooltip: { trigger: "item", confine: true, backgroundColor: "#0d2342", borderColor: "#376fa3", textStyle: { color: "#e8f7ff", fontSize: 11 }, formatter: "{b}：{c} 项（{d}%）" },
-    legend: { bottom: 0, itemWidth: 8, itemHeight: 8, itemGap: 10, selectedMode: false, textStyle: { color: textMuted, fontSize: 9 } },
+    tooltip: { trigger: "item", confine: true, backgroundColor: "#0d2342", borderColor: "#376fa3", textStyle: { color: "#e8f7ff", fontSize: 12 }, formatter: "{b}：{c} 项（{d}%）" },
+    legend: { bottom: 0, itemWidth: 8, itemHeight: 8, itemGap: 10, selectedMode: false, textStyle: { color: textMuted, fontSize: 12 } },
     series: [{
       type: "pie",
       radius: ["42%", "70%"],
       center: ["50%", "43%"],
       padAngle: 3,
       itemStyle: { borderColor: "#102544", borderWidth: 2, borderRadius: 5 },
-      label: { show: true, color: "#e8f7ff", fontSize: 10, formatter: "{b}\n{c} 项" },
+      label: { show: true, color: "#e8f7ff", fontSize: 12, formatter: "{b}\n{c} 项" },
       labelLine: { length: 7, length2: 6, lineStyle: { color: "rgba(184, 224, 255, .42)" } },
       emphasis: { scale: true, scaleSize: 5, itemStyle: { shadowBlur: 18, shadowColor: "rgba(85, 215, 233, .3)" } },
       data: [
