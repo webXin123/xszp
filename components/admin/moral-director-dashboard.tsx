@@ -2,30 +2,34 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
+import type { EChartsOption } from "echarts"
 import {
   Award,
   ArrowRight,
-  ClipboardCheck,
+  ChartNoAxesCombined,
   Flag,
   LayoutGrid,
-  MinusCircle,
+  PieChart,
   Settings2,
-  TrendingDown,
   Trophy,
+  UsersRound,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
-import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
-import { LoadMoreFooter } from "@/components/ui/load-more"
-import { formatDate, getISOWeekKey, getWeekRange } from "@/lib/scoring-utils"
+import { formatDate, getAllIndicatorsMaxScore, getISOWeekKey, getWeekRange } from "@/lib/scoring-utils"
 import { getMonthRange, getSemesterRange, inRange, TIME_RANGE_LABEL, type TimeRange } from "@/lib/points-utils"
 import { AWARD_LEVEL1_LIST, getFiveEducationLevel1 } from "@/lib/award-utils"
-import { AwardBarChart } from "../homeroom/award-bar-chart"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { EChart } from "../command-center/echart"
 import type { MainTab } from "../evaluation/evaluation-dashboard"
 import styles from "./moral-director-dashboard.module.css"
 
 interface MoralDirectorDashboardProps {
   onNavigate: (tab: MainTab) => void
+}
+
+function getTimeRange(range: TimeRange, now: Date) {
+  return range === "week" ? getWeekRange(now) : range === "month" ? getMonthRange(now) : getSemesterRange(now)
 }
 
 function ShortcutCard({
@@ -59,35 +63,32 @@ function ShortcutCard({
   return href ? <Link href={href} className={className}>{content}</Link> : <button type="button" onClick={onClick} className={className}>{content}</button>
 }
 
+function TimeRangeControl({
+  value,
+  onChange,
+  label,
+  className,
+}: {
+  value: TimeRange
+  onChange: (range: TimeRange) => void
+  label: string
+  className?: string
+}) {
+  return <div className={cn(styles.segmentedControl, className)} role="group" aria-label={label}>{(["week", "month", "semester"] as TimeRange[]).map((range) => <button key={range} type="button" aria-pressed={value === range} onClick={() => onChange(range)} className={cn(styles.segment, value === range && styles.segmentActive)}>{TIME_RANGE_LABEL[range]}</button>)}</div>
+}
+
 export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardProps) {
-  const { records, classes, flags, flagConfigs, awardCards, teachers } = useEvaluation()
+  const { records, classes, grades, flags, flagConfigs, awardCards, teachers } = useEvaluation()
   const now = new Date()
-  const weekKey = getISOWeekKey(now)
   const currentWeek = getWeekRange(now)
   const previousWeekDate = new Date(currentWeek.start)
   previousWeekDate.setDate(previousWeekDate.getDate() - 7)
   const previousWeekKey = getISOWeekKey(previousWeekDate)
   const classNameById = useMemo(() => new Map(classes.map((item) => [item.id, item.name])), [classes])
+  const teacherNameById = useMemo(() => new Map(teachers.map((teacher) => [teacher.id, teacher.name])), [teachers])
   const flagConfigById = useMemo(() => new Map(flagConfigs.map((item) => [item.id, item])), [flagConfigs])
   const defaultWeekFlagConfig = useMemo(() => flagConfigs.find((item) => item.enabled && item.period === "week"), [flagConfigs])
   const teacherIds = useMemo(() => new Set(teachers.map((teacher) => teacher.id)), [teachers])
-
-  const weekDeductionRecords = useMemo(
-    () => records
-      .filter((record) => record.totalDeduction < 0 && getISOWeekKey(new Date(record.date)) === weekKey)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [records, weekKey],
-  )
-  const deductionsLoadMore = useLoadMore(weekDeductionRecords, 6)
-  const deductionsScroll = useScrollLoadMore(deductionsLoadMore.hasMore, deductionsLoadMore.loadMore)
-
-  const weeklyTotals = useMemo(() => records
-    .filter((record) => getISOWeekKey(new Date(record.date)) === weekKey)
-    .reduce((totals, record) => {
-      if (record.totalDeduction < 0) totals.deduction += Math.abs(record.totalDeduction)
-      if (record.totalDeduction > 0) totals.addition += record.totalDeduction
-      return totals
-    }, { deduction: 0, addition: 0 }), [records, weekKey])
 
   const lastWeekFlags = useMemo(() => {
     const seen = new Set<string>()
@@ -114,8 +115,13 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
     [awardCards, teacherIds],
   )
   const [awardRange, setAwardRange] = useState<TimeRange>("week")
-  const awardBarData = useMemo(() => {
-    const range = awardRange === "week" ? currentWeek : awardRange === "month" ? getMonthRange(now) : getSemesterRange(now)
+  const [teacherAwardRange, setTeacherAwardRange] = useState<TimeRange>("week")
+  const [classScoreRange, setClassScoreRange] = useState<TimeRange>("week")
+  const [gradeFilter, setGradeFilter] = useState("all")
+  const gradeFilterLabel = gradeFilter === "all" ? "全部年级" : grades.find((grade) => grade.id === gradeFilter)?.name ?? "全部年级"
+
+  const awardPieData = useMemo(() => {
+    const range = getTimeRange(awardRange, now)
     const counts = new Map<string, number>()
     for (const level1 of AWARD_LEVEL1_LIST) counts.set(level1, 0)
     for (const award of onlineTeacherAwards) {
@@ -124,15 +130,63 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
       counts.set(level1, (counts.get(level1) ?? 0) + 1)
     }
     return AWARD_LEVEL1_LIST.map((level1) => ({ level1, points: counts.get(level1) ?? 0 }))
-  }, [awardRange, currentWeek, now, onlineTeacherAwards])
-  const latestAwardRecords = useMemo(
-    () => onlineTeacherAwards
-      .filter((award) => getISOWeekKey(new Date(award.date)) === weekKey)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [onlineTeacherAwards, weekKey],
-  )
-  const latestAwardsLoadMore = useLoadMore(latestAwardRecords, 5)
-  const latestAwardsScroll = useScrollLoadMore(latestAwardsLoadMore.hasMore, latestAwardsLoadMore.loadMore)
+  }, [awardRange, now, onlineTeacherAwards])
+  const awardTotal = useMemo(() => awardPieData.reduce((total, item) => total + item.points, 0), [awardPieData])
+
+  const teacherAwardFrequency = useMemo(() => {
+    const range = getTimeRange(teacherAwardRange, now)
+    const counts = new Map(teachers.map((teacher) => [teacher.id, 0]))
+    for (const award of onlineTeacherAwards) {
+      if (inRange(award.date, range.start, range.end)) counts.set(award.operatorId, (counts.get(award.operatorId) ?? 0) + 1)
+    }
+    return teachers
+      .map((teacher) => ({ name: teacherNameById.get(teacher.id) ?? teacher.name, count: counts.get(teacher.id) ?? 0 }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "zh-CN"))
+  }, [now, onlineTeacherAwards, teacherAwardRange, teacherNameById, teachers])
+
+  const classScoreData = useMemo(() => {
+    const range = getTimeRange(classScoreRange, now)
+    const baseline = getAllIndicatorsMaxScore()
+    const gradeOrder = new Map(grades.map((grade, index) => [grade.id, index]))
+    return classes
+      .filter((schoolClass) => gradeFilter === "all" || schoolClass.gradeId === gradeFilter)
+      .sort((a, b) => (gradeOrder.get(a.gradeId) ?? 0) - (gradeOrder.get(b.gradeId) ?? 0) || a.name.localeCompare(b.name, "zh-CN"))
+      .map((schoolClass) => {
+        const delta = records
+          .filter((record) => record.classId === schoolClass.id && inRange(record.date, range.start, range.end))
+          .reduce((total, record) => total + record.totalDeduction, 0)
+        return { name: schoolClass.shortName || schoolClass.name, score: Number((baseline + delta).toFixed(1)) }
+      })
+  }, [classScoreRange, classes, gradeFilter, grades, now, records])
+
+  const classScoreOption = useMemo<EChartsOption>(() => ({
+    animationDuration: 360,
+    animationEasing: "cubicOut",
+    grid: { top: 20, right: 18, bottom: 56, left: 42 },
+    tooltip: { trigger: "axis", backgroundColor: "#ffffff", borderColor: "#d7e2ef", borderWidth: 1, textStyle: { color: "#304554", fontSize: 12 }, formatter: (params: unknown) => { const item = (params as { axisValue: string; data: number }[])[0]; return `${item?.axisValue ?? ""}<br/>班级总分：<strong>${item?.data ?? 0}</strong> 分` } },
+    xAxis: { type: "category", boundaryGap: false, data: classScoreData.map((item) => item.name), axisLine: { lineStyle: { color: "#d9e5eb" } }, axisTick: { show: false }, axisLabel: { color: "#71808a", fontSize: 10, rotate: classScoreData.length > 7 ? 34 : 0, interval: 0 } },
+    yAxis: { type: "value", name: "分", nameTextStyle: { color: "#8a9aa4", fontSize: 10, padding: [0, 0, 0, -2] }, axisLabel: { color: "#71808a", fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: "#e7eef1", type: "dashed" } } },
+    series: [{ type: "line", smooth: 0.28, data: classScoreData.map((item) => item.score), symbol: "circle", symbolSize: 7, lineStyle: { color: "#e28d58", width: 3 }, itemStyle: { color: "#ffffff", borderColor: "#e28d58", borderWidth: 2 }, areaStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "rgba(226,141,88,.3)" }, { offset: 1, color: "rgba(226,141,88,0)" }] } } }],
+  }), [classScoreData])
+
+  const awardPieOption = useMemo<EChartsOption>(() => ({
+    animationDuration: 360,
+    animationEasing: "cubicOut",
+    color: ["#5296dc", "#55b691", "#e4a354", "#d8bd54", "#9d86d9"],
+    tooltip: { trigger: "item", backgroundColor: "#ffffff", borderColor: "#d7e2ef", borderWidth: 1, textStyle: { color: "#304554", fontSize: 12 }, formatter: "{b}：<strong>{c}</strong> 张（{d}%）" },
+    legend: { bottom: 0, itemWidth: 9, itemHeight: 9, itemGap: 11, textStyle: { color: "#71808a", fontSize: 10 } },
+    series: [{ type: "pie", radius: ["46%", "72%"], center: ["50%", "43%"], padAngle: 2, itemStyle: { borderColor: "#ffffff", borderWidth: 2, borderRadius: 5 }, label: { show: true, color: "#536671", fontSize: 10, formatter: "{b}\n{c} 张" }, labelLine: { length: 7, length2: 5, lineStyle: { color: "#b9c9d0" } }, data: awardPieData.map((item) => ({ name: item.level1, value: item.points })) }],
+  }), [awardPieData])
+
+  const teacherAwardOption = useMemo<EChartsOption>(() => ({
+    animationDuration: 360,
+    animationEasing: "cubicOut",
+    grid: { top: 16, right: 34, bottom: 12, left: 58, containLabel: false },
+    tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "#ffffff", borderColor: "#d7e2ef", borderWidth: 1, textStyle: { color: "#304554", fontSize: 12 }, formatter: (params: unknown) => { const item = (params as { axisValue: string; data: number }[])[0]; return `${item?.axisValue ?? ""}<br/>发卡 <strong>${item?.data ?? 0}</strong> 张` } },
+    xAxis: { type: "value", minInterval: 1, axisLabel: { color: "#71808a", fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: "#e7eef1", type: "dashed" } } },
+    yAxis: { type: "category", inverse: true, data: teacherAwardFrequency.map((item) => item.name), axisLine: { lineStyle: { color: "#d9e5eb" } }, axisTick: { show: false }, axisLabel: { color: "#536671", fontSize: 11, width: 52, overflow: "truncate" } },
+    series: [{ type: "bar", data: teacherAwardFrequency.map((item) => item.count), barMaxWidth: 18, itemStyle: { color: { type: "linear", x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: "#738be9" }, { offset: 1, color: "#9cb6ff" }] }, borderRadius: [0, 8, 8, 0] }, label: { show: true, position: "right", color: "#536671", fontSize: 10, formatter: "{c}" } }],
+  }), [teacherAwardFrequency])
 
   const shortcuts = [
     { label: "班级评价", description: "查看与录入班级表现", icon: LayoutGrid, href: "/class-evaluation", tone: "bg-[#edf1ff] text-primary" },
@@ -158,18 +212,21 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
       </section>
 
       <div className={styles.primaryGrid}>
-        <section className={cn(styles.panel, styles.deductionPanel)} aria-labelledby="weekly-deductions-title">
+        <section className={cn(styles.panel, styles.scorePanel)} aria-labelledby="class-score-title">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff0e9] text-brand-orange"><TrendingDown className="size-5" aria-hidden="true" /></span>
-              <div><h3 id="weekly-deductions-title" className="text-base font-bold text-foreground">本周班级扣分情况</h3><p className="mt-1 text-xs text-muted-foreground">共 {weekDeductionRecords.length} 条扣分记录 · 上拉可加载更多</p></div>
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff0e9] text-brand-orange"><ChartNoAxesCombined className="size-5" aria-hidden="true" /></span>
+              <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><h3 id="class-score-title" className="text-base font-bold text-foreground">班级总分走势</h3><TimeRangeControl value={classScoreRange} onChange={setClassScoreRange} label="班级总分统计周期" className={styles.titleRangeControl} /></div><p className="mt-1 text-xs text-muted-foreground">以 100 分为基准，累计当前统计期加扣分</p></div>
             </div>
-            <div className={styles.metrics}>
-              <span className={styles.metricDanger}><span>总扣分</span><strong>{weeklyTotals.deduction}</strong></span>
-              <span className={styles.metricGood}><span>总积分</span><strong>{weeklyTotals.addition}</strong></span>
-            </div>
+            <Select value={gradeFilterLabel} onValueChange={(value) => setGradeFilter(value === "全部年级" ? "all" : grades.find((grade) => grade.name === value)?.id ?? "all")}>
+              <SelectTrigger aria-label="筛选班级总分年级" className="w-28 bg-white text-xs font-semibold"><SelectValue placeholder="全部年级" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="全部年级">全部年级</SelectItem>
+                {grades.map((grade) => <SelectItem key={grade.id} value={grade.name}>{grade.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-          {weekDeductionRecords.length === 0 ? <div className="mt-3 flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-[#cfd7f6] text-sm text-muted-foreground">本周暂无班级扣分记录</div> : <ul className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl border border-[#e2e7f8] bg-[#fbfcff] px-2.5 pr-1.5" onScroll={deductionsScroll.onScroll}>{deductionsLoadMore.visible.map((record) => <li key={record.id} className="flex items-start gap-2 border-b border-[#e7ebfa] py-2 last:border-b-0"><MinusCircle className="mt-0.5 size-3.5 shrink-0 text-brand-orange" aria-hidden="true" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-foreground">{classNameById.get(record.classId) ?? "未命名班级"}<span className="font-normal text-muted-foreground"> · {record.level1} / {record.level2}</span></p><p className="mt-0.5 truncate text-[11px] text-muted-foreground">{record.note || "暂无备注"}</p></div><div className="flex shrink-0 flex-col items-end"><span className="text-xs font-bold tabular-nums text-brand-orange">-{Math.abs(record.totalDeduction)}</span><span className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">{record.date}</span></div></li>)}<li><LoadMoreFooter hasMore={deductionsLoadMore.hasMore} loaded={deductionsLoadMore.visible.length} total={deductionsLoadMore.total} onLoadMore={deductionsLoadMore.loadMore} /></li></ul>}
+          <div className="mt-3 min-h-0 flex-1"><EChart className={styles.chart} option={classScoreOption} ariaLabel={`${TIME_RANGE_LABEL[classScoreRange]}班级总分走势：${classScoreData.map((item) => `${item.name}${item.score}分`).join("、")}`} /></div>
         </section>
 
         <section className={cn(styles.panel, styles.flagPanel)} aria-labelledby="last-week-flags-title">
@@ -180,15 +237,14 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
 
       <div className={styles.secondaryGrid}>
         <section className={cn(styles.panel, styles.awardPanel)} aria-labelledby="award-count-title">
-          <div className="flex items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e7f7ef] text-[#21845b]"><ClipboardCheck className="size-5" aria-hidden="true" /></span><div><h3 id="award-count-title" className="text-base font-bold text-foreground">奖卡发放数量</h3><p className="mt-1 text-xs text-muted-foreground">全部教师线上发放 · 按一级指标分布</p></div></div>
-          <div className={styles.segmentedControl} role="tablist" aria-label="奖卡发放数量统计周期">{(["week", "month", "semester"] as TimeRange[]).map((range) => <button key={range} type="button" role="tab" aria-selected={awardRange === range} onClick={() => setAwardRange(range)} className={cn(styles.segment, awardRange === range && styles.segmentActive)}>{TIME_RANGE_LABEL[range]}</button>)}</div>
-          <div className="mt-3"><AwardBarChart data={awardBarData} unit="张" /></div>
-          <p className="mt-1 text-[11px] text-muted-foreground">统计线上奖卡，不含线下扫码与流动红旗奖励。</p>
+          <div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e7f7ef] text-[#21845b]"><PieChart className="size-5" aria-hidden="true" /></span><div className="min-w-0"><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><h3 id="award-count-title" className="text-base font-bold text-foreground">奖卡发放数量</h3><TimeRangeControl value={awardRange} onChange={setAwardRange} label="奖卡发放数量统计周期" className={styles.titleRangeControl} /></div><p className="mt-1 text-xs text-muted-foreground">全校教师线上发放 · 按五育指标分布</p></div></div>
+          <div className="mt-3 min-h-0 flex-1"><EChart className={styles.chart} option={awardPieOption} ariaLabel={`${TIME_RANGE_LABEL[awardRange]}奖卡发放数量分布：${awardPieData.map((item) => `${item.level1}${item.points}张`).join("、")}`} /></div>
+          <p className="mt-1 text-[11px] text-muted-foreground">共 {awardTotal} 张线上奖卡，不含线下扫码与流动红旗奖励。</p>
         </section>
 
-        <section className={cn(styles.panel, styles.feedPanel)} aria-labelledby="latest-awards-title">
-          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#edf1ff] text-primary"><Award className="size-5" aria-hidden="true" /></span><div><h3 id="latest-awards-title" className="text-base font-bold text-foreground">最新一周奖卡发放动态</h3><p className="mt-1 text-xs text-muted-foreground">默认显示最新 5 条 · 上拉加载更多</p></div></div><button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button></div>
-          {latestAwardRecords.length === 0 ? <div className="mt-4 flex flex-1 items-center justify-center rounded-xl border border-dashed border-[#cfd7f6] text-sm text-muted-foreground">本周暂无奖卡发放动态</div> : <ul aria-label="最新一周奖卡发放动态" tabIndex={0} className="mt-4 min-h-0 flex-1 divide-y divide-[#e7ebfa] overflow-y-auto overscroll-contain rounded-xl border border-[#e2e7f8] bg-[#fbfcff] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" onScroll={latestAwardsScroll.onScroll}>{latestAwardsLoadMore.visible.map((award) => <li key={award.id} className="flex items-center gap-3 py-2.5"><span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#edf1ff] text-primary"><Award className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{award.studentName}<span className="font-normal text-muted-foreground"> · {classNameById.get(award.classId) ?? "未命名班级"}</span></span><span className="mt-1 block truncate text-xs text-muted-foreground">{award.level1} · {award.operatorName}</span></span><span className="shrink-0 text-right"><span className="block text-xs font-semibold text-brand-green">+{award.points} 分</span><span className="mt-1 block text-xs tabular-nums text-muted-foreground">{award.date}</span></span></li>)}<li><LoadMoreFooter hasMore={latestAwardsLoadMore.hasMore} loaded={latestAwardsLoadMore.visible.length} total={latestAwardsLoadMore.total} onLoadMore={latestAwardsLoadMore.loadMore} /></li></ul>}
+        <section className={cn(styles.panel, styles.feedPanel)} aria-labelledby="teacher-award-frequency-title">
+          <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#edf1ff] text-primary"><UsersRound className="size-5" aria-hidden="true" /></span><div className="min-w-0"><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><h3 id="teacher-award-frequency-title" className="text-base font-bold text-foreground">全校教师发卡频次</h3><TimeRangeControl value={teacherAwardRange} onChange={setTeacherAwardRange} label="教师发卡频次统计周期" className={styles.titleRangeControl} /></div><p className="mt-1 text-xs text-muted-foreground">{TIME_RANGE_LABEL[teacherAwardRange]} · {teachers.length} 位教师线上发卡统计</p></div></div><button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button></div>
+          <div className="mt-3 min-h-0 flex-1"><EChart className={styles.chart} option={teacherAwardOption} ariaLabel={`${TIME_RANGE_LABEL[teacherAwardRange]}全校教师发卡频次：${teacherAwardFrequency.map((item) => `${item.name}${item.count}张`).join("、")}`} /></div>
         </section>
       </div>
     </div>

@@ -25,7 +25,7 @@ import { LoadMoreFooter } from "@/components/ui/load-more"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
 import { getActivityStatus, requiresActivityEnrollment } from "@/lib/activity-utils"
-import { formatDate, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek, getWeekRange } from "@/lib/scoring-utils"
+import { computeWeeklyScore, formatDate, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek, getWeekRange } from "@/lib/scoring-utils"
 import { TIME_RANGE_LABEL, type TimeRange } from "@/lib/points-utils"
 import { readSemesterEvaluationRecords } from "@/lib/semester-evaluation-utils"
 import { PointsRankingTab } from "./points-ranking-tab"
@@ -78,7 +78,7 @@ const FALLBACK_COMMENT_PROGRESS: CommentProgressItem[] = [
 ]
 
 export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
-  const { records, awardCards, classes, flags, flagConfigs, activities, currentTeacher, students } = useEvaluation()
+  const { records, awardCards, classes, flags, flagConfigs, classRatingConfigs, activities, currentTeacher, students } = useEvaluation()
   const { scoringClasses } = usePermission()
   const [classId, setClassId] = useState(scoringClasses[0]?.id ?? "")
   const [range, setRange] = useState<TimeRange>("semester")
@@ -162,6 +162,23 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
   const lastWeekFlags = useMemo(() => flags
     .filter((flag) => flag.classId === currentClass?.id && flag.awarded && flag.weekKey === previousWeekKey && (flag.period ?? "week") === "week")
     .map((flag) => ({ ...flag, config: classFlagConfigs.get(flag.configId ?? "") })), [classFlagConfigs, currentClass, flags, previousWeekKey])
+
+  const thisWeekFlags = useMemo(() => flags
+    .filter((flag) => flag.classId === currentClass?.id && flag.awarded && flag.weekKey === weekKey && (flag.period ?? "week") === "week")
+    .map((flag) => ({ ...flag, config: classFlagConfigs.get(flag.configId ?? "") ?? flagConfigs.find((config) => config.period === (flag.period ?? "week")) })), [classFlagConfigs, currentClass, flagConfigs, flags, weekKey])
+
+  const classWeeklyRank = useMemo(() => {
+    if (!currentClass) return 0
+    return [...scoringClasses]
+      .map((item) => ({ id: item.id, total: computeWeeklyScore(records, item.id, weekKey).total }))
+      .sort((a, b) => b.total - a.total)
+      .findIndex((item) => item.id === currentClass.id) + 1
+  }, [currentClass, records, scoringClasses, weekKey])
+
+  const currentClassRating = useMemo(() => {
+    if (!classWeeklyRank) return undefined
+    return classRatingConfigs.find((config) => classWeeklyRank >= Number(config.rankStart) && classWeeklyRank <= Number(config.rankEnd))
+  }, [classRatingConfigs, classWeeklyRank])
 
   const classActivities = useMemo(() => {
     if (!currentClass) return []
@@ -275,8 +292,28 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
       <section className="overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]" aria-label="班主任信息、最新消息与待办事项">
         <div className="grid xl:grid-cols-[minmax(340px,0.82fr)_minmax(0,1.18fr)]">
           <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] p-5 sm:p-6 xl:border-r xl:border-[#e4e9f8]">
-            <p className="text-xs font-semibold tracking-[0.16em] text-primary">班级成长工作台</p>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">班主任首页</h1>
+            <div className="mt-1 grid gap-4 lg:grid-cols-[minmax(170px,0.34fr)_minmax(0,1fr)] lg:items-center">
+              <div>
+                <p className="text-xs font-semibold tracking-[0.16em] text-primary">班级成长工作台</p>
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">班主任首页</h1>
+              </div>
+              <div role="group" className="flex min-h-[88px] items-center rounded-2xl border border-[#e0e6fa] bg-white/70 px-3 py-2.5 shadow-[0_10px_22px_-22px_rgba(55,71,153,0.5)]" aria-label="本周班级荣誉">
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-contain pb-0.5">
+                  {thisWeekFlags.map((flag, index) => {
+                    const flagName = flag.config?.name ?? "流动红旗"
+                    return <div key={`${flag.configId ?? flag.weekKey}-${index}`} className="flex min-w-[132px] items-center gap-2 rounded-xl border border-[#f1dfb7] bg-[#fffaf0] px-2 py-1.5">
+                      <img src={flag.config?.image ?? "/xszp/images/flag-issued.svg"} alt={`${flagName}图片`} width="40" height="40" fetchPriority="high" className="size-10 shrink-0 object-contain" />
+                      <span className="min-w-0"><span className="block text-[10px] font-semibold text-[#a77821]">本周流动红旗</span><span title={flagName} className="block truncate text-xs font-bold text-foreground">{flagName}</span></span>
+                    </div>
+                  })}
+                  {currentClassRating && <div className="flex min-w-[132px] items-center gap-2 rounded-xl border border-[#dbe3fa] bg-[#f7f9ff] px-2 py-1.5">
+                    <img src={currentClassRating.image ?? (currentClassRating.defaultImage === "cry" ? "/xszp/images/rating-cry.svg" : "/xszp/images/rating-smile.svg")} alt={`${currentClassRating.name}评级图片`} width="40" height="40" fetchPriority="high" className="size-10 shrink-0 object-contain" />
+                    <span className="min-w-0"><span className="block text-[10px] font-semibold text-primary">本周班级评级</span><span title={currentClassRating.name} className="block truncate text-xs font-bold text-foreground">{currentClassRating.name}</span></span>
+                  </div>}
+                  {thisWeekFlags.length === 0 && !currentClassRating && <div className="flex min-w-0 items-center gap-2 px-1 text-xs text-muted-foreground"><Trophy className="size-4 shrink-0 text-[#d5af59]" aria-hidden="true" /><span>本周荣誉持续累积中</span></div>}
+                </div>
+              </div>
+            </div>
             <div className="mt-5 flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => setClassSwitchOpen(true)} aria-haspopup="dialog" className="flex min-h-10 items-center gap-2 rounded-xl border border-[#dbe3fa] bg-white px-3 text-left transition-colors hover:border-primary/45 hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">{currentClass.name.slice(0, 1)}</span><span className="text-sm font-bold text-foreground">{currentClass.name}</span><span className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-primary">切换班级<ChevronDown className="size-3.5" aria-hidden="true" /></span></button>
               <span className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#dbe3fa] bg-white px-3 text-xs font-medium tabular-nums text-primary"><CalendarDays className="size-3.5" aria-hidden="true" />{weekRangeLabel}</span>
@@ -296,7 +333,17 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
       </section>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <section className="flex h-[320px] min-h-0 flex-col rounded-2xl border border-[#cbd6f7] border-t-2 border-t-brand-orange bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6" aria-labelledby="week-deductions-title"><SectionHeading id="week-deductions-title" icon={TrendingDown} tone="orange" title="本周班级评价扣分动态" description={`共 ${weekDeductions.length} 条扣分记录 · 按记录时间倒序`} action={<div className="flex items-center gap-1.5"><span className="inline-flex min-h-8 items-center rounded-lg bg-[#fff1e9] px-2 text-[11px] font-bold tabular-nums text-brand-orange">扣分 -{weekEvaluationTotals.deduction}</span><span className="inline-flex min-h-8 items-center rounded-lg bg-[#eaf8f1] px-2 text-[11px] font-bold tabular-nums text-brand-green">加分 +{weekEvaluationTotals.addition}</span></div>} />{weekDeductions.length === 0 ? <EmptyPanel text="本周暂无扣分记录，继续保持！" /> : <ul tabIndex={0} aria-label="本周班级评价扣分动态" className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-xl border border-[#e6eaf6] bg-[#fbfcff] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" onScroll={deductionsScroll.onScroll}>{deductionsLoadMore.visible.map((record) => <li key={record.id} className="flex items-start gap-2.5 border-b border-[#edf0fa] py-2.5 last:border-0"><MinusCircle className="mt-0.5 size-4 shrink-0 text-brand-orange" aria-hidden="true" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{record.level1}<span className="font-normal text-muted-foreground"> · {record.level2}</span></span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{record.studentNames.length > 0 ? `涉及：${record.studentNames.join("、")}` : record.note || "班级评价记录"}</span></span><span className="shrink-0 text-right"><span className="block text-sm font-bold tabular-nums text-brand-orange">-{Math.abs(record.totalDeduction)}</span><span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">{record.date}</span></span></li>)}<li><LoadMoreFooter hasMore={deductionsLoadMore.hasMore} loaded={deductionsLoadMore.visible.length} total={deductionsLoadMore.total} onLoadMore={deductionsLoadMore.loadMore} /></li></ul>}</section>
+        <section className="flex h-[320px] min-h-0 flex-col rounded-2xl border border-[#cbd6f7] border-t-2 border-t-brand-orange bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6" aria-labelledby="week-deductions-title">
+          <SectionHeading
+            id="week-deductions-title"
+            icon={TrendingDown}
+            tone="orange"
+            title="本周班级评价扣分动态"
+            description={`共 ${weekDeductions.length} 条扣分记录 · 扣分 -${weekEvaluationTotals.deduction} · 加分 +${weekEvaluationTotals.addition}`}
+            action={<Link href="/class-evaluation" className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">去打分<ChevronRight className="size-3.5" aria-hidden="true" /></Link>}
+          />
+          {weekDeductions.length === 0 ? <EmptyPanel text="本周暂无扣分记录，继续保持！" /> : <ul tabIndex={0} aria-label="本周班级评价扣分动态" className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-xl border border-[#e6eaf6] bg-[#fbfcff] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" onScroll={deductionsScroll.onScroll}>{deductionsLoadMore.visible.map((record) => <li key={record.id} className="flex items-start gap-2.5 border-b border-[#edf0fa] py-2.5 last:border-0"><MinusCircle className="mt-0.5 size-4 shrink-0 text-brand-orange" aria-hidden="true" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{record.level1}<span className="font-normal text-muted-foreground"> · {record.level2}</span></span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{record.studentNames.length > 0 ? `涉及：${record.studentNames.join("、")}` : record.note || "班级评价记录"}</span></span><span className="shrink-0 text-right"><span className="block text-sm font-bold tabular-nums text-brand-orange">-{Math.abs(record.totalDeduction)}</span><span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">{record.date}</span></span></li>)}<li><LoadMoreFooter hasMore={deductionsLoadMore.hasMore} loaded={deductionsLoadMore.visible.length} total={deductionsLoadMore.total} onLoadMore={deductionsLoadMore.loadMore} /></li></ul>}
+        </section>
         <section className="flex h-[320px] min-h-0 flex-col rounded-2xl border border-[#cbd6f7] border-t-2 border-t-brand-green bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6" aria-labelledby="week-awards-title"><SectionHeading id="week-awards-title" icon={Award} tone="green" title="本周班级奖卡记录动态" description="按发放时间倒序" action={<div className="flex items-center gap-2"><span className="inline-flex min-h-8 items-center rounded-lg bg-[#eaf8f1] px-2 text-[11px] font-bold tabular-nums text-brand-green">{weekAwards.length} 张 · +{weekAwardPoints} 分</span><button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-[11px] font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">去发放<ChevronRight className="size-3.5" aria-hidden="true" /></button></div>} />{weekAwards.length === 0 ? <EmptyPanel text="本周暂无奖卡记录" /> : <ul tabIndex={0} aria-label="本周班级奖卡记录动态" className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-xl border border-[#e6eaf6] bg-[#fbfcff] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" onScroll={awardsScroll.onScroll}>{awardsLoadMore.visible.map((award) => <li key={award.id} className="flex items-center gap-3 border-b border-[#edf0fa] py-2.5 last:border-0"><span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#eaf8f1] text-brand-green"><Award className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{award.studentName}<span className="font-normal text-muted-foreground"> · {award.level2}</span></span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{award.level1} · 发放人：{award.operatorName}</span></span><span className="shrink-0 text-right"><span className="block text-xs font-bold tabular-nums text-brand-green">+{award.points} 分</span><span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">{award.date}</span></span></li>)}<li><LoadMoreFooter hasMore={awardsLoadMore.hasMore} loaded={awardsLoadMore.visible.length} total={awardsLoadMore.total} onLoadMore={awardsLoadMore.loadMore} /></li></ul>}</section>
       </div>
 

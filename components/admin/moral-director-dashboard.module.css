@@ -31,22 +31,21 @@
 .primaryGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .secondaryGrid { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); }
 .panel { display: flex; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid #dbe7eb; border-radius: 20px; padding: 22px; background: #fff; box-shadow: 0 16px 30px -30px rgb(46 79 97 / 50%); }
-.deductionPanel, .flagPanel { height: 370px; }
-.feedPanel { height: 390px; }
-.deductionPanel { border-top: 3px solid #e29a61; }
+.scorePanel, .flagPanel { height: 390px; }
+.awardPanel, .feedPanel { height: 390px; }
+.scorePanel { border-top: 3px solid #e29a61; }
 .flagPanel { border-top: 3px solid #d5af59; }
 .awardPanel { border-top: 3px solid #4da991; }
 .feedPanel { border-top: 3px solid #7895e8; }
 
-.metrics { display: flex; gap: 6px; }
-.metrics > span { display: inline-flex; height: 32px; align-items: center; gap: 6px; border-radius: 9px; padding: 0 9px; font-size: 12px; }
-.metrics strong { font-variant-numeric: tabular-nums; font-size: 14px; }
-.metricDanger { background: #fff4ec; color: #b96731; }
-.metricGood { background: #edf9f2; color: #287859; }
+.chart { width: 100%; min-height: 0; height: 100%; }
 
 .segmentedControl { display: flex; gap: 3px; margin-top: 16px; padding: 4px; border-radius: 12px; background: #f0f6f5; }
-.segment { min-height: 36px; flex: 1; border-radius: 9px; color: #77858d; font-size: 12px; font-weight: 700; transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease; cursor: pointer; }
+.segment { min-height: 36px; flex: 1; border-radius: 9px; color: #77858d; font-size: 12px; font-weight: 700; transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.titleRangeControl { margin-top: 0; flex: 0 0 auto; }
+.titleRangeControl .segment { min-width: 48px; flex: 0 0 auto; padding-inline: 8px; }
 .segment:hover { color: #385461; }
+.segment:focus-visible { outline: 2px solid #28746f; outline-offset: 2px; }
 .segmentActive { background: #fff; color: #28746f; box-shadow: 0 3px 8px rgb(45 95 90 / 10%); }
 
 @media (max-width: 1100px) {
@@ -60,7 +59,5 @@
   .heroHeading { flex-direction: column; }
   .pageTitle { font-size: 18px; }
   .shortcuts { grid-template-columns: 1fr; margin-top: 16px; padding-top: 12px; }
-  .deductionPanel, .flagPanel, .feedPanel { height: 340px; }
-  .metrics { width: 100%; }
-  .metrics > span { flex: 1; justify-content: space-between; }
+  .scorePanel, .flagPanel, .awardPanel, .feedPanel { height: 350px; }
 }

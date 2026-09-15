@@ -214,15 +214,6 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
               </Link>
             )}
 
-            {/* 独立页面仍保留当前页上下文，避免从首页跳转后顶部导航看起来像“失效” */}
-            {standaloneView && (
-              <span className="relative flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
-                {standaloneView === "evaluation" ? <LayoutGrid className="size-4" /> : <Medal className="size-4" />}
-                {standaloneView === "evaluation" ? "班级评价" : "班级排行榜"}
-                <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-primary to-primary-2" />
-              </span>
-            )}
-
             {/* 二级页面分组：按要求在页面中隐藏，功能仍可通过各首页快捷入口进入 */}
             {false && isTeacher && showSecondaryGroup && (
               <DropdownMenu>
@@ -291,15 +282,35 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
             <AdminDataDashboard onBack={() => setMainTab("admin_home")} />
           ) : mainTab === "score" ? (
             <>
-              {standaloneView === "evaluation" && (
-                <div className="flex items-center gap-3" aria-labelledby="class-evaluation-page-title">
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <LayoutGrid className="size-5" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">班级评价 / 录入中心</p>
-                    <h1 id="class-evaluation-page-title" className="text-xl font-bold tracking-tight text-foreground">班级评价</h1>
-                  </div>
+              {standaloneView && (
+                <div className="border-b border-border/60 pb-2" aria-labelledby="class-page-title">
+                  <h1 id="class-page-title" className="sr-only">班级评价与班级排行榜</h1>
+                  <nav aria-label="班级数据页面切换" className="inline-flex max-w-full items-center gap-1">
+                    <Link
+                      href="/class-evaluation"
+                      scroll={false}
+                      aria-current={standaloneView === "evaluation" ? "page" : undefined}
+                      className={cn(
+                        "inline-flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
+                        standaloneView === "evaluation" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:border-primary/35 hover:text-primary",
+                      )}
+                    >
+                      <LayoutGrid className="size-3.5" aria-hidden="true" />
+                      班级评价
+                    </Link>
+                    <Link
+                      href="/class-ranking"
+                      scroll={false}
+                      aria-current={standaloneView === "ranking" ? "page" : undefined}
+                      className={cn(
+                        "inline-flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
+                        standaloneView === "ranking" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:border-primary/35 hover:text-primary",
+                      )}
+                    >
+                      <Medal className="size-3.5" aria-hidden="true" />
+                      班级排行榜
+                    </Link>
+                  </nav>
                 </div>
               )}
               {standaloneView === "ranking" ? <ClassRankingTab /> : canEvaluate ? <ClassEvaluationTab /> : null}
