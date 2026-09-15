@@ -37,44 +37,48 @@
   background: linear-gradient(90deg, #416fe1, #78a0f3 56%, #6abca7);
 }
 
-.statsGrid {
-  position: relative;
+.topShortcuts {
+  display: grid;
   overflow: hidden;
-  border: 1px solid rgb(222 231 243 / 95%);
-  border-radius: 15px;
-  background: rgb(248 251 255 / 88%);
+  border: 1px solid rgb(219 229 246 / 94%);
+  border-radius: 16px;
+  background: rgb(248 251 255 / 82%);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
-.statItem {
-  position: relative;
-  transition: background-color 180ms ease;
-}
-
-.statItem:hover {
-  background: rgb(255 255 255 / 74%);
-}
-
-.statItem::after {
-  position: absolute;
-  right: 16px;
-  bottom: 0;
-  left: 16px;
-  height: 1px;
-  content: "";
-  background: rgb(221 230 243 / 80%);
+.topShortcuts > * + * {
+  border-left: 1px solid rgb(223 232 247 / 90%);
 }
 
 .contentCard {
   background: linear-gradient(180deg, #fff 0%, #fcfdff 100%);
 }
 
-@media (min-width: 640px) {
-  .statItem::after {
-    right: 0;
-    bottom: 16px;
-    left: auto;
-    width: 1px;
-    height: auto;
+.awardPieCard {
+  border-top: 3px solid #4da991;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+@media (max-width: 1279px) {
+  .topShortcuts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .topShortcuts > * + * {
+    border-left: 0;
+  }
+
+  .topShortcuts > :not(:nth-child(3n + 1)) {
+    border-left: 1px solid rgb(223 232 247 / 90%);
+  }
+
+  .topShortcuts > :nth-child(n + 4) {
+    border-top: 1px solid rgb(223 232 247 / 90%);
   }
 }
 
@@ -82,11 +86,27 @@
   .card {
     border-radius: 16px;
   }
+
+  .topShortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-radius: 14px;
+  }
+
+  .topShortcuts > :not(:nth-child(3n + 1)) {
+    border-left: 0;
+  }
+
+  .topShortcuts > :not(:nth-child(2n + 1)) {
+    border-left: 1px solid rgb(223 232 247 / 90%);
+  }
+
+  .topShortcuts > :nth-child(n + 3) {
+    border-top: 1px solid rgb(223 232 247 / 90%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card,
-  .statItem {
+  .card {
     transition: none;
   }
 }

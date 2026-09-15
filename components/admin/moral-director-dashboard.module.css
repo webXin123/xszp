@@ -40,10 +40,20 @@
 
 .chart { width: 100%; min-height: 0; height: 100%; }
 
-.segmentedControl { display: flex; gap: 3px; margin-top: 16px; padding: 4px; border-radius: 12px; background: #f0f6f5; }
+.segmentedControl { display: flex; gap: 3px; margin-top: 16px; padding: 4px; border: 1px solid transparent; border-radius: 12px; background: #f0f6f5; }
 .segment { min-height: 36px; flex: 1; border-radius: 9px; color: #77858d; font-size: 12px; font-weight: 700; transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .titleRangeControl { margin-top: 0; flex: 0 0 auto; }
 .titleRangeControl .segment { min-width: 48px; flex: 0 0 auto; padding-inline: 8px; }
+.panelActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.rangeToneScore { border-color: #f1d6c3; background: #fff6f0; }
+.rangeToneScore .segment:hover, .rangeToneScore .segmentActive { color: #b56b38; }
+.rangeToneScore .segmentActive { background: #fff; box-shadow: 0 3px 9px rgb(207 117 57 / 14%); }
+.rangeToneAward { border-color: #cce7db; background: #effaf4; }
+.rangeToneAward .segment:hover, .rangeToneAward .segmentActive { color: #21845b; }
+.rangeToneAward .segmentActive { background: #fff; box-shadow: 0 3px 9px rgb(33 132 91 / 14%); }
+.rangeToneTeacher { border-color: #d5def8; background: #f1f4ff; }
+.rangeToneTeacher .segment:hover, .rangeToneTeacher .segmentActive { color: #4f6fc6; }
+.rangeToneTeacher .segmentActive { background: #fff; box-shadow: 0 3px 9px rgb(79 111 198 / 14%); }
 .segment:hover { color: #385461; }
 .segment:focus-visible { outline: 2px solid #28746f; outline-offset: 2px; }
 .segmentActive { background: #fff; color: #28746f; box-shadow: 0 3px 8px rgb(45 95 90 / 10%); }
@@ -57,6 +67,7 @@
   .dashboard { gap: 14px; }
   .hero, .panel { border-radius: 18px; padding: 16px; }
   .heroHeading { flex-direction: column; }
+  .panelActions { width: 100%; justify-content: flex-start; }
   .pageTitle { font-size: 18px; }
   .shortcuts { grid-template-columns: 1fr; margin-top: 16px; padding-top: 12px; }
   .scorePanel, .flagPanel, .awardPanel, .feedPanel { height: 350px; }

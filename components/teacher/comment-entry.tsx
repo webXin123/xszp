@@ -65,7 +65,7 @@ export function TeacherCommentEntry() {
 
   const academicSubjects = useMemo<readonly AcademicSubject[]>(() => {
     if (role === "homeroom") return ACADEMIC_SUBJECTS
-    if (role === "pe_teacher") return ["体育"]
+    if (role === "pe_teacher") return ["体育与健身"]
     if (teacher?.name === "张哲") return ["数学"]
     return ["语文"]
   }, [role, teacher?.name])

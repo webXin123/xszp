@@ -198,10 +198,12 @@ export function CommentEntryManagement({
   grades,
   classes,
   mode = "comment",
+  embedded = false,
 }: {
   grades: Grade[]
   classes: SchoolClass[]
   mode?: SemesterTaskMode
+  embedded?: boolean
 }) {
   const copy = TASK_COPY[mode]
   const isEvaluation = mode === "evaluation"
@@ -337,7 +339,9 @@ export function CommentEntryManagement({
   }
 
   return (
-    <section className="rounded-[24px] border border-[#cfd8f6] bg-[#f7f8ff] p-4 shadow-[0_18px_38px_-30px_rgba(53,67,150,0.72)] sm:p-5">
+    <section className={cn(
+      !embedded && "rounded-[24px] border border-[#cfd8f6] bg-[#f7f8ff] p-4 shadow-[0_18px_38px_-30px_rgba(53,67,150,0.72)] sm:p-5",
+    )}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_9px_18px_-11px_rgba(63,81,188,0.92)]">

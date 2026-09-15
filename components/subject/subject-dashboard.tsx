@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
+  Award,
   ArrowRight,
   CheckCircle2,
   ClipboardCheck,
@@ -10,34 +11,28 @@ import {
   FileSpreadsheet,
   HeartPulse,
   NotebookPen,
-  Send,
+  PieChart,
   Upload,
-  UsersRound,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
-import { getSemesterRange, inRange } from "@/lib/points-utils"
+import { inRange } from "@/lib/points-utils"
 import { PE_CLASSES, getSemesterLabel } from "@/lib/pe-scores"
+import { getISOWeekKey } from "@/lib/scoring-utils"
 import { readCommentRecords, type StudentCommentRecord } from "@/lib/comment-utils"
 import { readSemesterEvaluationRecords, type SemesterEvaluationRecord } from "@/lib/semester-evaluation-utils"
+import { AWARD_LEVEL1_LIST, getFiveEducationLevel1 } from "@/lib/award-utils"
+import type { AwardCardRecord } from "@/lib/types"
 import type { MainTab } from "../evaluation/evaluation-dashboard"
 import styles from "../role-home.module.css"
 
-const SCORE_ENTRY_TASKS_KEY = "mzlg-score-entry-tasks-v1"
+const SCORE_ENTRY_TASKS_KEY = "mzlg-score-entry-tasks-v2"
 const COMMENT_TASKS_KEY = "mzlg-comment-entry-tasks-v1"
 
 type ProgressStatus = "未开始" | "录入中" | "已提交"
-type AwardChartRange = "sevenDays" | "semester"
-
-interface AwardTrendPoint {
-  key: string
-  label: string
-  value: number
-}
-
 interface ScoreTaskCache {
   progress?: Array<{ teacher: string; classNames: string; status: ProgressStatus }>
 }
@@ -69,30 +64,11 @@ interface CommentClassProgress extends WorkClass {
   status: ProgressStatus
 }
 
-function statusStyle(status: ProgressStatus) {
-  if (status === "已提交") return "bg-[#eaf8f1] text-brand-green"
-  if (status === "录入中") return "bg-[#eef2ff] text-primary"
-  return "bg-[#fff4e5] text-brand-orange"
-}
-
-function statusLabel(status: ProgressStatus, type: "score" | "comment") {
-  if (status === "已提交") return type === "score" ? "已上传" : "已完成"
-  return type === "score" ? "待上传" : "待录入"
-}
-
-function ProgressBar({ value, total, tone = "primary" }: { value: number; total: number; tone?: "primary" | "green" | "purple" }) {
-  const percent = total ? Math.round((value / total) * 100) : 0
-  const color = tone === "green" ? "bg-brand-green" : tone === "purple" ? "bg-[#7166b3]" : "bg-primary"
-  return <div className="flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-[#e7ebf8]"><div className={cn("h-full rounded-full transition-[width] duration-300", color)} style={{ width: `${percent}%` }} /></div><span className="w-10 text-right text-xs font-bold tabular-nums">{percent}%</span></div>
-}
-
 function commentCompleted(studentCount: number, status: ProgressStatus) {
   if (status === "已提交") return studentCount
   if (status === "录入中") return Math.max(1, Math.round(studentCount * 0.56))
   return 0
 }
-
-const DAY_MS = 24 * 60 * 60 * 1000
 
 function startOfDay(date: Date) {
   const value = new Date(date)
@@ -100,17 +76,10 @@ function startOfDay(date: Date) {
   return value
 }
 
-function dateKey(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
-}
-
 function formatAwardTime(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
+  return new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date)
 }
 
 function getRecentSevenDayRange(now = new Date()) {
@@ -121,54 +90,50 @@ function getRecentSevenDayRange(now = new Date()) {
   return { start, end }
 }
 
-function AwardTrendChart({ points, title }: { points: AwardTrendPoint[]; title: string }) {
-  const width = 640
-  const height = 220
-  const padding = { top: 18, right: 18, bottom: 38, left: 38 }
-  const chartWidth = width - padding.left - padding.right
-  const chartHeight = height - padding.top - padding.bottom
-  const maxValue = Math.max(1, ...points.map((point) => point.value))
-  const coordinates = points.map((point, index) => ({
-    ...point,
-    x: padding.left + (points.length === 1 ? chartWidth / 2 : (index / (points.length - 1)) * chartWidth),
-    y: padding.top + chartHeight - (point.value / maxValue) * chartHeight,
-  }))
-  const linePath = coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ")
-  const areaPath = coordinates.length > 0 ? `${linePath} L ${coordinates.at(-1)!.x.toFixed(2)} ${height - padding.bottom} L ${coordinates[0].x.toFixed(2)} ${height - padding.bottom} Z` : ""
-  const labelStep = Math.max(1, Math.ceil(points.length / 7))
-  const titleId = `award-trend-${title.replace(/[^a-zA-Z0-9]+/g, "-")}`
+const AWARD_PIE_COLORS = ["#6f86e8", "#63b58f", "#dfa25f", "#9a86d5", "#df8c78"]
 
-  return <div className="mt-3 min-w-0 overflow-x-auto rounded-xl border border-[#e5e9f6] bg-[#fbfcff] px-2 pt-2 sm:px-3" role="img" aria-labelledby={titleId}>
-    <span id={titleId} className="sr-only">{title}，纵轴为发放奖卡张数</span>
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-[220px] w-full min-w-[520px]" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id={`${titleId}-fill`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="rgb(63 81 188)" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="rgb(63 81 188)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[0, 0.5, 1].map((ratio) => {
-        const y = padding.top + chartHeight * ratio
-        const value = Math.round(maxValue * (1 - ratio))
-        return <g key={ratio}>
-          <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="#e4e9f8" strokeDasharray="3 5" />
-          <text x={padding.left - 8} y={y + 4} textAnchor="end" className="fill-[#8b96b5] text-[11px]">{value}</text>
-        </g>
+function MiniAwardPie({ title, description, cards }: { title: string; description: string; cards: Array<{ level1: string }> }) {
+  const distribution = AWARD_LEVEL1_LIST.map((level1) => ({ level1, count: cards.filter((card) => getFiveEducationLevel1(card.level1) === level1).length })).filter((item) => item.count > 0)
+  const total = distribution.reduce((sum, item) => sum + item.count, 0)
+  let cursor = 0
+  const slices = distribution.map((item, index) => {
+    const start = cursor
+    cursor += (item.count / total) * 100
+    return { ...item, index, start, end: cursor }
+  })
+  const gap = total > 0 ? Math.min(1.8, 100 / slices.length * 0.18) : 0
+  const distributionLabel = distribution.map((item) => `${item.level1}${item.count}张`).join("、") || "暂无发放记录"
+  const gradient = total > 0
+    ? [`#ffffff 0% ${gap / 2}%`, ...slices.flatMap((item) => {
+      const segmentStart = item.start + gap / 2
+      const segmentEnd = item.end - gap / 2
+      return [
+        `${AWARD_PIE_COLORS[item.index % AWARD_PIE_COLORS.length]} ${segmentStart}% ${Math.max(segmentStart, segmentEnd)}%`,
+        `#ffffff ${Math.max(segmentStart, segmentEnd)}% ${item.end + gap / 2}%`,
+      ]
+    })].join(", ")
+    : "#edf1f8 0% 100%"
+
+  return <article className="min-h-[390px] min-w-0 rounded-2xl border border-[#dce4f6] bg-[linear-gradient(145deg,#fbfcff_0%,#f4f7ff_100%)] p-5 shadow-[0_14px_28px_-24px_rgba(45,62,139,0.6)] sm:p-6" aria-label={`${title}：${total} 张`}>
+    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex items-center gap-2"><PieChart className="size-4.5 shrink-0 text-primary" aria-hidden="true" /><h3 className="truncate text-sm font-bold text-foreground sm:text-base">{title}</h3></div><p className="mt-1.5 truncate text-xs text-muted-foreground">{description}</p></div><span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold tabular-nums text-primary">{total} 张</span></div>
+    <div className="relative mx-auto mt-3 size-[270px] max-w-full sm:size-[292px]" role="img" aria-label={`${title}共 ${total} 张，${distributionLabel}`}>
+      <div className="absolute left-1/2 top-1/2 flex size-[172px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-1 shadow-[0_12px_24px_-18px_rgba(63,81,188,0.7)] sm:size-[190px]" style={{ background: `conic-gradient(from -90deg, ${gradient})` }}>
+        <div className="flex size-full items-center justify-center rounded-full border border-white/80 bg-white/60 p-1 backdrop-blur-[1px]"><div className="flex size-[108px] flex-col items-center justify-center rounded-full border border-[#e4e9f8] bg-white shadow-[0_8px_18px_-16px_rgba(45,62,139,0.8)] sm:size-[120px]"><span className="text-2xl font-bold tabular-nums tracking-tight text-foreground sm:text-[30px]">{total}</span><span className="mt-0.5 text-[11px] font-medium text-muted-foreground">张奖卡</span></div></div>
+      </div>
+      {slices.map((item) => {
+        const angle = ((item.start + item.end) / 2 / 100) * Math.PI * 2 - Math.PI / 2
+        const left = 50 + Math.cos(angle) * 44
+        const top = 50 + Math.sin(angle) * 44
+        return <span key={item.level1} className="absolute z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-white/80 px-1 text-center text-[11px] leading-4 text-[#60718b] shadow-[0_4px_10px_-9px_rgba(45,62,139,0.7)]" style={{ left: `${left}%`, top: `${top}%` }}>{item.level1}<br /><strong className="font-semibold text-foreground">{item.count} 张</strong></span>
       })}
-      {areaPath && <path d={areaPath} fill={`url(#${titleId}-fill)`} />}
-      {linePath && <path d={linePath} fill="none" stroke="#3f51bc" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" vectorEffect="non-scaling-stroke" />}
-      {coordinates.map((point, index) => <g key={point.key}>
-        <circle cx={point.x} cy={point.y} r="4" fill="#ffffff" stroke="#3f51bc" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-        {(index % labelStep === 0 || index === coordinates.length - 1) && <text x={point.x} y={height - 13} textAnchor="middle" className="fill-[#8b96b5] text-[11px]">{point.label}</text>}
-      </g>)}
-    </svg>
-  </div>
+    </div>
+    {distribution.length > 0 ? <ul className="mx-auto flex max-w-[330px] flex-wrap justify-center gap-x-4 gap-y-2 border-t border-[#e6eaf6] pt-3">{slices.map((item) => <li key={item.level1} className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: AWARD_PIE_COLORS[item.index % AWARD_PIE_COLORS.length] }} aria-hidden="true" /><span>{item.level1}</span></li>)}</ul> : <p className="mt-2 text-center text-xs text-muted-foreground">暂无发放记录</p>}
+  </article>
 }
 
 export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
   const { awardCards, currentTeacher, peScoreUploads, classes, students } = useEvaluation()
   const { role, awardClasses, peClassIds } = usePermission()
-  const [chartRange, setChartRange] = useState<AwardChartRange>("sevenDays")
   const [scoreTasks, setScoreTasks] = useState<ScoreTaskCache[]>([])
   const [commentTasks, setCommentTasks] = useState<CommentTaskCache[]>([])
   const [commentRecords, setCommentRecords] = useState<StudentCommentRecord[]>([])
@@ -196,45 +161,10 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
     const recentRange = getRecentSevenDayRange(new Date())
     return myAwardCards.filter((card) => inRange(card.createdAt, recentRange.start, recentRange.end)).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }, [myAwardCards])
-  const recentWeekPoints = recentWeekCards.reduce((sum, card) => sum + card.points, 0)
-  const recentCardsLoadMore = useLoadMore(recentWeekCards, 6)
+  const recentCardsLoadMore = useLoadMore(recentWeekCards, 5)
   const recentCardsScroll = useScrollLoadMore(recentCardsLoadMore.hasMore, recentCardsLoadMore.loadMore)
-  const trendPoints = useMemo<AwardTrendPoint[]>(() => {
-    const now = new Date()
-    if (chartRange === "sevenDays") {
-      const start = getRecentSevenDayRange(now).start
-      return Array.from({ length: 7 }, (_, index) => {
-        const day = new Date(start)
-        day.setDate(start.getDate() + index)
-        const key = dateKey(day)
-        return {
-          key,
-          label: `${day.getMonth() + 1}/${day.getDate()}`,
-          value: myAwardCards.filter((card) => dateKey(new Date(card.createdAt)) === key).length,
-        }
-      })
-    }
-
-    const semesterStart = startOfDay(getSemesterRange(now).start)
-    const currentDay = startOfDay(now)
-    const elapsedDays = Math.max(0, Math.floor((currentDay.getTime() - semesterStart.getTime()) / DAY_MS))
-    const weekCount = Math.max(1, Math.floor(elapsedDays / 7) + 1)
-    return Array.from({ length: weekCount }, (_, index) => {
-      const weekStart = new Date(semesterStart)
-      weekStart.setDate(semesterStart.getDate() + index * 7)
-      const nextWeekStart = new Date(weekStart)
-      nextWeekStart.setDate(weekStart.getDate() + 7)
-      return {
-        key: `semester-week-${index + 1}`,
-        label: `第${index + 1}周`,
-        value: myAwardCards.filter((card) => {
-          const createdAt = new Date(card.createdAt).getTime()
-          return createdAt >= weekStart.getTime() && createdAt < nextWeekStart.getTime()
-        }).length,
-      }
-    })
-  }, [chartRange, myAwardCards])
-  const trendTotal = trendPoints.reduce((sum, point) => sum + point.value, 0)
+  const currentWeekKey = getISOWeekKey(new Date())
+  const onlineWeekCards = useMemo(() => myAwardCards.filter((card) => card.source === "online" && card.weekKey === currentWeekKey), [currentWeekKey, myAwardCards])
   const classNameById = useMemo(() => new Map(classes.map((item) => [item.id, item.name])), [classes])
 
   const workClasses = useMemo<WorkClass[]>(() => {
@@ -274,7 +204,6 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
   }, [commentRecords, commentTasks, teacher.id, teacher.name, teacher.role, workClasses])
 
   const pendingScoreClasses = scoreProgress.filter((item) => item.status !== "已提交")
-  const commentCompletedStudents = commentProgress.reduce((sum, item) => sum + item.completedStudents, 0)
   const pendingCommentClasses = commentProgress.filter((item) => item.completedStudents < item.studentCount)
   const evaluationProgress = useMemo(() => workClasses.map((item) => {
     const roster = students.filter((student) => student.classId === item.id)
@@ -284,57 +213,39 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
   const pendingEvaluationClasses = evaluationProgress.filter((item) => item.completed < item.total)
 
   const scoreHref = isPe ? "/pe-score-import" : "/score-entry"
+  const todoCount = pendingScoreClasses.length + pendingCommentClasses.length + pendingEvaluationClasses.length
+  const scoreCompleted = scoreProgress.filter((item) => item.status === "已提交").length
+  const commentCompletedStudents = commentProgress.reduce((sum, item) => sum + item.completedStudents, 0)
+  const commentTotalStudents = commentProgress.reduce((sum, item) => sum + item.studentCount, 0)
+  const evaluationCompleted = evaluationProgress.reduce((sum, item) => sum + item.completed, 0)
+  const evaluationTotal = evaluationProgress.reduce((sum, item) => sum + item.total, 0)
 
   return <div className={cn("-m-4 flex flex-col gap-4 p-4 sm:-m-6 sm:gap-5 sm:p-6", styles.teacherHome, styles.subjectHome)}>
-    <section className="overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]" aria-label="任课教师工作概览">
-      <div className="grid xl:grid-cols-[minmax(270px,0.68fr)_minmax(0,1.32fr)]">
-        <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] p-5 sm:p-6 xl:border-r xl:border-[#e4e9f8]">
-          <p className="text-xs font-semibold tracking-[0.16em] text-primary">教师工作台</p><h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">{isPe ? "体育教师首页" : "任课教师首页"}</h1>
-          <div className="mt-6 min-w-0"><p className="truncate text-base font-bold text-foreground">{teacher.name}</p><p className="mt-1 truncate text-xs text-muted-foreground">{workClasses.map((item) => item.name).join("、") || "暂无任教班级"}</p><span className="mt-2 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">本周工作概览</span></div>
-        </div>
-        <div className="p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold text-foreground">本学期待办</p>
-              <p className="mt-1 text-xs text-muted-foreground">任务较多时可在列表中继续查看</p>
-            </div>
-            <span className="inline-flex min-h-8 shrink-0 items-center rounded-lg bg-[#fff1e9] px-2.5 text-xs font-bold tabular-nums text-brand-orange">{pendingScoreClasses.length + pendingCommentClasses.length + pendingEvaluationClasses.length} 项待处理</span>
-          </div>
-          <div tabIndex={0} className="mt-3 max-h-36 space-y-2 overflow-y-auto overscroll-contain pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" aria-label="本学期待办列表">
-            <TodoSummary href={scoreHref} icon={FileSpreadsheet} tone="green" title={isPe ? "体质健康上传" : "成绩上传"} value={`${pendingScoreClasses.length} 个班级待处理`} description={pendingScoreClasses.length ? pendingScoreClasses.map((item) => item.name).join("、") : "所有班级均已上传"} />
-            <TodoSummary href="/comment-entry" icon={NotebookPen} tone="purple" title="评语录入" value={`${pendingCommentClasses.length} 个班级待处理`} description={pendingCommentClasses.length ? pendingCommentClasses.map((item) => item.name).join("、") : "本学期评语已完成"} />
-            <TodoSummary href="/semester-evaluation" icon={ClipboardCheck} tone="blue" title="学期评价" value={`${pendingEvaluationClasses.length} 个班级待处理`} description={pendingEvaluationClasses.length ? pendingEvaluationClasses.map((item) => item.name).join("、") : "本学期评价已完成"} />
-          </div>
-        </div>
+    <section className="overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]" aria-label="任课教师工作台">
+      <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] px-4 py-3.5 sm:px-5 sm:py-4">
+        <p className="text-xs font-semibold tracking-[0.16em] text-primary">教师工作台</p><h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">{isPe ? "体育教师首页" : "任课教师首页"}</h1>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-base font-bold text-foreground">{teacher.name}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{workClasses.map((item) => item.name).join("、") || "暂无任教班级"}</p></div><span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">本周工作概览</span></div>
       </div>
     </section>
 
-    <section className="rounded-2xl border border-[#cbd6f7] bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6" aria-labelledby="teacher-work-title">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 id="teacher-work-title" className="text-base font-bold text-foreground">{isPe ? "本学期工作进度" : "我发放的奖卡"}</h2>
-          <p className="mt-1 text-xs text-muted-foreground">{isPe ? "体质健康上传按班级统计" : "查看最近七天明细与本学期发放趋势"}</p>
-        </div>
-        <button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/20 transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><Send className="size-3.5" aria-hidden="true" />去发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button>
+    <section className="rounded-2xl border border-[#cbd6f7] border-t-2 border-t-brand-orange bg-white p-5 shadow-[0_16px_34px_-28px_rgba(48,62,139,0.7)] sm:p-6" aria-labelledby="teacher-todo-title">
+      <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2.5"><span className="flex size-9 items-center justify-center rounded-xl bg-[#fff1e9] text-brand-orange"><ClipboardCheck className="size-4.5" aria-hidden="true" /></span><div><h2 id="teacher-todo-title" className="text-base font-bold text-foreground">待办事项</h2><p className="mt-1 text-xs text-muted-foreground">优先处理当前学期尚未完成的工作</p></div></div><span className="inline-flex min-h-8 shrink-0 items-center rounded-lg bg-[#fff1e9] px-2.5 text-xs font-bold tabular-nums text-brand-orange">{todoCount} 项待处理</span></div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3" aria-label="本学期待办列表">
+        <TodoSummary href={scoreHref} icon={FileSpreadsheet} tone="green" title={isPe ? "体质健康上传" : "成绩上传"} completed={scoreCompleted} total={scoreProgress.length} unit="班级" />
+        <TodoSummary href="/comment-entry" icon={NotebookPen} tone="purple" title="评语录入" completed={commentCompletedStudents} total={commentTotalStudents} unit="名学生" />
+        <TodoSummary href="/semester-evaluation" icon={ClipboardCheck} tone="blue" title="学期评价" completed={evaluationCompleted} total={evaluationTotal} unit="名学生" />
       </div>
-      {isPe ? <div className="mt-4"><PeUploadProgressCard items={scoreProgress} href={scoreHref} /></div> : <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-        <div className="min-w-0 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><p className="text-sm font-bold text-foreground">奖卡发放趋势</p><p className="mt-1 text-xs text-muted-foreground">按{chartRange === "sevenDays" ? "日期" : "学期周次"}统计发放张数</p></div>
-            <div className="flex rounded-xl border border-[#d8e0f7] bg-white p-1" role="tablist" aria-label="奖卡趋势时间范围">
-              {([{ value: "sevenDays", label: "最近7天" }, { value: "semester", label: "本学期" }] as Array<{ value: AwardChartRange; label: string }>).map((item) => <button key={item.value} type="button" role="tab" aria-selected={chartRange === item.value} onClick={() => setChartRange(item.value)} className={cn("min-h-8 rounded-lg px-3 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", chartRange === item.value ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>{item.label}</button>)}
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums text-foreground">{trendTotal}</span><span className="text-xs text-muted-foreground">{chartRange === "sevenDays" ? "最近7天发放张数" : "本学期累计发放张数"}</span></div>
-          <AwardTrendChart points={trendPoints} title={chartRange === "sevenDays" ? "最近7天奖卡发放趋势" : "本学期奖卡发放趋势"} />
-        </div>
-        <div className="flex min-h-[330px] min-w-0 flex-col rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-4">
-          <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold text-foreground">最近七天发放明细</p><p className="mt-1 text-xs text-muted-foreground">共 {recentWeekCards.length} 张 · 累计 {recentWeekPoints} 分</p></div><span className="rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">按创建时间倒序</span></div>
-          {recentWeekCards.length === 0 ? <div className="mt-4 flex flex-1 items-center justify-center rounded-xl border border-dashed border-[#d5def5] px-3 text-center text-sm text-muted-foreground">最近七天暂无奖卡发放记录</div> : <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-xl border border-[#e6eaf6] bg-white"><div className="grid grid-cols-[76px_minmax(0,1fr)_48px] gap-2 border-b border-[#edf0fa] px-3 py-2 text-[11px] font-semibold text-muted-foreground"><span>获得时间</span><span>学生 / 班级</span><span className="text-right">分值</span></div><ul tabIndex={0} aria-label="最近七天发放的奖卡列表" className="max-h-[300px] overflow-y-auto px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" onScroll={recentCardsScroll.onScroll}>{recentCardsLoadMore.visible.map((card) => <li key={card.id} className="grid grid-cols-[76px_minmax(0,1fr)_48px] items-center gap-2 border-b border-[#edf0fa] py-2.5 last:border-0"><time dateTime={card.createdAt} className="text-[11px] tabular-nums text-muted-foreground">{formatAwardTime(card.createdAt)}</time><span className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{card.studentName}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{classNameById.get(card.classId) ?? "未命名班级"}</span></span><span className="text-right text-xs font-bold tabular-nums text-brand-green">+{card.points}</span></li>)}<li><LoadMoreFooter hasMore={recentCardsLoadMore.hasMore} loaded={recentCardsLoadMore.visible.length} total={recentCardsLoadMore.total} onLoadMore={recentCardsLoadMore.loadMore} /></li></ul></div>}
-        </div>
-      </div>}
     </section>
+
+    {isPe ? <section className="rounded-2xl border border-[#cbd6f7] bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6" aria-labelledby="teacher-work-title"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 id="teacher-work-title" className="text-base font-bold text-foreground">本学期工作进度</h2><p className="mt-1 text-xs text-muted-foreground">体质健康上传按班级统计</p></div><Link href={scoreHref} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/20 transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><Upload className="size-3.5" aria-hidden="true" />去上传<ArrowRight className="size-3.5" aria-hidden="true" /></Link></div><div className="mt-4"><PeUploadProgressCard items={scoreProgress} href={scoreHref} /></div></section> : <section className="rounded-2xl border border-[#cbd6f7] bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6" aria-labelledby="award-insights-title"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 id="award-insights-title" className="text-base font-bold text-foreground">奖卡发放概览</h2><p className="mt-1 text-xs text-muted-foreground">最近七天发卡明细与本周线上发卡分布</p></div><button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/20 transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><Award className="size-3.5" aria-hidden="true" />去发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button></div><div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(380px,1fr)]"><RecentAwardDetailList cards={recentWeekCards} classNameById={classNameById} visibleCards={recentCardsLoadMore.visible} hasMore={recentCardsLoadMore.hasMore} loaded={recentCardsLoadMore.visible.length} total={recentCardsLoadMore.total} onLoadMore={recentCardsLoadMore.loadMore} onScroll={recentCardsScroll.onScroll} /><MiniAwardPie title="本周线上发卡一级指标分布" description={`共 ${onlineWeekCards.length} 张 · 仅统计线上发卡`} cards={onlineWeekCards} /></div></section>}
   </div>
+}
+
+function RecentAwardDetailList({ cards, classNameById, visibleCards, hasMore, loaded, total, onLoadMore, onScroll }: { cards: AwardCardRecord[]; classNameById: Map<string, string>; visibleCards: AwardCardRecord[]; hasMore: boolean; loaded: number; total: number; onLoadMore: () => void; onScroll: (event: React.UIEvent<HTMLUListElement>) => void }) {
+  return <article className="min-w-0 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-4" aria-labelledby="recent-award-detail-title">
+    <div className="flex items-center justify-between gap-3"><div><h3 id="recent-award-detail-title" className="text-sm font-bold text-foreground">最近一周发卡明细</h3><p className="mt-1 text-[11px] text-muted-foreground">按发放时间倒序展示</p></div><span className="rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-semibold tabular-nums text-primary">{cards.length} 张</span></div>
+    {visibleCards.length > 0 ? <ul tabIndex={0} aria-label="最近一周发卡明细" onScroll={onScroll} className="mt-3 max-h-[360px] divide-y divide-[#edf0fa] overflow-y-auto overscroll-contain rounded-lg border border-[#e6eaf6] bg-white px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">{visibleCards.map((card) => <li key={card.id} className="flex min-w-0 items-center gap-2.5 py-2.5"><span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#fff1e9] text-brand-orange"><Award className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-foreground">{card.studentName}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{classNameById.get(card.classId) ?? "未命名班级"} · {getFiveEducationLevel1(card.level1)}</span></span><span className="shrink-0 text-right"><span className="block text-xs font-bold tabular-nums text-brand-green">+{card.points}</span><time dateTime={card.createdAt} className="mt-0.5 block text-[10px] tabular-nums text-muted-foreground">{formatAwardTime(card.createdAt)}</time></span></li>)}<li><LoadMoreFooter hasMore={hasMore} loaded={loaded} total={total} onLoadMore={onLoadMore} /></li></ul> : <div className="mt-3 rounded-lg border border-dashed border-[#d5def5] px-3 py-5 text-center text-xs text-muted-foreground">最近一周暂无发卡记录</div>}
+  </article>
 }
 
 function PeUploadProgressCard({ items, href }: { items: ScoreClassProgress[]; href: string }) {
@@ -346,69 +257,80 @@ function PeUploadProgressCard({ items, href }: { items: ScoreClassProgress[]; hr
     { key: "female" as const, label: "女生" },
   ]
 
-  return <section className="min-w-0 rounded-xl border border-[#d6e9e2] bg-[#fbfefd] p-4" aria-labelledby="pe-upload-progress-title">
+  return <section className="min-w-0 rounded-xl border border-[#dfe8e5] bg-[#fdfefe] p-5" aria-labelledby="pe-upload-progress-title">
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#e4f6ef] text-brand-green"><HeartPulse className="size-4.5" aria-hidden="true" /></span>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#edf5f2] text-[#497c69]"><HeartPulse className="size-4.5" aria-hidden="true" /></span>
         <div className="min-w-0">
           <h3 id="pe-upload-progress-title" className="text-sm font-bold text-foreground">本学期体质健康上传进度</h3>
           <p className="mt-1 truncate text-xs text-muted-foreground">{getSemesterLabel()} · 按班级查看男女生文件</p>
         </div>
       </div>
-      <Link href={href} className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2 text-xs font-bold text-brand-green transition-colors hover:bg-[#eaf8f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green/40">去上传<ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+      <Link href={href} className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2 text-xs font-bold text-[#497c69] transition-colors hover:bg-[#edf5f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#729988]/45">去上传<ArrowRight className="size-3.5" aria-hidden="true" /></Link>
     </div>
 
-    <div className="mt-4 rounded-xl border border-[#dcefe7] bg-[linear-gradient(135deg,#f0fbf6_0%,#ffffff_88%)] p-3" aria-label={`体质健康成绩已上传 ${uploadedFiles} / ${totalFiles} 份文件`}>
+    <div className="mt-5 rounded-xl border border-[#e0e9e5] bg-[linear-gradient(135deg,#f6faf8_0%,#ffffff_88%)] p-3.5" aria-label={`体质健康成绩已上传 ${uploadedFiles} / ${totalFiles} 份文件`}>
       <div className="flex items-end justify-between gap-3">
         <div className="flex items-baseline gap-1.5"><span className="text-2xl font-bold tabular-nums text-foreground">{uploadedFiles}</span><span className="text-xs text-muted-foreground">/ {totalFiles} 份文件已上传</span></div>
-        <span className="text-sm font-bold tabular-nums text-brand-green">{percentage}%</span>
+        <span className="text-sm font-bold tabular-nums text-[#497c69]">{percentage}%</span>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#dfeee8]" role="progressbar" aria-label="本学期体质健康总体上传进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage}>
-        <div className="h-full rounded-full bg-brand-green transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${percentage}%` }} />
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#e5eee9]" role="progressbar" aria-label="本学期体质健康总体上传进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage}>
+        <div className="h-full rounded-full bg-[#92b7a7] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${percentage}%` }} />
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">每个班级需上传男生、女生各 1 份成绩文件</p>
     </div>
 
-    <div className="mt-4 grid gap-2.5 sm:grid-cols-2" aria-label="各班级体质健康成绩上传情况">
+    {items.length === 0 ? <div className="mt-5 flex min-h-24 items-center justify-center rounded-xl border border-dashed border-[#d7e4de] bg-[#fafdfb] px-4 text-center text-sm text-muted-foreground">暂无可上传的班级</div> : <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-label="班级体质健康成绩录入情况">
       {items.map((item) => {
         const uploaded = item.completedFiles ?? 0
-        const complete = uploaded === (item.totalFiles ?? 2)
-        return <article key={item.id} className="rounded-xl border border-[#e1eee9] bg-white p-3 transition-colors hover:border-[#abd9c7]">
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="min-w-0 truncate text-sm font-bold text-foreground">{item.name}</h4>
-            <span className="flex shrink-0 items-center gap-1.5">
-              <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">{uploaded} / {item.totalFiles ?? 2}</span>
-              <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", complete ? "bg-[#eaf8f1] text-brand-green" : uploaded > 0 ? "bg-[#fff4e5] text-brand-orange" : "bg-[#f1f3f8] text-muted-foreground")}>
-                {complete ? "已完成" : uploaded > 0 ? "部分上传" : "待上传"}
-              </span>
-            </span>
+        const total = item.totalFiles ?? 2
+        const completed = uploaded === total
+        return <Link
+          key={item.id}
+          href={href}
+          aria-label={`${item.name}体质健康成绩，${completed ? "已录入" : "未录入"}，点击进入录入页面`}
+          className={cn(
+            "group flex min-w-0 flex-col gap-3 rounded-xl border px-3.5 py-3 transition-[border-color,background-color,box-shadow] hover:shadow-[0_10px_20px_-18px_rgba(73,124,105,0.72)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#729988]/45",
+            completed ? "border-[#bfe6d1] bg-[#f8fffb] hover:border-[#8fc8a9]" : "border-[#eadfcf] bg-[#fffdf8] hover:border-[#d5bc91]",
+          )}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className="truncate text-sm font-bold text-foreground">{item.name}</h4>
+              <p className="mt-1 text-[11px] text-muted-foreground">{item.studentCount} 名学生 · {uploaded}/{total} 份文件</p>
+            </div>
+            <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold", completed ? "bg-[#eaf8f1] text-[#397463]" : "bg-[#fff1e1] text-[#9b6b32]")}>{completed ? "已录入" : "未录入"}</span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2" role="group" aria-label={`${item.name} 男女生文件上传情况`}>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label={`${item.name}男女生成绩录入情况`}>
             {genderFiles.map((file) => {
               const isUploaded = item.uploadedGenders?.[file.key] ?? false
-              return <div key={file.key} className={cn("flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs", isUploaded ? "bg-[#f1fbf6] text-brand-green" : "bg-[#f7f8fb] text-muted-foreground")} aria-label={`${item.name}${file.label}${isUploaded ? "已上传" : "待上传"}`}>
-                {isUploaded ? <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" /> : <Circle className="size-3.5 shrink-0" aria-hidden="true" />}
-                <span>{file.label}</span><span className="ml-auto text-[11px]">{isUploaded ? "已上传" : "待上传"}</span>
+              const isMale = file.key === "male"
+              return <div
+                key={file.key}
+                className={cn(
+                  "flex min-h-[58px] items-center justify-between gap-2 rounded-lg border px-2.5 py-2",
+                  isMale
+                    ? isUploaded ? "border-[#c9d6fb] bg-[#f1f5ff] text-[#536db9]" : "border-[#dbe3f7] bg-[#f8faff] text-[#7a86aa]"
+                    : isUploaded ? "border-[#f1cbd4] bg-[#fff1f4] text-[#a65c71]" : "border-[#f4dce2] bg-[#fff9fa] text-[#b37c8a]",
+                )}
+                aria-label={`${item.name}${file.label}${isUploaded ? "已录入" : "未录入"}`}
+              >
+                <span className="text-xs font-semibold">{file.label}</span>
+                <span className="flex items-center gap-1 text-[11px] font-semibold" aria-label={isUploaded ? "已录入" : "未录入"}>
+                  {isUploaded ? <CheckCircle2 className="size-4" aria-hidden="true" /> : <Circle className="size-4" aria-hidden="true" />}
+                  <span className="sr-only">{isUploaded ? "已录入" : "未录入"}</span>
+                </span>
               </div>
             })}
           </div>
-        </article>
+        </Link>
       })}
-    </div>
+    </div>}
   </section>
 }
 
-function TodoSummary({ icon: Icon, tone, title, value, description, href }: { icon: typeof Upload; tone: "green" | "purple" | "blue"; title: string; value: string; description: string; href: string }) {
+function TodoSummary({ icon: Icon, tone, title, completed, total, unit, href }: { icon: typeof Upload; tone: "green" | "purple" | "blue"; title: string; completed: number; total: number; unit: string; href: string }) {
   const toneClass = tone === "green" ? "bg-[#eaf8f1] text-brand-green" : tone === "purple" ? "bg-[#f2f0ff] text-[#7166b3]" : "bg-primary/10 text-primary"
-  return <Link href={href} className="group flex min-h-11 min-w-0 items-center gap-2.5 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] px-3 py-2 transition-colors hover:border-primary/35 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", toneClass)}><Icon className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="flex min-w-0 items-center gap-2"><span className="truncate text-xs font-semibold text-foreground">{title}</span><span className="shrink-0 text-xs font-bold tabular-nums text-primary">{value}</span></span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{description}</span></span><ArrowRight className="size-3.5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-hover:translate-x-0.5" aria-hidden="true" /></Link>
-}
-
-function ProgressSummary({ icon: Icon, tone, title, completed, total, href }: { icon: typeof Upload; tone: "green" | "purple"; title: string; completed: number; total: number; href: string }) {
-  const percentage = total ? Math.round((completed / total) * 100) : 0
-  return <Link href={href} className="group min-w-0 rounded-xl border border-[#e5e9f6] bg-[#fbfcff] p-3 transition-colors hover:border-primary/30 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><div className="flex items-center gap-2"><span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg", tone === "green" ? "bg-[#eaf8f1] text-brand-green" : "bg-[#f2f0ff] text-[#7166b3]")}><Icon className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1 truncate text-xs font-semibold text-muted-foreground">{title}</span><ArrowRight className="size-3.5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-hover:translate-x-0.5" aria-hidden="true" /></div><div className="mt-2 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#e7ebf8]"><div className={cn("h-full rounded-full transition-[width] duration-300", tone === "green" ? "bg-brand-green" : "bg-[#7166b3]")} style={{ width: `${percentage}%` }} /></div><span className="w-10 text-right text-xs font-bold tabular-nums text-foreground">{percentage}%</span></div><p className="mt-1 text-[11px] text-muted-foreground">已完成 {completed} / {total}</p></Link>
-}
-
-function TaskProgressCard({ title, description, icon: Icon, tone, completed, total, unit, items, action }: { title: string; description: string; icon: typeof Upload; tone: "green" | "purple"; completed: number; total: number; unit: string; items: Array<{ id: string; name: string; status: ProgressStatus; meta: string }>; action?: React.ReactNode }) {
-  const toneClass = tone === "green" ? "bg-[#eaf8f1] text-brand-green" : "bg-[#f2f0ff] text-[#7166b3]"
-  return <section className={cn("flex h-[330px] min-h-0 flex-col rounded-2xl border border-[#cbd6f7] border-t-2 bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6", tone === "green" ? "border-t-brand-green" : "border-t-[#7166b3]")} aria-label={title}><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", toneClass)}><Icon className="size-5" aria-hidden="true" /></span><div className="min-w-0"><h2 className="text-base font-bold text-foreground">{title}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{description}</p></div></div>{action}</div><div className="mt-4"><div className="mb-2 flex items-baseline justify-between gap-3"><span className="text-xs text-muted-foreground">已完成 <strong className="font-bold tabular-nums text-foreground">{completed}</strong> / {total} {unit}</span><span className={cn("text-xs font-bold tabular-nums", tone === "green" ? "text-brand-green" : "text-[#7166b3]")}>{total ? Math.round((completed / total) * 100) : 0}%</span></div><ProgressBar value={completed} total={total} tone={tone === "green" ? "green" : "purple"} /></div><ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">{items.map((item) => <li key={item.id} className="flex items-center gap-2.5 rounded-xl border border-[#e5e9f6] bg-[#fbfcff] px-3 py-2.5"><span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", item.status === "已提交" ? "bg-[#eaf8f1] text-brand-green" : "bg-[#fff4e5] text-brand-orange")}>{item.status === "已提交" ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <Circle className="size-3.5" aria-hidden="true" />}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{item.name}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{item.meta}</span></span><span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold", statusStyle(item.status))}>{statusLabel(item.status, title.includes("成绩") ? "score" : "comment")}</span></li>)}</ul></section>
+  const percentage = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0
+  return <Link href={href} className="group flex min-h-[112px] min-w-0 flex-col justify-between rounded-xl border border-[#e1e6f5] bg-[#fbfcff] px-4 py-3.5 transition-colors hover:border-primary/35 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><div className="flex items-center gap-3"><span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", toneClass)}><Icon className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{title}</span><span className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-primary/15 bg-white px-2 text-[11px] font-bold text-primary">去填写<ArrowRight className="size-3" aria-hidden="true" /></span></div><div className="mt-3"><div className="flex items-center justify-between gap-2 text-[11px]"><span className="text-muted-foreground">已完成 <strong className="font-bold tabular-nums text-foreground">{completed}</strong> / {total} {unit}</span><span className="font-bold tabular-nums text-primary">{percentage}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e7ebf8]" role="progressbar" aria-label={`${title}完成进度`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage}><div className={cn("h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none", tone === "green" ? "bg-brand-green" : tone === "purple" ? "bg-[#8d7bc7]" : "bg-primary")} style={{ width: `${percentage}%` }} /></div></div></Link>
 }

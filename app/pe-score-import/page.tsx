@@ -194,9 +194,7 @@ function PeScoreImportPage() {
           </p>
         </button>
         <div className="flex items-center justify-between gap-1 text-[11px] text-muted-foreground">
-          <span className="min-w-0 truncate">
-            {upload.uploaderName} · {formatTime(upload.uploadedAt)}
-          </span>
+          <time className="min-w-0 truncate" dateTime={upload.uploadedAt}>{formatTime(upload.uploadedAt)}</time>
           <span className="flex shrink-0 items-center gap-1">
             <button
               type="button"

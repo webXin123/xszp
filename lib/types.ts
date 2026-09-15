@@ -1,8 +1,8 @@
 export type TeacherRole = "homeroom" | "subject" | "moral_director" | "director" | "pe_teacher"
 
-export type Segment = "小学部" | "初中部"
+export type Segment = "小学部"
 
-export type Campus = "屹力校区" | "屹力校区"
+export type Campus = "上海市浦东新区实验小学"
 
 /** 当前登录身份：教师或家长。家长身份用于查看自己孩子的积分/奖卡/荣誉/活动（只读）。 */
 export type UserKind = "teacher" | "parent"
@@ -45,6 +45,10 @@ export interface Teacher {
   viewGradeIds: string[]
   /** Class ids this teacher manages for PE score import (体质健康成绩导入) */
   peTeacherClassIds?: string[]
+  /** Subjects configured for this teacher's academic-score uploads. */
+  teachingSubjects?: string[]
+  /** Classes configured for this teacher's academic-score uploads. */
+  teachingClassIds?: string[]
 }
 
 export interface Grade {

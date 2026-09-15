@@ -6,15 +6,15 @@ import { PE_CLASS_IDS } from "./pe-scores"
  * 校区 / 学段 / 年级 / 班级
  * ------------------------------------------------------------------ */
 
-export const CAMPUSES = ["屹力校区", "屹力校区"] as const
-export const SEGMENTS = ["小学部", "初中部"] as const
+export const CAMPUSES = ["上海市浦东新区实验小学"] as const
+export const SEGMENTS = ["小学部"] as const
 
 export const GRADES: Grade[] = [
-  { id: "grade-5", name: "五年级", segment: "小学部", campus: "屹力校区", order: 1 },
-  { id: "grade-6", name: "六年级", segment: "小学部", campus: "屹力校区", order: 2 },
-  { id: "grade-7", name: "七年级", segment: "初中部", campus: "屹力校区", order: 3 },
-  { id: "grade-8", name: "八年级", segment: "初中部", campus: "屹力校区", order: 4 },
-  { id: "grade-mz-4", name: "四年级", segment: "小学部", campus: "屹力校区", order: 5 },
+  { id: "grade-5", name: "一年级", segment: "小学部", campus: "上海市浦东新区实验小学", order: 1 },
+  { id: "grade-6", name: "二年级", segment: "小学部", campus: "上海市浦东新区实验小学", order: 2 },
+  { id: "grade-7", name: "三年级", segment: "小学部", campus: "上海市浦东新区实验小学", order: 3 },
+  { id: "grade-8", name: "四年级", segment: "小学部", campus: "上海市浦东新区实验小学", order: 4 },
+  { id: "grade-mz-4", name: "五年级", segment: "小学部", campus: "上海市浦东新区实验小学", order: 5 },
 ]
 
 interface ClassSeed {
@@ -134,7 +134,7 @@ export function pickStudentNames(classId: string, seed: string, count: number): 
  * 教师与权限
  * ------------------------------------------------------------------ */
 
-const GRADE_6_CLASSES = CLASSES.filter((c) => c.gradeId === "grade-6").map((c) => c.id)
+const GRADE_2_CLASSES = CLASSES.filter((c) => c.gradeId === "grade-6").map((c) => c.id)
 const ALL_CLASS_IDS = CLASSES.map((c) => c.id)
 const ALL_GRADE_IDS = GRADES.map((g) => g.id)
 
@@ -154,7 +154,7 @@ export const TEACHERS: Teacher[] = [
     name: "锦言",
     avatar: "",
     role: "homeroom",
-    title: "六年级01班 班主任",
+    title: "二年级01班 班主任",
     scoringClassIds: ["class-6-1"],
     awardClassIds: ["class-6-1"],
     viewGradeIds: ["grade-6"],
@@ -165,10 +165,24 @@ export const TEACHERS: Teacher[] = [
     name: "刘敏",
     avatar: "",
     role: "subject",
-    title: "六年级 语文任课教师",
+    title: "二年级 语文任课教师",
     scoringClassIds: [],
     awardClassIds: ["class-6-1"],
     viewGradeIds: ["grade-6"],
+    teachingSubjects: ["语文"],
+    teachingClassIds: ["class-6-1", "class-6-2"],
+  },
+  {
+    id: "teacher-sun",
+    name: "孙悦",
+    avatar: "",
+    role: "subject",
+    title: "一年级 道德与法治任课教师",
+    scoringClassIds: [],
+    awardClassIds: ["class-5-1", "class-5-2"],
+    viewGradeIds: ["grade-5"],
+    teachingSubjects: ["道德与法治"],
+    teachingClassIds: ["class-5-1", "class-5-2"],
   },
   /* ---------------------------------- 体育教师 ---------------------------------- */
   {
@@ -180,6 +194,8 @@ export const TEACHERS: Teacher[] = [
     scoringClassIds: [],
     awardClassIds: ["class-6-2", "class-6-3"],
     viewGradeIds: ["grade-6"],
+    teachingSubjects: ["体育与健身"],
+    teachingClassIds: ["class-6-2", "class-6-3"],
     // 负责 1-5 年级体质健康成绩导入
     peTeacherClassIds: PE_CLASS_IDS,
   },
@@ -189,9 +205,9 @@ export const TEACHERS: Teacher[] = [
     name: "陈明",
     avatar: "",
     role: "moral_director",
-    title: "六年级 德育主任",
-    scoringClassIds: GRADE_6_CLASSES,
-    awardClassIds: GRADE_6_CLASSES,
+    title: "二年级 德育主任",
+    scoringClassIds: GRADE_2_CLASSES,
+    awardClassIds: GRADE_2_CLASSES,
     viewGradeIds: ["grade-6"],
   },
   /* ---------------------------------- 管理员 ---------------------------------- */

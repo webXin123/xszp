@@ -5,12 +5,19 @@ import type { StudentSemesterReportProps } from "./student-semester-report"
 
 export function getReportFitnessMetrics(studentId: string): StudentSemesterReportProps["fitnessMetrics"] {
   const code = studentId.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  const height = 128 + (code % 25)
+  const weight = 28 + (code % 16)
   return {
-    height: 128 + (code % 25),
-    weight: 28 + (code % 16),
+    height,
+    weight,
     run: (8.8 + (code % 12) / 10).toFixed(1),
     rope: 112 + (code % 36),
     level: code % 4 === 0 ? "优秀" : "良好",
+    score: Math.max(80, Math.min(98, 82 + (height % 14))),
+    vitalCapacity: height * 25,
+    sitAndReach: (weight / 2).toFixed(1),
+    standingLongJump: 142 + (code % 36),
+    vision: "5.0",
   }
 }
 

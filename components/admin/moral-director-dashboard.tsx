@@ -114,6 +114,10 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
     () => awardCards.filter((award) => award.source === "online" && teacherIds.has(award.operatorId)),
     [awardCards, teacherIds],
   )
+  const issuedAwardCards = useMemo(
+    () => awardCards.filter((award) => award.source === "online" || award.source === "offline_scan"),
+    [awardCards],
+  )
   const [awardRange, setAwardRange] = useState<TimeRange>("week")
   const [teacherAwardRange, setTeacherAwardRange] = useState<TimeRange>("week")
   const [classScoreRange, setClassScoreRange] = useState<TimeRange>("week")
@@ -124,13 +128,13 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
     const range = getTimeRange(awardRange, now)
     const counts = new Map<string, number>()
     for (const level1 of AWARD_LEVEL1_LIST) counts.set(level1, 0)
-    for (const award of onlineTeacherAwards) {
+    for (const award of issuedAwardCards) {
       if (!inRange(award.date, range.start, range.end)) continue
       const level1 = getFiveEducationLevel1(award.level1)
       counts.set(level1, (counts.get(level1) ?? 0) + 1)
     }
     return AWARD_LEVEL1_LIST.map((level1) => ({ level1, points: counts.get(level1) ?? 0 }))
-  }, [awardRange, now, onlineTeacherAwards])
+  }, [awardRange, issuedAwardCards, now])
   const awardTotal = useMemo(() => awardPieData.reduce((total, item) => total + item.points, 0), [awardPieData])
 
   const teacherAwardFrequency = useMemo(() => {
@@ -216,15 +220,12 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff0e9] text-brand-orange"><ChartNoAxesCombined className="size-5" aria-hidden="true" /></span>
-              <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><h3 id="class-score-title" className="text-base font-bold text-foreground">班级总分走势</h3><TimeRangeControl value={classScoreRange} onChange={setClassScoreRange} label="班级总分统计周期" className={styles.titleRangeControl} /></div><p className="mt-1 text-xs text-muted-foreground">以 100 分为基准，累计当前统计期加扣分</p></div>
+              <div className="min-w-0"><h3 id="class-score-title" className="text-base font-bold text-foreground">班级总分走势</h3><p className="mt-1 text-xs text-muted-foreground">以 100 分为基准，累计当前统计期加扣分</p></div>
             </div>
-            <Select value={gradeFilterLabel} onValueChange={(value) => setGradeFilter(value === "全部年级" ? "all" : grades.find((grade) => grade.name === value)?.id ?? "all")}>
+            <div className={styles.panelActions}><TimeRangeControl value={classScoreRange} onChange={setClassScoreRange} label="班级总分统计周期" className={cn(styles.titleRangeControl, styles.rangeToneScore)} /><Select value={gradeFilterLabel} onValueChange={(value) => setGradeFilter(value === "全部年级" ? "all" : grades.find((grade) => grade.name === value)?.id ?? "all")}>
               <SelectTrigger aria-label="筛选班级总分年级" className="w-28 bg-white text-xs font-semibold"><SelectValue placeholder="全部年级" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="全部年级">全部年级</SelectItem>
-                {grades.map((grade) => <SelectItem key={grade.id} value={grade.name}>{grade.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+              <SelectContent><SelectItem value="全部年级">全部年级</SelectItem>{grades.map((grade) => <SelectItem key={grade.id} value={grade.name}>{grade.name}</SelectItem>)}</SelectContent>
+            </Select></div>
           </div>
           <div className="mt-3 min-h-0 flex-1"><EChart className={styles.chart} option={classScoreOption} ariaLabel={`${TIME_RANGE_LABEL[classScoreRange]}班级总分走势：${classScoreData.map((item) => `${item.name}${item.score}分`).join("、")}`} /></div>
         </section>
@@ -237,13 +238,13 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
 
       <div className={styles.secondaryGrid}>
         <section className={cn(styles.panel, styles.awardPanel)} aria-labelledby="award-count-title">
-          <div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e7f7ef] text-[#21845b]"><PieChart className="size-5" aria-hidden="true" /></span><div className="min-w-0"><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><h3 id="award-count-title" className="text-base font-bold text-foreground">奖卡发放数量</h3><TimeRangeControl value={awardRange} onChange={setAwardRange} label="奖卡发放数量统计周期" className={styles.titleRangeControl} /></div><p className="mt-1 text-xs text-muted-foreground">全校教师线上发放 · 按五育指标分布</p></div></div>
+          <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e7f7ef] text-[#21845b]"><PieChart className="size-5" aria-hidden="true" /></span><div className="min-w-0"><h3 id="award-count-title" className="text-base font-bold text-foreground">奖卡发放数量</h3><p className="mt-1 text-xs text-muted-foreground">线上、线下发放 · 按五育指标分布</p></div></div><TimeRangeControl value={awardRange} onChange={setAwardRange} label="奖卡发放数量统计周期" className={cn(styles.titleRangeControl, styles.rangeToneAward)} /></div>
           <div className="mt-3 min-h-0 flex-1"><EChart className={styles.chart} option={awardPieOption} ariaLabel={`${TIME_RANGE_LABEL[awardRange]}奖卡发放数量分布：${awardPieData.map((item) => `${item.level1}${item.points}张`).join("、")}`} /></div>
-          <p className="mt-1 text-[11px] text-muted-foreground">共 {awardTotal} 张线上奖卡，不含线下扫码与流动红旗奖励。</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">共 {awardTotal} 张奖卡，不含流动红旗奖励。</p>
         </section>
 
         <section className={cn(styles.panel, styles.feedPanel)} aria-labelledby="teacher-award-frequency-title">
-          <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#edf1ff] text-primary"><UsersRound className="size-5" aria-hidden="true" /></span><div className="min-w-0"><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><h3 id="teacher-award-frequency-title" className="text-base font-bold text-foreground">全校教师发卡频次</h3><TimeRangeControl value={teacherAwardRange} onChange={setTeacherAwardRange} label="教师发卡频次统计周期" className={styles.titleRangeControl} /></div><p className="mt-1 text-xs text-muted-foreground">{TIME_RANGE_LABEL[teacherAwardRange]} · {teachers.length} 位教师线上发卡统计</p></div></div><button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button></div>
+          <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#edf1ff] text-primary"><UsersRound className="size-5" aria-hidden="true" /></span><div className="min-w-0"><h3 id="teacher-award-frequency-title" className="text-base font-bold text-foreground">全校教师发卡频次</h3><p className="mt-1 text-xs text-muted-foreground">{TIME_RANGE_LABEL[teacherAwardRange]} · {teachers.length} 位教师线上发卡统计</p></div></div><div className={styles.panelActions}><TimeRangeControl value={teacherAwardRange} onChange={setTeacherAwardRange} label="教师发卡频次统计周期" className={cn(styles.titleRangeControl, styles.rangeToneTeacher)} /><button type="button" onClick={() => onNavigate("award")} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看发卡<ArrowRight className="size-3.5" aria-hidden="true" /></button></div></div>
           <div className="mt-3 min-h-0 flex-1"><EChart className={styles.chart} option={teacherAwardOption} ariaLabel={`${TIME_RANGE_LABEL[teacherAwardRange]}全校教师发卡频次：${teacherAwardFrequency.map((item) => `${item.name}${item.count}张`).join("、")}`} /></div>
         </section>
       </div>

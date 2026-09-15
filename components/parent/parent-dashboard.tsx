@@ -20,12 +20,10 @@ import {
   Upload,
   Users,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -34,8 +32,6 @@ import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more"
 import { LoadMoreFooter } from "@/components/ui/load-more"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { AWARD_LEVEL1_LIST, getAwardIndicator } from "@/lib/award-utils"
-import { getAcademicScores, ACADEMIC_SUBJECTS } from "@/lib/academic-scores"
-import { getSemesterLabel } from "@/lib/pe-scores"
 import { buildPointEntries, getSemesterRange, inRange } from "@/lib/points-utils"
 import { ACTIVITY_STATUS_META, canSubmit, isEnrolling, requiresActivityEnrollment } from "@/lib/activity-utils"
 import styles from "../role-home.module.css"
@@ -45,6 +41,8 @@ import { SemesterGrowthChart } from "./semester-growth-chart"
 import { ParentActivityDetailDialog } from "./parent-activity-detail-dialog"
 import { ScanFab } from "./scan-fab"
 import { StudentSemesterReportDrawer } from "./student-semester-report-drawer"
+import { StudentHistoryDrawer } from "./student-history-drawer"
+import { getHistoricalFiveEducation, getStudentAcademicHistory, getStudentFitnessHistory, getStudentSemesterOptions } from "@/lib/student-semester-history"
 import { ParentHonorUploadDrawer } from "./parent-honor-upload-drawer"
 
 const HONOR_LEVEL_LABEL: Record<string, string> = {
@@ -144,7 +142,8 @@ export function ParentDashboard() {
   const clazz = useMemo(() => classes.find((item) => item.id === currentChild?.classId) ?? null, [classes, currentChild])
   const gradeName = grades.find((item) => item.id === currentChild?.gradeId)?.name ?? ""
   const semester = useMemo(() => getSemesterRange(new Date()), [])
-  const semesterLabel = getSemesterLabel(new Date())
+  const semesterOptions = useMemo(() => getStudentSemesterOptions(new Date()), [])
+  const semesterLabel = semesterOptions[0]?.label ?? "本学期"
 
   const allPointEntries = useMemo(() => buildPointEntries(awardCards, honors), [awardCards, honors])
   const semesterEntries = useMemo(() => allPointEntries.filter((item) => inRange(item.date, semester.start, semester.end)), [allPointEntries, semester])
@@ -232,12 +231,53 @@ export function ParentDashboard() {
       { label: "本学期", value: current },
     ]
   }, [semesterEarned])
-  const academicScores = useMemo(() => student ? getAcademicScores(student, ACADEMIC_SUBJECTS) : [], [student])
-  const fitnessMetrics = useMemo(() => {
-    const code = studentId.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0)
-    return { height: 128 + (code % 25), weight: 28 + (code % 16), run: (8.8 + (code % 12) / 10).toFixed(1), rope: 112 + (code % 36), level: code % 4 === 0 ? "优秀" : "良好" }
-  }, [studentId])
-
+  const academicHistory = useMemo(
+    () => student ? getStudentAcademicHistory(student, semesterOptions) : [],
+    [semesterOptions, student],
+  )
+  const fitnessHistory = useMemo(
+    () => getStudentFitnessHistory(studentId, semesterOptions),
+    [semesterOptions, studentId],
+  )
+  const academicScores = academicHistory[0]?.scores ?? []
+  const fitnessMetrics = fitnessHistory[0]?.metrics ?? {
+    height: 0,
+    weight: 0,
+    run: "0.0",
+    rope: 0,
+    level: "暂无",
+    score: 0,
+    vitalCapacity: 0,
+    sitAndReach: "0.0",
+    standingLongJump: 0,
+    vision: "-",
+  }
+  const reportData = useMemo(() => {
+    if (!student || !currentChild) return []
+    return semesterOptions.map((option, index) => {
+      const fiveEducation = index === 0 ? childSemByLevel1 : getHistoricalFiveEducation(studentId, option.key)
+      const optionHonors = honors
+        .filter((item) => item.studentId === studentId && inRange(item.awardDate, option.start, option.end))
+        .sort((a, b) => b.awardDate.localeCompare(a.awardDate))
+      const optionActivities = visibleActivities
+        .filter((item) => inRange(item.startDate, option.start, option.end))
+        .sort((a, b) => b.startDate.localeCompare(a.startDate))
+      return {
+        semesterLabel: option.label,
+        student: { name: currentChild.name, gender: student.gender, studentNo: student.studentNo },
+        className: clazz?.name ?? currentChild.className,
+        gradeName,
+        homeroomTeacher: clazz?.homeroomTeacher ?? "班主任老师",
+        semesterPoints: fiveEducation.reduce((total, value) => total + value, 0),
+        totalPoints: totalEarned,
+        fiveEducation,
+        academicScores: academicHistory[index]?.scores ?? academicScores,
+        fitnessMetrics: fitnessHistory[index]?.metrics ?? fitnessMetrics,
+        honors: optionHonors,
+        activities: optionActivities,
+      }
+    })
+  }, [academicHistory, academicScores, childSemByLevel1, clazz, currentChild, fitnessHistory, fitnessMetrics, gradeName, honors, semesterOptions, student, studentId, totalEarned, visibleActivities])
   if (!parentUser || !currentChild || !student) return null
 
   const circumference = 2 * Math.PI * 44
@@ -302,20 +342,8 @@ export function ParentDashboard() {
       <StudentSemesterReportDrawer
         open={reportDrawerOpen}
         onOpenChange={setReportDrawerOpen}
-        semesterLabel={semesterLabel}
-        student={{ name: currentChild.name, gender: student.gender, studentNo: student.studentNo }}
-        className={clazz?.name ?? currentChild.className}
-        gradeName={gradeName}
-        homeroomTeacher={clazz?.homeroomTeacher ?? "班主任老师"}
-        semesterPoints={semesterEarned}
-        totalPoints={totalEarned}
-        fiveEducation={childSemByLevel1}
-        academicScores={academicScores}
-        fitnessMetrics={fitnessMetrics}
-        honors={semesterHonors}
-        activities={semesterActivities}
+        reports={reportData}
       />
-
       <Dialog open={studentPickerOpen} onOpenChange={setStudentPickerOpen}>
         <DialogContent className="glass-surface sm:max-w-md">
           <DialogHeader><DialogTitle>切换学生</DialogTitle><DialogDescription>选择要查看成长记录的学生</DialogDescription></DialogHeader>
@@ -325,15 +353,22 @@ export function ParentDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!quickPanel} onOpenChange={(open) => !open && setQuickPanel(null)}>
-        <DialogContent className="glass-surface sm:max-w-lg">
-          <DialogHeader><DialogTitle>{quickPanel === "academic" ? "学科成绩" : "体质健康"}</DialogTitle><DialogDescription>{currentChild.name} · {semesterLabel}</DialogDescription></DialogHeader>
-          {quickPanel === "academic" && <div className="overflow-hidden rounded-xl border border-[#dce3f8]"><table className="w-full text-sm"><caption className="sr-only">{currentChild.name}本学期各科成绩</caption><thead className="bg-primary/[0.06] text-xs text-muted-foreground"><tr><th className="px-3 py-2 text-left font-semibold">科目</th><th className="px-3 py-2 text-right font-semibold">成绩</th><th className="px-3 py-2 text-right font-semibold">等级</th></tr></thead><tbody>{academicScores.map((score) => <tr key={score.subject} className="border-t border-[#e5e9f9]"><th className="px-3 py-2.5 text-left font-medium text-foreground">{score.subject}</th><td className="px-3 py-2.5 text-right font-bold tabular-nums text-foreground">{score.score}</td><td className="px-3 py-2.5 text-right text-xs font-semibold text-primary">{score.level}</td></tr>)}</tbody></table></div>}
-          {quickPanel === "fitness" && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><InfoTile label="身高" value={`${fitnessMetrics.height} cm`} /><InfoTile label="体重" value={`${fitnessMetrics.weight} kg`} /><InfoTile label="50米跑" value={`${fitnessMetrics.run} 秒`} /><InfoTile label="综合等级" value={fitnessMetrics.level} tone="green" /></div>}
-          <DialogFooter><Button type="button" variant="outline" onClick={() => setQuickPanel(null)}>关闭</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      <StudentHistoryDrawer
+        open={quickPanel === "academic"}
+        onOpenChange={(open) => !open && setQuickPanel(null)}
+        kind="academic"
+        studentName={currentChild.name}
+        academicHistory={academicHistory}
+        fitnessHistory={fitnessHistory}
+      />
+      <StudentHistoryDrawer
+        open={quickPanel === "fitness"}
+        onOpenChange={(open) => !open && setQuickPanel(null)}
+        kind="fitness"
+        studentName={currentChild.name}
+        academicHistory={academicHistory}
+        fitnessHistory={fitnessHistory}
+      />    </div>
   )
 }
 

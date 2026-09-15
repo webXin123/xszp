@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ChevronRight,
+  Circle,
   FileSpreadsheet,
   HeartPulse,
   Plus,
@@ -30,6 +31,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { buildPePreviewRows, PE_CLASSES, PE_CLASS_IDS, getSemesterLabel, type PeScoreUpload } from "@/lib/pe-scores"
 import { useEvaluation } from "@/lib/evaluation-context"
+import { getAcademicSubjectsForGradeOrder } from "@/lib/academic-scores"
+import { CLASSES, TEACHERS } from "@/lib/mock-data"
 import type { Grade } from "@/lib/types"
 
 type EntryMethod = "teacher" | "automatic"
@@ -75,7 +78,6 @@ interface ScoreEntryTask {
   semester: string
   scoreName: string
   gradeIds: string[]
-  subjects: string[]
   startAt: string
   endAt: string
   method: EntryMethod
@@ -88,8 +90,6 @@ interface ScoreEntryTask {
   conversionRules: ConversionRule[]
   progress: TeacherEntryProgress[]
 }
-
-const SUBJECTS = ["语文", "数学", "英语", "科学", "道德与法治", "体育"]
 
 const SCORE_NAME_OPTIONS: { code: ScoreName; value: string }[] = [
   { code: "daily", value: "平时成绩" },
@@ -114,7 +114,7 @@ const DEFAULT_RANK_CONVERSION: ConversionRule[] = [
   { label: "良好", rangeStart: "21", rangeEnd: "50" },
 ]
 
-const SCORE_ENTRY_TASKS_KEY = "mzlg-score-entry-tasks-v1"
+const SCORE_ENTRY_TASKS_KEY = "mzlg-score-entry-tasks-v2"
 const PE_SCORE_TASK_KEY = "mzlg-pe-score-task-v1"
 
 function localDate(offset: number) {
@@ -164,20 +164,21 @@ function taskStatus(task: ScoreEntryTask) {
   return { label: "未开始", className: "bg-[#eef2ff] text-primary" }
 }
 
-function buildProgress(taskId: string, scoreName: string, gradeNames: string[], subjects: string[]) {
-  const teachers = ["刘敏", "张哲", "王晨", "孙悦", "钱进", "周岚"]
-  return subjects.flatMap((subject, subjectIndex) => gradeNames.map((gradeName, gradeIndex) => {
-    const index = subjectIndex * gradeNames.length + gradeIndex
+function buildProgress(taskId: string, scoreName: string, selectedGrades: Grade[]) {
+  return selectedGrades.flatMap((grade) => getAcademicSubjectsForGradeOrder(grade.order).map((subject, subjectIndex) => {
+    const index = grade.order * 10 + subjectIndex
     const submitted = index === 0 || index === 3
     const editing = !submitted && index % 3 === 1
+    const teacher = TEACHERS.find((item) => item.teachingSubjects?.includes(subject.name) && item.teachingClassIds?.some((classId) => CLASSES.some((schoolClass) => schoolClass.id === classId && schoolClass.gradeId === grade.id)))
+    const classNames = CLASSES.filter((schoolClass) => schoolClass.gradeId === grade.id && teacher?.teachingClassIds?.includes(schoolClass.id)).map((schoolClass) => schoolClass.name)
     return {
-      id: `${taskId}-${subjectIndex}-${gradeIndex}`,
-      teacher: teachers[subjectIndex % teachers.length],
-      subject,
-      gradeName,
-      classNames: `${gradeName}01班、${gradeName}02班`,
+      id: `${taskId}-${grade.id}-${subject.id}`,
+      teacher: teacher?.name ?? "待配置",
+      subject: subject.name,
+      gradeName: grade.name,
+      classNames: classNames.length > 0 ? classNames.join("、") : `${grade.name}任课班级`,
       status: submitted ? "已提交" : editing ? "录入中" : "未开始",
-      fileName: submitted ? `${gradeName}${subject}${scoreName}.xlsx` : undefined,
+      fileName: submitted ? `${grade.name}${subject.name}${scoreName}.xlsx` : undefined,
       uploadedAt: submitted ? "2026-09-08 15:30" : undefined,
       rows: submitted ? 86 + index : undefined,
     } satisfies TeacherEntryProgress
@@ -191,7 +192,6 @@ function createSeedTask(grades: Grade[]): ScoreEntryTask {
     semester: getSemesterLabel(),
     scoreName: "期中成绩",
     gradeIds: targetGrades.map((item) => item.id),
-    subjects: ["语文", "数学", "英语"],
     startAt: localDateTime(-2, 8),
     endAt: localDateTime(5, 18),
     method: "teacher",
@@ -200,7 +200,7 @@ function createSeedTask(grades: Grade[]): ScoreEntryTask {
     calculationItems: [],
     convertResult: false,
     conversionRules: [],
-    progress: buildProgress("score-task-seed", "期中成绩", targetGrades.map((item) => item.name), ["语文", "数学", "英语"]),
+    progress: buildProgress("score-task-seed", "期中成绩", targetGrades),
   }
 }
 
@@ -214,7 +214,6 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
   const [scoreName, setScoreName] = useState<ScoreName>("daily")
   const [otherScoreName, setOtherScoreName] = useState("")
   const [selectedGradeIds, setSelectedGradeIds] = useState<string[]>(grades.slice(-2).map((item) => item.id))
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(["语文", "数学"])
   const [startAt, setStartAt] = useState(localDateTime(0, 8))
   const [endAt, setEndAt] = useState(localDateTime(7, 18))
   const [method, setMethod] = useState<EntryMethod>("teacher")
@@ -263,7 +262,6 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
     setScoreName("daily")
     setOtherScoreName("")
     setSelectedGradeIds(grades.slice(-2).map((item) => item.id))
-    setSelectedSubjects(["语文", "数学"])
     setStartAt(localDateTime(0, 8))
     setEndAt(localDateTime(7, 18))
     setMethod("teacher")
@@ -284,7 +282,6 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
     const finalScoreName = scoreName === "other" ? otherScoreName.trim() : SCORE_NAME_OPTIONS.find((item) => item.code === scoreName)?.value ?? "成绩"
     if (!finalScoreName) return setError("请填写成绩名称")
     if (selectedGradeIds.length === 0) return setError("请选择至少一个录入年级")
-    if (selectedSubjects.length === 0) return setError("请选择至少一个录入科目")
     if (!startAt || !endAt || startAt >= endAt) return setError("请正确设置开始与截止时间")
     if (method === "automatic") {
       if (calculationItems.length === 0 || calculationItems.some((item) => !item.sourceId || Number(item.weight) <= 0)) return setError("请添加需要计算的成绩及权重")
@@ -300,7 +297,6 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
       semester: getSemesterLabel(),
       scoreName: finalScoreName,
       gradeIds: selectedGradeIds,
-      subjects: selectedSubjects,
       startAt,
       endAt,
       method,
@@ -311,7 +307,7 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
       convertResult: method === "automatic" && convertResult,
       conversionMode: method === "automatic" && convertResult ? conversionMode : undefined,
       conversionRules: method === "automatic" && convertResult ? conversionRules : [],
-      progress: buildProgress(id, finalScoreName, selectedGrades.map((grade) => grade.name), selectedSubjects).map((item) => ({ ...item, status: "未开始", fileName: undefined, uploadedAt: undefined, rows: undefined })),
+      progress: buildProgress(id, finalScoreName, selectedGrades).map((item) => ({ ...item, status: "未开始", fileName: undefined, uploadedAt: undefined, rows: undefined })),
     }
     setTasks((current) => [next, ...current])
     setPublishOpen(false)
@@ -347,7 +343,7 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
               <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="truncate text-base font-bold text-foreground">{task.scoreName}</span><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", status.className)}>{status.label}</span></div><p className="mt-1 text-xs text-muted-foreground">{task.semester} · {task.method === "teacher" ? "教师录入" : "自动计算"}</p></div>
               <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </div>
-            <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-lg bg-[#f0f3ff] px-2 py-1 text-primary">{gradeNames.join("、")}</span><span className="rounded-lg bg-[#f6f7fb] px-2 py-1 text-muted-foreground">{task.subjects.join("、")}</span>{task.method === "teacher" && <span className="rounded-lg bg-[#fff5e9] px-2 py-1 text-brand-orange">{task.valueType === "grade" ? "等第录入" : "数值录入"}</span>}</div>
+            <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-lg bg-[#f0f3ff] px-2 py-1 text-primary">{gradeNames.join("、")}</span><span className="rounded-lg bg-[#f6f7fb] px-2 py-1 text-muted-foreground">按年级匹配后台学科分项</span>{task.method === "teacher" && <span className="rounded-lg bg-[#fff5e9] px-2 py-1 text-brand-orange">{task.valueType === "grade" ? "等第录入" : "数值录入"}</span>}</div>
             {task.method === "automatic" ? <div className="border-t border-[#edf0fa] pt-3" aria-live="polite"><div className="flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">计算状态</span><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", (task.calculationStatus ?? "计算完成") === "计算中" ? "bg-[#fff4e5] text-brand-orange" : "bg-[#effbf4] text-brand-green")}>{task.calculationStatus ?? "计算完成"}</span></div><p className="mt-2 text-xs text-muted-foreground">{(task.calculationStatus ?? "计算完成") === "计算中" ? "正在根据来源成绩与权重生成结果…" : "自动计算已完成，可打开查看任务详情。"}</p></div> : <div className="border-t border-[#edf0fa] pt-3"><div className="flex items-center justify-between text-xs"><span className="text-muted-foreground">任课教师录入进度</span><span className="font-bold text-foreground">{done} / {total}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e5e9f7]"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: total ? `${(done / total) * 100}%` : "0%" }} /></div></div>}
             <p className="text-xs text-muted-foreground">录入：{task.startAt.replace("T", " ")} ~ {task.endAt.replace("T", " ")}</p>
           </button>
@@ -358,7 +354,7 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
         <DialogContent className="max-h-[88vh] overflow-x-hidden overflow-y-auto overscroll-contain rounded-[26px] border border-[#c8d4f7] bg-white p-0 shadow-[0_32px_80px_-34px_rgba(41,61,148,0.68)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:max-w-4xl">
           <DialogHeader className="border-b border-[#dce4fa] bg-[linear-gradient(110deg,#edf2ff,#ffffff_60%,#f7f4ff)] px-5 py-5 sm:px-7"><DialogTitle className="flex items-center gap-2 text-xl"><span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="size-4" aria-hidden="true" /></span>发布成绩录入任务</DialogTitle><DialogDescription>按学期发布成绩录入任务，任务发布后将通知对应任课教师。</DialogDescription></DialogHeader>
           <div className="bg-[#fbfcff] px-5 py-5 sm:px-7"><div className="grid gap-4 lg:grid-cols-2">
-            <FormSection icon={FileSpreadsheet} title="任务范围" description="先确定本次需要录入的成绩、年级和科目。"><div className="grid gap-3 sm:grid-cols-2"><div className="flex flex-col gap-1.5"><Label>成绩名称 <span className="text-destructive">*</span></Label><Select value={SCORE_NAME_OPTIONS.find((item) => item.code === scoreName)?.value ?? ""} onValueChange={(value) => setScoreName(SCORE_NAME_OPTIONS.find((item) => item.value === value)?.code ?? "daily")}><SelectTrigger aria-label="选择成绩名称" className="w-full"><SelectValue placeholder="请选择成绩名称" /></SelectTrigger><SelectContent>{SCORE_NAME_OPTIONS.map((item) => <SelectItem key={item.code} value={item.value}>{item.value}</SelectItem>)}</SelectContent></Select>{scoreName === "other" && <Input name="other-score-name" autoComplete="off" value={otherScoreName} onChange={(event) => setOtherScoreName(event.target.value)} placeholder="请输入成绩名称" className={fieldClass} />}</div><MultiSelectDropdown label="录入科目" description="可选择多个本次需要录入的科目。" items={SUBJECTS.map((subject) => ({ id: subject, name: subject }))} selectedIds={selectedSubjects} onToggle={(subject) => toggleSelection(subject, selectedSubjects, setSelectedSubjects)} /></div><div className="mt-3"><MultiSelectDropdown label="录入年级" description="可选择多个需要开展成绩录入的年级。" items={grades.map((grade) => ({ id: grade.id, name: grade.name }))} selectedIds={selectedGradeIds} onToggle={(gradeId) => toggleSelection(gradeId, selectedGradeIds, setSelectedGradeIds)} /></div></FormSection>
+            <FormSection icon={FileSpreadsheet} title="任务范围" description="选择录入成绩和年级，系统将按后台配置匹配该年级全部学科及分项。"><div className="flex flex-col gap-1.5"><Label>成绩名称 <span className="text-destructive">*</span></Label><Select value={SCORE_NAME_OPTIONS.find((item) => item.code === scoreName)?.value ?? ""} onValueChange={(value) => setScoreName(SCORE_NAME_OPTIONS.find((item) => item.value === value)?.code ?? "daily")}><SelectTrigger aria-label="选择成绩名称" className="w-full"><SelectValue placeholder="请选择成绩名称" /></SelectTrigger><SelectContent>{SCORE_NAME_OPTIONS.map((item) => <SelectItem key={item.code} value={item.value}>{item.value}</SelectItem>)}</SelectContent></Select>{scoreName === "other" && <Input name="other-score-name" autoComplete="off" value={otherScoreName} onChange={(event) => setOtherScoreName(event.target.value)} placeholder="请输入成绩名称" className={fieldClass} />}</div><div className="mt-3"><MultiSelectDropdown label="录入年级" description="发布后，该年级任课教师按自己的学科下载对应分项模板。" items={grades.map((grade) => ({ id: grade.id, name: grade.name }))} selectedIds={selectedGradeIds} onToggle={(gradeId) => toggleSelection(gradeId, selectedGradeIds, setSelectedGradeIds)} /></div></FormSection>
             <FormSection icon={CalendarClock} title="录入时间" description="在时间窗口内，任课教师可以提交或更新成绩。"><div className="grid gap-3 sm:grid-cols-2"><div className="flex flex-col gap-1.5"><Label htmlFor="score-start">开始录入时间 <span className="text-destructive">*</span></Label><Input id="score-start" name="score-start" autoComplete="off" type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} className={fieldClass} /></div><div className="flex flex-col gap-1.5"><Label htmlFor="score-end">截止录入时间 <span className="text-destructive">*</span></Label><Input id="score-end" name="score-end" autoComplete="off" type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} className={fieldClass} /></div></div></FormSection>
           </div>
           <div className="mt-4"><FormSection icon={WandSparkles} title="成绩录入方式" description="教师直接填写成绩，或基于本学期已发布成绩自动计算。"><div className="grid gap-2 sm:grid-cols-2"><ChoiceButton active={method === "teacher"} onClick={() => setMethod("teacher")} description="任课教师在任务内填写并上传成绩 Excel。">教师录入</ChoiceButton><ChoiceButton active={method === "automatic"} onClick={() => setMethod("automatic")} description="按已发布成绩及权重自动生成本次成绩。">自动计算</ChoiceButton></div>{method === "teacher" ? <div className="mt-3 rounded-xl border border-[#dce4fa] bg-white p-3"><p className="text-xs font-semibold text-foreground">成绩类型 <span className="text-destructive">*</span></p><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={valueType === "number"} onClick={() => setValueType("number")}>数值</ChoiceButton><ChoiceButton active={valueType === "grade"} onClick={() => setValueType("grade")}>等第</ChoiceButton></div>{valueType === "grade" && <RuleEditor className="mt-3" rules={gradeRules} setRules={setGradeRules} thresholdLabel="对应分数" placeholder="如 A" />}</div> : <AutomaticSettings tasks={sourceTasks} items={calculationItems} setItems={setCalculationItems} convertResult={convertResult} setConvertResult={setConvertResult} conversionMode={conversionMode} setConversionMode={(mode) => { setConversionMode(mode); setConversionRules(mode === "score" ? DEFAULT_SCORE_CONVERSION : DEFAULT_RANK_CONVERSION) }} rules={conversionRules} setRules={setConversionRules} />}</FormSection></div>
@@ -369,7 +365,7 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
 
       <Dialog open={!!detailTask} onOpenChange={(open) => !open && setDetailTask(null)}>
         <DialogContent className="max-h-[84vh] overflow-x-hidden overflow-y-auto overscroll-contain rounded-[24px] border border-[#cbd5f5] bg-white p-0 shadow-[0_28px_70px_-36px_rgba(48,62,139,0.72)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:max-w-3xl">
-          {detailTask && <><DialogHeader className="border-b border-[#dce3f8] bg-[#f6f8ff] px-5 py-4"><DialogTitle className="flex items-center gap-2"><span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary"><UsersRound className="size-4" aria-hidden="true" /></span>{detailTask.scoreName} · 录入进度</DialogTitle><DialogDescription>{detailTask.semester} · {detailTask.subjects.join("、")} · 截止 {detailTask.endAt.replace("T", " ")}</DialogDescription></DialogHeader><div className="px-5 py-4"><div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-[#dce4fa] bg-[#fbfcff] p-3 text-center"><Metric label="任课教师" value={detailTask.progress.length} /><Metric label="已提交" value={submittedCount(detailTask)} tone="text-brand-green" /><Metric label="待处理" value={detailTask.progress.length - submittedCount(detailTask)} tone="text-brand-orange" /></div><div className="flex flex-col gap-2">{detailTask.progress.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e0e5f7] bg-[#fbfcff] px-3 py-2.5"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", item.status === "已提交" ? "bg-[#effbf4] text-brand-green" : item.status === "录入中" ? "bg-[#eef2ff] text-primary" : "bg-[#fff5e9] text-brand-orange")}>{item.status}</span><div className="min-w-[110px] flex-1"><p className="text-sm font-semibold text-foreground">{item.teacher} · {item.subject}</p><p className="mt-0.5 text-xs text-muted-foreground">{item.gradeName} · {item.classNames}</p></div>{item.fileName ? <button type="button" onClick={() => setPreview(item)} className="inline-flex items-center gap-1 rounded-lg border border-[#d3defa] bg-white px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"><FileSpreadsheet className="size-3.5" aria-hidden="true" />{item.fileName}</button> : <span className="text-xs text-muted-foreground">暂未上传 Excel</span>}</div>)}</div></div></>}
+          {detailTask && <><DialogHeader className="border-b border-[#dce3f8] bg-[#f6f8ff] px-5 py-4"><DialogTitle className="flex items-center gap-2"><span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary"><UsersRound className="size-4" aria-hidden="true" /></span>{detailTask.scoreName} · 录入进度</DialogTitle><DialogDescription>{detailTask.semester} · 已按发布年级匹配学科分项 · 截止 {detailTask.endAt.replace("T", " ")}</DialogDescription></DialogHeader><div className="px-5 py-4"><div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-[#dce4fa] bg-[#fbfcff] p-3 text-center"><Metric label="任课教师" value={detailTask.progress.length} /><Metric label="已提交" value={submittedCount(detailTask)} tone="text-brand-green" /><Metric label="待处理" value={detailTask.progress.length - submittedCount(detailTask)} tone="text-brand-orange" /></div><div className="flex flex-col gap-2">{detailTask.progress.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e0e5f7] bg-[#fbfcff] px-3 py-2.5"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", item.status === "已提交" ? "bg-[#effbf4] text-brand-green" : item.status === "录入中" ? "bg-[#eef2ff] text-primary" : "bg-[#fff5e9] text-brand-orange")}>{item.status}</span><div className="min-w-[110px] flex-1"><p className="text-sm font-semibold text-foreground">{item.teacher} · {item.subject}</p><p className="mt-0.5 text-xs text-muted-foreground">{item.gradeName} · {item.classNames}</p></div>{item.fileName ? <button type="button" onClick={() => setPreview(item)} className="inline-flex items-center gap-1 rounded-lg border border-[#d3defa] bg-white px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"><FileSpreadsheet className="size-3.5" aria-hidden="true" />{item.fileName}</button> : <span className="text-xs text-muted-foreground">暂未上传 Excel</span>}</div>)}</div></div></>}
         </DialogContent>
       </Dialog>
 
@@ -443,10 +439,10 @@ function PeScoreEntryManagement() {
       <ProgressMetric label="待上传文件" value={`${Math.max(totalFiles - uploadedFiles, 0)}`} description={`${scopedClasses.filter((item) => !uploadMap.has(`${item.id}:male`) || !uploadMap.has(`${item.id}:female`)).length} 个班级尚未完成`} />
     </div>
 
-    <section className="rounded-2xl border border-[#dce4fa] bg-white p-4 shadow-[0_12px_26px_-24px_rgba(53,67,150,0.62)]">
+    <section className="rounded-2xl border border-[#dfe5eb] bg-white p-5 shadow-[0_14px_28px_-26px_rgba(53,67,150,0.46)] sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h4 className="text-sm font-bold text-foreground">本学期体质健康录入进度</h4><p className="mt-1 text-xs text-muted-foreground">{task ? `${task.semesterLabel} · 录入时间 ${task.startDate} 至 ${task.endDate}` : "尚未发布任务，以下展示本学期全部班级的录入情况。"}</p></div><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{progress === 100 && totalFiles > 0 ? "全部完成" : `待完成 ${Math.max(totalFiles - uploadedFiles, 0)} 份`}</span></div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e5e9f7]"><div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} /></div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{scopedClasses.map((item) => { const male = uploadMap.has(`${item.id}:male`); const female = uploadMap.has(`${item.id}:female`); const done = Number(male) + Number(female); return <div key={item.id} className={cn("rounded-xl border px-3 py-2.5", done === 2 ? "border-[#d2ddfb] bg-[#f5f8ff]" : "border-[#e4e8f0] bg-[#fbfcfe]")}><div className="flex items-center justify-between gap-2"><span className="text-sm font-semibold text-foreground">{item.name}</span><span className="rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-primary">{done} / 2 份</span></div><p className="mt-1 text-xs text-muted-foreground">男生 {male ? "已录入" : "待上传"} · 女生 {female ? "已录入" : "待上传"}</p></div> })}</div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">{scopedClasses.map((item) => { const male = uploadMap.has(`${item.id}:male`); const female = uploadMap.has(`${item.id}:female`); const completed = male && female; return <div key={item.id} className={cn("min-w-0 rounded-xl border border-l-4 px-3.5 py-3", completed ? "border-[#d9e6df] border-l-[#91b6a5] bg-[#fcfefd] shadow-[0_9px_20px_-18px_rgba(50,99,81,0.3)]" : "border-[#e2e7ed] border-l-[#c5d0dc] bg-[#fdfefe]")}><div className="flex items-center gap-2"><span className="min-w-0 truncate text-sm font-semibold text-foreground">{item.name}</span></div><div className="mt-3 flex flex-wrap gap-2" aria-label={`${item.name}男女生成绩录入状态`}><span className={cn("inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold", male ? "bg-[#eef5f1] text-[#397463]" : "bg-[#f7f4ed] text-[#876b43]")} aria-label={`男生成绩${male ? "已上传" : "未上传"}`}><span>男生</span>{male ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <Circle className="size-3.5" aria-hidden="true" />}</span><span className={cn("inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold", female ? "bg-[#eef5f1] text-[#397463]" : "bg-[#f7f4ed] text-[#876b43]")} aria-label={`女生成绩${female ? "已上传" : "未上传"}`}><span>女生</span>{female ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <Circle className="size-3.5" aria-hidden="true" />}</span></div></div> })}</div>
     </section>
 
     <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>

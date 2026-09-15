@@ -16,9 +16,20 @@ import { cn } from "@/lib/utils"
 import type { Activity, HonorRecord } from "@/lib/types"
 
 type AcademicScoreRow = { subject: string; score: number; level: string }
-type FitnessMetrics = { height: number; weight: number; run: string; rope: number; level: string }
+type FitnessMetrics = {
+  height: number
+  weight: number
+  run: string
+  rope: number
+  level: string
+  score?: number
+  vitalCapacity?: number
+  sitAndReach?: string
+  standingLongJump?: number
+  vision?: string
+}
 
-export interface StudentSemesterReportProps {
+export interface StudentSemesterReportData {
   semesterLabel: string
   student: { name: string; gender: string; studentNo: string }
   className: string
@@ -32,6 +43,8 @@ export interface StudentSemesterReportProps {
   honors: HonorRecord[]
   activities: Activity[]
 }
+
+export type StudentSemesterReportProps = StudentSemesterReportData
 
 const ASSET_ROOT = "/xszp/report-assets"
 const RADAR_LABELS = ["德育", "智育", "体育", "美育", "劳动"]

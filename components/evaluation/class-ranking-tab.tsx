@@ -1,9 +1,10 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CalendarDays, Crown, Flag, Medal, Sparkles } from "lucide-react"
+import { CalendarDays, Flag, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
@@ -11,9 +12,20 @@ import { usePermission } from "@/lib/use-permission"
 import { computeWeeklyScore, formatDate, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek, getWeekRange } from "@/lib/scoring-utils"
 
 type RankingPeriod = "day" | "week" | "month"
+type ScoreDetailKind = "addition" | "deduction"
+
+interface ScoreDetailTarget {
+  classId: string
+  kind: ScoreDetailKind
+}
 
 const PERIOD_LABEL: Record<RankingPeriod, string> = { day: "日榜", week: "周榜", month: "月榜" }
 const DEFAULT_ICON_PATH = "/xszp/images"
+const RANK_MEDAL_IMAGES = {
+  1: `${DEFAULT_ICON_PATH}/ranking-medals/gold.png`,
+  2: `${DEFAULT_ICON_PATH}/ranking-medals/silver.png`,
+  3: `${DEFAULT_ICON_PATH}/ranking-medals/bronze.png`,
+} as const
 
 function getSemesterStart(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() >= 7 ? 8 : 1, 1)
@@ -50,6 +62,11 @@ function formatMonthLabel(monthKey: string) {
   return `${year}年${Number(month)}月`
 }
 
+function periodScoreLabel(period: RankingPeriod, kind: ScoreDetailKind) {
+  const scope = period === "day" ? "今日" : period === "week" ? "本周" : "本月"
+  return `${scope}${period === "day" ? "" : "总"}${kind === "addition" ? "加分" : "扣分"}`
+}
+
 export function ClassRankingTab() {
   const { classes, grades, records, flags, flagConfigs, classRatingConfigs, setFlag, issueFlagReward } = useEvaluation()
   const { visibleGrades, canManageFlags, role, scoringClasses } = usePermission()
@@ -58,10 +75,13 @@ export function ClassRankingTab() {
   const monthOptions = useMemo(() => getSemesterMonthKeys(new Date()), [])
   const currentWeekKey = weekOptions[0] ?? getISOWeekKey(new Date())
   const currentMonthKey = monthOptions[0] ?? formatDate(new Date()).slice(0, 7)
+  const currentDate = formatDate(new Date())
+  const [dayDate, setDayDate] = useState(currentDate)
   const [weekKey, setWeekKey] = useState(currentWeekKey)
   const [monthPrefix, setMonthPrefix] = useState(currentMonthKey)
   const [gradeFilter, setGradeFilter] = useState("all")
   const [detailClassId, setDetailClassId] = useState<string | null>(null)
+  const [scoreDetail, setScoreDetail] = useState<ScoreDetailTarget | null>(null)
   const [flagDialog, setFlagDialog] = useState<{ classId: string; configId: string } | null>(null)
   const [syncPoints, setSyncPoints] = useState(true)
 
@@ -70,15 +90,16 @@ export function ClassRankingTab() {
   const availableClasses = isHomeroomRanking
     ? classes.filter((item) => item.gradeId === homeroomGrade?.id)
     : scoringClasses.length > 0 ? scoringClasses : classes
-  const today = formatDate(new Date())
+  const today = dayDate
   const periodKey = period === "month" ? monthPrefix : weekKey
-  const isHistorical = period === "week" ? weekKey !== currentWeekKey : period === "month" ? monthPrefix !== currentMonthKey : false
+  const isHistorical = period === "day" ? dayDate !== currentDate : period === "week" ? weekKey !== currentWeekKey : monthPrefix !== currentMonthKey
   const gradeOptions = isHomeroomRanking ? homeroomGrade ? [homeroomGrade] : [] : visibleGrades.length > 0 ? visibleGrades : grades
   const activeFlagConfigs = useMemo(
     () => flagConfigs.filter((item) => item.period === period && (item.enabled || isHistorical)),
     [flagConfigs, isHistorical, period],
   )
-  const tableMinWidth = period === "day" ? 600 : 620 + activeFlagConfigs.length * 108
+  const tableMinWidth = period === "day" ? 680 : period === "week" ? 900 + activeFlagConfigs.length * 108 : 720
+  const tableColumnCount = 5 + (period === "week" ? 1 : 0) + activeFlagConfigs.length
 
   const ranking = useMemo(() => availableClasses
     .filter((item) => gradeFilter === "all" || item.gradeId === gradeFilter)
@@ -97,7 +118,11 @@ export function ClassRankingTab() {
     .sort((a, b) => b.total - a.total), [availableClasses, flags, gradeFilter, grades, monthPrefix, period, records, today, weekKey])
 
   const detailClass = ranking.find((item) => item.cls.id === detailClassId)
+  const scoreDetailClass = ranking.find((item) => item.cls.id === scoreDetail?.classId)
+  const scoreDetailRecords = scoreDetailClass?.periodRecords.filter((record) => scoreDetail?.kind === "addition" ? record.totalDeduction > 0 : record.totalDeduction < 0) ?? []
   const podiumRows = [ranking[1], ranking[0], ranking[2]]
+
+  const getMedalImage = (rank: number) => RANK_MEDAL_IMAGES[Math.min(Math.max(rank, 1), 3) as 1 | 2 | 3]
 
   const getRating = (rank: number) => {
     const currentRank = rank + 1
@@ -133,9 +158,10 @@ export function ClassRankingTab() {
             <div className="inline-flex rounded-2xl border border-primary/10 bg-[#eef1ff] p-1.5 shadow-[inset_0_1px_0_rgb(255_255_255_/_80%)]" role="tablist" aria-label="排行榜周期">
               {(["day", "week", "month"] as RankingPeriod[]).map((item) => <button key={item} type="button" role="tab" aria-selected={period === item} onClick={() => setPeriod(item)} className={cn("min-h-10 min-w-16 rounded-xl px-3.5 text-xs font-bold transition-[background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50", period === item ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-[0_7px_16px_-9px_rgba(63,81,188,0.92)]" : "text-[#687898] hover:bg-white/85 hover:text-primary")}>{PERIOD_LABEL[item]}</button>)}
             </div>
+            {period === "day" && <div className="flex h-11 items-center gap-2 rounded-xl border border-[#dbe3f7] bg-[#fbfcff] px-3"><CalendarDays className="size-3.5 text-primary" /><Input type="date" name="ranking-day" autoComplete="off" aria-label="选择排行榜日期" max={currentDate} value={dayDate} onChange={(event) => setDayDate(event.target.value)} className="h-8 w-[132px] border-0 bg-transparent p-0 text-xs font-semibold shadow-none focus-visible:ring-0" /></div>}
             {period === "week" && <Select value={weekKey} onValueChange={(value) => setWeekKey(String(value ?? currentWeekKey))}>
               <SelectTrigger aria-label="选择历史周次" className="h-11 min-w-44 rounded-xl border-[#dbe3f7] bg-[#fbfcff] px-3 text-xs font-semibold"><CalendarDays className="size-3.5 text-primary" /><SelectValue placeholder="选择周次" /></SelectTrigger>
-              <SelectContent><SelectGroup>{weekOptions.map((key) => <SelectItem key={key} value={key}>{key === currentWeekKey ? `本周 · ${formatWeekLabel(key)}` : `${formatWeekLabel(key)} · ${formatDateRangeLabel(key)}`}</SelectItem>)}</SelectGroup></SelectContent>
+              <SelectContent><SelectGroup>{weekOptions.map((key) => <SelectItem key={key} value={key}>{formatWeekLabel(key)}</SelectItem>)}</SelectGroup></SelectContent>
             </Select>}
             {period === "month" && <Select value={monthPrefix} onValueChange={(value) => setMonthPrefix(String(value ?? currentMonthKey))}>
               <SelectTrigger aria-label="选择历史月份" className="h-11 min-w-36 rounded-xl border-[#dbe3f7] bg-[#fbfcff] px-3 text-xs font-semibold"><CalendarDays className="size-3.5 text-primary" /><SelectValue placeholder="选择月份" /></SelectTrigger>
@@ -146,19 +172,15 @@ export function ClassRankingTab() {
           <span className="hidden items-center gap-1.5 rounded-full bg-[#f7f8ff] px-2.5 py-1.5 text-xs font-medium text-muted-foreground sm:inline-flex"><Sparkles aria-hidden="true" className="size-3.5 text-[#8f84ee]" />荣耀前三</span>
         </div>
 
-        <div className="relative m-3 grid grid-cols-3 items-end gap-2 overflow-hidden rounded-2xl border border-[#e2e6f8] bg-[radial-gradient(circle_at_50%_0%,#fff9dc_0%,#f8f9ff_52%,#f2f4ff_100%)] p-2 pt-4 sm:m-4 sm:gap-3 sm:p-3 sm:pt-5">
+        <div className="relative m-3 grid grid-cols-3 items-end gap-2 overflow-hidden rounded-2xl border border-[#e2e6f8] bg-[radial-gradient(circle_at_50%_0%,#fff9dc_0%,#f8f9ff_52%,#f2f4ff_100%)] p-2 pt-3 sm:m-4 sm:gap-3 sm:p-3 sm:pt-4">
           {podiumRows.map((row, podiumIndex) => {
             if (!row) return <div key={`empty-${podiumIndex}`} />
             const rank = ranking.indexOf(row) + 1
             const isFirst = rank === 1
-            const PodiumIcon = isFirst ? Crown : Medal
-            return <button key={row.cls.id} type="button" onClick={() => setDetailClassId(row.cls.id)} className={cn("group relative flex min-w-0 flex-col items-center overflow-hidden rounded-xl border px-2 pt-2.5 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50", isFirst ? "z-10 min-h-[156px] border-[#f1cc72] bg-gradient-to-b from-[#fffdf3] to-white shadow-[0_18px_28px_-20px_rgba(209,157,50,0.82)]" : rank === 2 ? "mt-6 min-h-[132px] border-[#dce2f1] bg-white shadow-[0_12px_22px_-21px_rgba(99,111,148,0.75)] hover:border-[#bdc7e4]" : "mt-8 min-h-[124px] border-[#f1ded5] bg-white shadow-[0_12px_22px_-21px_rgba(159,103,77,0.6)] hover:border-[#eac6b4]") }>
-              {isFirst && <span className="absolute right-2 top-2 rounded-full bg-[#fff0b8] px-1.5 py-0.5 text-[9px] font-black tracking-[0.08em] text-[#a56b13]">CHAMPION</span>}
-              <span className={cn("flex size-7 items-center justify-center rounded-full", isFirst ? "bg-[#fff1bf] text-[#d89522]" : rank === 2 ? "bg-[#e8ecf6] text-[#74819c]" : "bg-[#ffeadf] text-[#d97c51]")}><PodiumIcon aria-hidden="true" className={cn(isFirst ? "size-4" : "size-3.5")} /></span>
-              <span className={cn("mt-1.5 flex items-center justify-center rounded-full border text-sm font-bold transition-transform group-hover:scale-105", isFirst ? "size-12 border-[#f2d274] bg-[#fff6d3] text-[#8e651a] sm:size-14" : rank === 2 ? "size-10 border-[#d3daeb] bg-[#eef2fa] text-[#657298] sm:size-11" : "size-10 border-[#f0d4c6] bg-[#fff0e8] text-[#b86745] sm:size-11")}>{row.cls.shortName || row.cls.name.slice(-2)}</span>
-              <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-foreground sm:text-xs">{row.cls.name}</span>
-              <span className={cn("mt-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums", isFirst ? "bg-[#fff3ca] text-[#9a6b16]" : rank === 2 ? "bg-[#eef1f7] text-[#687592]" : "bg-[#fff0e8] text-[#b86a49]")}>{row.total > 0 ? "+" : ""}{row.total.toFixed(1)} 分</span>
-              <span className={cn("mt-auto w-full py-1.5 text-[10px] font-black tracking-[0.12em]", isFirst ? "bg-[#f7d26e] text-[#7f5916]" : rank === 2 ? "bg-[#dfe5f1] text-[#63708d]" : "bg-[#f4c6ad] text-[#915036]")}>NO. 0{rank}</span>
+            return <button key={row.cls.id} type="button" onClick={() => setDetailClassId(row.cls.id)} className={cn("group relative flex min-w-0 flex-col items-center overflow-hidden rounded-xl border px-2 py-2 text-center transition-[border-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none", isFirst ? "z-10 min-h-[126px] border-[#f1cc72] bg-gradient-to-b from-[#fffdf3] to-white shadow-[0_18px_28px_-20px_rgba(209,157,50,0.82)] hover:-translate-y-0.5" : rank === 2 ? "mt-3 min-h-[114px] border-[#dce2f1] bg-white shadow-[0_12px_22px_-21px_rgba(99,111,148,0.75)] hover:-translate-y-0.5 hover:border-[#bdc7e4]" : "mt-5 min-h-[108px] border-[#f1ded5] bg-white shadow-[0_12px_22px_-21px_rgba(159,103,77,0.6)] hover:-translate-y-0.5 hover:border-[#eac6b4]") }>
+              <img src={getMedalImage(rank)} alt={`${rank === 1 ? "第一名" : rank === 2 ? "第二名" : "第三名"}奖章`} width={58} height={58} className={cn("object-contain transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none", isFirst ? "size-14" : "size-11")} />
+              <span className="mt-0.5 max-w-full truncate text-[11px] font-bold text-foreground sm:text-xs">{row.cls.name}</span>
+              <span className={cn("mt-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums", isFirst ? "bg-[#fff3ca] text-[#9a6b16]" : rank === 2 ? "bg-[#eef1f7] text-[#687592]" : "bg-[#fff0e8] text-[#b86a49]")}>第{rank}名 · {row.total > 0 ? "+" : ""}{row.total.toFixed(1)} 分</span>
             </button>
           })}
         </div>
@@ -166,28 +188,28 @@ export function ClassRankingTab() {
 
       <div className="overflow-hidden rounded-[24px] border border-[#cfd8f6] bg-white shadow-[0_20px_42px_-34px_rgba(54,67,148,0.68)]">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm tabular-nums" style={{ minWidth: tableMinWidth }}>
+          <table className="w-full border-collapse text-center text-sm tabular-nums" style={{ minWidth: tableMinWidth }}>
             <thead>
-              <tr className="border-b border-[#dfe4f7] bg-[#f5f7ff] text-left text-xs font-bold text-muted-foreground">
-                <th className="w-20 px-4 py-3">排名</th>
-                <th className="px-4 py-3">班级</th>
-                <th className="px-4 py-3">加分</th>
-                <th className="px-4 py-3">扣分</th>
-                <th className="px-4 py-3">{period === "day" ? "今日净分" : period === "week" ? "班级总分" : "月综合分"}</th>
-                {period === "week" && <th className="px-4 py-3">班级评级</th>}
+              <tr className="border-b border-[#dfe4f7] bg-[#f5f7ff] text-center text-xs font-bold text-muted-foreground">
+                <th className="w-20 px-4 py-3 text-center">排名</th>
+                <th className="px-4 py-3 text-center">班级</th>
+                <th className="px-4 py-3 text-center">{period === "day" ? "今日加分" : period === "week" ? "本周总加分" : "本月总加分"}</th>
+                <th className="px-4 py-3 text-center">{period === "day" ? "今日扣分" : period === "week" ? "本周总扣分" : "本月总扣分"}</th>
+                <th className="px-4 py-3 text-center">{period === "day" ? "今日累计分数" : period === "week" ? "本周班级总分" : "本月总分"}</th>
+                {period === "week" && <th className="px-4 py-3 text-center">班级评级</th>}
                 {activeFlagConfigs.map((config) => <th key={config.id} className="min-w-[108px] px-3 py-3 text-center"><span className="line-clamp-2 inline-block max-w-[96px] leading-4">{config.name}</span></th>)}
               </tr>
             </thead>
             <tbody>
-              {ranking.length === 0 ? <tr><td colSpan={5 + (period !== "day" ? 1 : 0) + activeFlagConfigs.length} className="px-4 py-12 text-center text-sm text-muted-foreground">当前筛选条件下暂无班级数据</td></tr> : ranking.map((row, index) => {
+              {ranking.length === 0 ? <tr><td colSpan={tableColumnCount} className="px-4 py-12 text-center text-sm text-muted-foreground">当前筛选条件下暂无班级数据</td></tr> : ranking.map((row, index) => {
                 const rating = getRating(index)
                 return <tr key={row.cls.id} className={cn("border-b border-[#edf0fa] transition-colors last:border-0 hover:bg-[#f5f7ff]", index === 0 && "bg-[#fbfaff]", index === 1 && "bg-slate-50/50", index === 2 && "bg-[#fffdfa]")}>
-                  <td className="px-4 py-2.5"><span className={cn("inline-flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-sm", index === 0 ? "bg-gradient-to-br from-[#ffd976] to-[#f3aa4b] text-[#72501b]" : index === 1 ? "bg-gradient-to-br from-[#e7ecff] to-[#aebae5] text-[#55617f]" : index === 2 ? "bg-gradient-to-br from-[#ffcfad] to-[#ef9268] text-[#874527]" : "bg-muted text-muted-foreground")}>{index + 1}</span></td>
-                  <td className="px-4 py-2.5"><button type="button" onClick={() => setDetailClassId(row.cls.id)} className="rounded-sm text-left font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">{row.cls.name}<span className="ml-2 text-xs font-normal text-muted-foreground">{row.grade?.name}</span></button></td>
-                  <td className="px-4 py-2.5 font-medium text-emerald-700">{row.addition > 0 ? `+${row.addition.toFixed(1)}` : "—"}</td>
-                  <td className="px-4 py-2.5 font-medium text-rose-700">{row.deduction > 0 ? `-${row.deduction.toFixed(1)}` : "—"}</td>
-                  <td className="px-4 py-2.5"><button type="button" onClick={() => setDetailClassId(row.cls.id)} className="rounded-sm font-bold text-primary transition-colors hover:text-primary-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">{row.total > 0 ? "+" : ""}{row.total.toFixed(1)}</button></td>
-                  {period === "week" && <td className="px-4 py-2.5"><span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.05] py-1 pl-1 pr-2.5 text-xs font-medium text-primary shadow-[0_4px_10px_-9px_rgba(95,102,205,0.9)]"><img src={rating.image} alt="" width="24" height="24" loading="lazy" className="size-6 rounded-full object-cover" />{rating.label}</span></td>}
+                  <td className="px-4 py-2.5 text-center"><span className={cn("inline-flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-sm", index === 0 ? "bg-gradient-to-br from-[#ffd976] to-[#f3aa4b] text-[#72501b]" : index === 1 ? "bg-gradient-to-br from-[#e7ecff] to-[#aebae5] text-[#55617f]" : index === 2 ? "bg-gradient-to-br from-[#ffcfad] to-[#ef9268] text-[#874527]" : "bg-muted text-muted-foreground")}>{index + 1}</span></td>
+                  <td className="px-4 py-2.5 text-center"><button type="button" onClick={() => setDetailClassId(row.cls.id)} className="rounded-sm text-center font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">{row.cls.name}<span className="ml-2 text-xs font-normal text-muted-foreground">{row.grade?.name}</span></button></td>
+                  <td className="px-4 py-2.5 text-center font-medium text-emerald-700">{row.addition > 0 ? <button type="button" onClick={() => setScoreDetail({ classId: row.cls.id, kind: "addition" })} className="inline-flex min-h-9 min-w-[44px] touch-manipulation items-center justify-center rounded-sm px-1 font-medium underline decoration-emerald-200 underline-offset-4 transition-colors hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40" aria-label={`查看${row.cls.name}${periodScoreLabel(period, "addition")}明细`}>+{row.addition.toFixed(1)}</button> : "—"}</td>
+                  <td className="px-4 py-2.5 text-center font-medium text-rose-700">{row.deduction > 0 ? <button type="button" onClick={() => setScoreDetail({ classId: row.cls.id, kind: "deduction" })} className="inline-flex min-h-9 min-w-[44px] touch-manipulation items-center justify-center rounded-sm px-1 font-medium underline decoration-rose-200 underline-offset-4 transition-colors hover:text-rose-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40" aria-label={`查看${row.cls.name}${periodScoreLabel(period, "deduction")}明细`}>-{row.deduction.toFixed(1)}</button> : "—"}</td>
+                  <td className="px-4 py-2.5 text-center"><button type="button" onClick={() => setDetailClassId(row.cls.id)} className="rounded-sm font-bold text-primary transition-colors hover:text-primary-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">{row.total > 0 ? "+" : ""}{row.total.toFixed(1)}</button></td>
+                  {period === "week" && <td className="px-4 py-2.5 text-center"><span className="inline-flex items-center justify-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.05] py-1 pl-1 pr-2.5 text-xs font-medium text-primary shadow-[0_4px_10px_-9px_rgba(95,102,205,0.9)]"><img src={rating.image} alt="" width="24" height="24" loading="lazy" className="size-6 rounded-full object-cover" />{rating.label}</span></td>}
                   {activeFlagConfigs.map((config, configIndex) => {
                     const awarded = isFlagAwarded(row.cls.id, config.id, configIndex)
                     const image = config.image ?? (awarded ? `${DEFAULT_ICON_PATH}/flag-issued.svg` : `${DEFAULT_ICON_PATH}/flag-unissued.svg`)
@@ -200,6 +222,17 @@ export function ClassRankingTab() {
           </table>
         </div>
       </div>
+
+      <Dialog open={!!scoreDetail} onOpenChange={(open) => !open && setScoreDetail(null)}>
+        <DialogContent className="glass-surface max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{scoreDetailClass?.cls.name ?? "班级"} · {scoreDetail ? `${periodScoreLabel(period, scoreDetail.kind)}明细` : "加扣分明细"}</DialogTitle>
+            <DialogDescription>{period === "day" ? dayDate : period === "week" ? `${formatWeekLabel(weekKey)} · ${formatDateRangeLabel(weekKey)}` : formatMonthLabel(monthPrefix)} · 共 {scoreDetailRecords.length} 条记录</DialogDescription>
+          </DialogHeader>
+          {scoreDetailRecords.length === 0 ? <p className="rounded-xl border border-dashed border-[#dce4f7] bg-[#fbfcff] px-4 py-10 text-center text-sm text-muted-foreground">暂无{scoreDetail ? periodScoreLabel(period, scoreDetail.kind) : "加扣分"}记录</p> : <div className="overflow-hidden rounded-xl border border-[#e1e6f7] bg-white"><div className="grid grid-cols-[88px_minmax(0,1fr)_72px] gap-3 border-b border-[#edf0fa] bg-[#f7f9ff] px-3 py-2.5 text-xs font-semibold text-muted-foreground"><span>日期</span><span>评价项目 / 说明</span><span className="text-right">分数</span></div>{scoreDetailRecords.map((record) => { const meta = [record.note, record.studentNames.length > 0 ? `涉及学生：${record.studentNames.join("、")}` : ""].filter(Boolean).join(" · ") || "未填写说明"; return <div key={record.id} className="grid grid-cols-[88px_minmax(0,1fr)_72px] items-start gap-3 border-b border-[#edf0fa] px-3 py-3 last:border-0"><time className="text-xs tabular-nums text-muted-foreground">{record.date}</time><div className="min-w-0"><p className="text-sm font-semibold text-foreground">{record.level1} / {record.level2}</p><p className="mt-1 break-words text-xs leading-5 text-muted-foreground">{meta}</p></div><span className={cn("text-right text-sm font-bold tabular-nums", scoreDetail?.kind === "addition" ? "text-emerald-700" : "text-rose-700")}>{scoreDetail?.kind === "addition" ? "+" : "−"}{Math.abs(record.totalDeduction).toFixed(1)}</span></div> })}</div>}
+          <DialogFooter><Button type="button" variant="outline" onClick={() => setScoreDetail(null)}>关闭</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!detailClassId} onOpenChange={(open) => !open && setDetailClassId(null)}>
         <DialogContent className="glass-surface max-h-[80vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{detailClass?.cls.name} · {PERIOD_LABEL[period]}评价记录</DialogTitle></DialogHeader><div className="rounded-lg border border-border/60">{(detailClass?.periodRecords.length ?? 0) === 0 ? <p className="p-8 text-center text-sm text-muted-foreground">暂无评价记录</p> : detailClass?.periodRecords.map((record) => <div key={record.id} className="flex flex-wrap items-center gap-3 border-b border-border/50 px-4 py-3 last:border-0"><span className="w-24 text-xs text-muted-foreground">{record.date}</span><span className="flex-1 text-sm">{record.level1} / {record.level2}</span><span className={cn("font-semibold", record.totalDeduction > 0 ? "text-emerald-700" : "text-rose-700")}>{record.totalDeduction > 0 ? "+" : ""}{record.totalDeduction}</span></div>)}</div></DialogContent>
