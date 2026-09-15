@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import type { EChartsOption } from "echarts"
 import {
   Award,
+  ArrowLeft,
   CalendarDays,
   ChartNoAxesCombined,
   Clock3,
@@ -485,6 +487,9 @@ export function SchoolCommandCenter() {
       >
         <header className={styles.header}>
           <div className={styles.headerMeta}>
+            <Link className={styles.backLink} href="/" aria-label="返回管理员首页">
+              <ArrowLeft size={17} aria-hidden="true" />
+            </Link>
             <span className={styles.liveDot} aria-hidden="true" />
             <span>数据实时同步</span>
             <span className={styles.metaDivider} aria-hidden="true" />
