@@ -29,7 +29,7 @@ const CLASS_SEEDS: ClassSeed[] = [
   { id: "class-5-1", gradeId: "grade-5", index: 1, homeroomTeacher: "何淑芬", studentCount: 34 },
   { id: "class-5-2", gradeId: "grade-5", index: 2, homeroomTeacher: "罗晓梅", studentCount: 33 },
   { id: "class-5-3", gradeId: "grade-5", index: 3, homeroomTeacher: "邱志远", studentCount: 35 },
-  { id: "class-6-1", gradeId: "grade-6", index: 1, homeroomTeacher: "赵得鑫", studentCount: 36 },
+  { id: "class-6-1", gradeId: "grade-6", index: 1, homeroomTeacher: "锦言", studentCount: 36 },
   { id: "class-6-2", gradeId: "grade-6", index: 2, homeroomTeacher: "王芳", studentCount: 35 },
   { id: "class-6-3", gradeId: "grade-6", index: 3, homeroomTeacher: "沈亦菲", studentCount: 34 },
   { id: "class-6-4", gradeId: "grade-6", index: 4, homeroomTeacher: "蒋文博", studentCount: 33 },
@@ -61,7 +61,7 @@ export const CLASSES: SchoolClass[] = CLASS_SEEDS.map((seed) => {
  * ------------------------------------------------------------------ */
 
 const SURNAMES = [
-  "王", "李", "张", "刘", "陈", "杨", "黄", "赵", "吴", "周",
+  "王", "李", "张", "刘", "陈", "杨", "黄", "", "吴", "周",
   "徐", "孙", "马", "朱", "胡", "郭", "何", "高", "林", "罗",
   "郑", "梁", "谢", "宋", "唐", "许", "韩", "冯", "邓", "曹",
   "彭", "曾", "肖", "田", "董", "袁", "潘", "蒋", "蔡", "余",
@@ -151,7 +151,7 @@ export const TEACHERS: Teacher[] = [
   /* ---------------------------------- 班主任 ---------------------------------- */
   {
     id: "teacher-zhao",
-    name: "赵得鑫",
+    name: "锦言",
     avatar: "",
     role: "homeroom",
     title: "六年级01班 班主任",

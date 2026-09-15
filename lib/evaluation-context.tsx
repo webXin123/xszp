@@ -201,15 +201,15 @@ function seedRecords(): ScoreRecord[] {
       index % 2 === 0 ? ["陈思远", "王浩然"].slice(0, index % 3 === 0 ? 2 : 1) : [],
       note,
       "teacher-zhao",
-      "赵得鑫",
+      "锦言",
       index / 48,
     )
   })
 
   return [
-    mk("seed-1", "class-6-1", yesterday, "礼仪形象", "仪容仪表", "ly-2", 2, -2, ["陈思远"], "晨检时红领巾未佩戴", "teacher-zhao", "赵得鑫", 1),
-    mk("seed-2", "class-6-1", yesterday, "课间文明休息", "行为安全", "jj-1", 1, -3, [], "走廊追逐打闹", "teacher-zhao", "赵得鑫", 1),
-    mk("seed-3", "class-6-1", today, "早操", "做操纪律", "zc-2", 1, -3, [], "做操期间交头接耳", "teacher-zhao", "赵得鑫", 0),
+    mk("seed-1", "class-6-1", yesterday, "礼仪形象", "仪容仪表", "ly-2", 2, -2, ["陈思远"], "晨检时红领巾未佩戴", "teacher-zhao", "锦言", 1),
+    mk("seed-2", "class-6-1", yesterday, "课间文明休息", "行为安全", "jj-1", 1, -3, [], "走廊追逐打闹", "teacher-zhao", "锦言", 1),
+    mk("seed-3", "class-6-1", today, "早操", "做操纪律", "zc-2", 1, -3, [], "做操期间交头接耳", "teacher-zhao", "锦言", 0),
     mk("seed-4", "class-6-2", yesterday, "卫生", "环境卫生", "hy-1", 1, -2, [], "", "teacher-wang", "王芳", 1),
     mk("seed-5", "class-6-2", twoDaysAgo, "路队", "队伍秩序", "ld-1", 1, -3, [], "", "teacher-wang", "王芳", 2),
     mk("seed-6", "class-6-3", today, "路队", "队伍秩序", "ld-1", 1, -3, [], "", "teacher-chen", "陈明", 0),
@@ -222,11 +222,11 @@ function seedRecords(): ScoreRecord[] {
     mk("seed-13", "class-5-1", yesterday, "卫生", "物品摆放", "hy-6", 1, -2, [], "卫生工具未归位", "teacher-he", "何淑芬", 1),
     mk("seed-14", "class-5-2", yesterday, "早操", "进退场秩序", "zc-4", 1, -3, [], "进场队伍不整齐", "teacher-zhou", "周海峰", 1),
     mk("seed-15", "class-mz-4-1", today, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["李晓雨"], "未按要求穿校服", "teacher-gu", "顾伟", 0),
-    mk("seed-16", "class-6-1", twoDaysAgo, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["王浩然"], "未穿校服", "teacher-zhao", "赵得鑫", 2),
+    mk("seed-16", "class-6-1", twoDaysAgo, "礼仪形象", "仪容仪表", "ly-1", 1, -3, ["王浩然"], "未穿校服", "teacher-zhao", "锦言", 2),
     ...moralDemoRecords,
     ...homeroomDashboardRecords,
     // 排名演示数据：6-1 为第 1 名，6-2 与 7-1 并列第 2 名，下一名自然显示为第 4 名。
-    mk("seed-ranking-1", "class-6-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -1, [], "上周班级排名演示：轻微扣分", "teacher-zhao", "赵得鑫", 8),
+    mk("seed-ranking-1", "class-6-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -1, [], "上周班级排名演示：轻微扣分", "teacher-zhao", "锦言", 8),
     mk("seed-ranking-2", "class-6-2", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -3, [], "上周班级排名演示：并列第 2 名", "teacher-wang", "王芳", 8),
     mk("seed-ranking-3", "class-7-1", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -3, [], "上周班级排名演示：并列第 2 名", "teacher-xu", "徐蓉", 8),
     mk("seed-ranking-4", "class-6-3", previousWeekRankingDate, "卫生", "环境卫生", "hy-1", 1, -5, [], "上周班级排名演示：第 4 名", "teacher-shen", "沈亦菲", 8),
@@ -343,7 +343,7 @@ function seedAwardCards(): AwardCardRecord[] {
     ["class-6-2-stu-6", "class-6-2", "award-5-1", "才艺智多星", "感知美与欣赏美", 1, "teacher-chen", "陈明"],
     ["class-6-3-stu-6", "class-6-3", "award-7-1", "合作创享星", "团队协作", 0, "teacher-chen", "陈明"],
     ["class-6-4-stu-6", "class-6-4", "award-8-1", "生活阳光星", "热爱生活", 2, "teacher-chen", "陈明"],
-    ["class-6-1-stu-7", "class-6-1", "award-10-1", "责任担当星", "主动负责", 3, "teacher-zhao", "赵得鑫"],
+    ["class-6-1-stu-7", "class-6-1", "award-10-1", "责任担当星", "主动负责", 3, "teacher-zhao", "锦言"],
     ["class-6-2-stu-7", "class-6-2", "award-9-1", "自信创造星", "自信表达", 5, "teacher-wang", "王芳"],
     ["class-6-3-stu-7", "class-6-3", "award-3-2", "友善美少年", "友爱互助", 35, "teacher-chen", "陈明"],
     ["class-6-4-stu-7", "class-6-4", "award-4-1", "健康小能手", "热爱运动", 20, "teacher-chen", "陈明"],
@@ -361,7 +361,7 @@ function seedAwardCards(): AwardCardRecord[] {
       ["award-10-1", "责任担当星", "主动负责"],
     ] as const
     const [indicatorId, level1, level2] = templates[index % templates.length]
-    const operator = index % 3 === 1 ? ["teacher-liu", "刘敏"] as const : ["teacher-zhao", "赵得鑫"] as const
+    const operator = index % 3 === 1 ? ["teacher-liu", "刘敏"] as const : ["teacher-zhao", "锦言"] as const
     const student = STUDENTS.filter((item) => item.classId === "class-6-1")[index % 36]
     return mk(
       `award-role-dashboard-${index + 1}`,
@@ -390,14 +390,14 @@ function seedAwardCards(): AwardCardRecord[] {
       1,
       dateForDaysAgo(index % 6),
       index % 2 === 0 ? "teacher-zhao" : "teacher-liu",
-      index % 2 === 0 ? "赵得鑫" : "刘敏",
+      index % 2 === 0 ? "锦言" : "刘敏",
       index % 6 + index / 80,
     )
   })
   return [
-    mk("award-seed-1", "class-6-1-stu-1", "class-6-1", "award-1-1", "智慧小博士", "乐于探究", 1, today, "teacher-zhao", "赵得鑫", 0),
-    mk("award-seed-2", "class-6-1-stu-2", "class-6-1", "award-7-1", "合作创享星", "团队协作", 1, today, "teacher-zhao", "赵得鑫", 0),
-    mk("award-seed-3", "class-6-1-stu-3", "class-6-1", "award-3-2", "友善美少年", "尊重包容", 1, yesterday, "teacher-zhao", "赵得鑫", 1),
+    mk("award-seed-1", "class-6-1-stu-1", "class-6-1", "award-1-1", "智慧小博士", "乐于探究", 1, today, "teacher-zhao", "锦言", 0),
+    mk("award-seed-2", "class-6-1-stu-2", "class-6-1", "award-7-1", "合作创享星", "团队协作", 1, today, "teacher-zhao", "锦言", 0),
+    mk("award-seed-3", "class-6-1-stu-3", "class-6-1", "award-3-2", "友善美少年", "尊重包容", 1, yesterday, "teacher-zhao", "锦言", 1),
     mk("award-seed-4", "class-6-1-stu-4", "class-6-1", "award-5-1", "才艺智多星", "感知美与欣赏美", 1, yesterday, "teacher-liu", "刘敏", 1),
     mk("award-seed-5", "class-6-2-stu-1", "class-6-2", "award-3-1", "友善美少年", "友爱互助", 1, today, "teacher-wang", "王芳", 0),
     mk("award-seed-6", "class-6-2-stu-2", "class-6-2", "award-1-2", "智慧小博士", "勤于思考", 1, yesterday, "teacher-liu", "刘敏", 1),
