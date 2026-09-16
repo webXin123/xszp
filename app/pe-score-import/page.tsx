@@ -19,6 +19,7 @@ import { StandalonePageShell } from "@/components/evaluation/standalone-page-she
 import {
   PE_CLASSES,
   PE_GRADE_NAMES,
+  PE_PREVIEW_HEADER,
   buildPePreviewRows,
   getPeClass,
   getSemesterLabel,
@@ -29,11 +30,14 @@ import {
 } from "@/lib/pe-scores"
 
 function formatTime(iso: string) {
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso))
 }
 
 function expectedCount(cls: PeClass, gender: PeGender) {
@@ -95,6 +99,7 @@ function PeScoreImportPage() {
   )
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [viewing, setViewing] = useState<PeScoreUpload | null>(null)
+  const [templateMessage, setTemplateMessage] = useState("")
 
   const startUpload = (classId: string, gender: PeGender) => {
     setPendingSlot({ classId, gender })
@@ -151,6 +156,21 @@ function PeScoreImportPage() {
     const book = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(book, sheet, "成绩")
     XLSX.writeFile(book, viewing.fileName)
+  }
+
+  const downloadImportTemplate = () => {
+    const sheet = XLSX.utils.aoa_to_sheet([
+      PE_PREVIEW_HEADER,
+      ["示例学生", "01", "男", 128, 28.5, 9.8, 12, 98, "良好"],
+    ])
+    sheet["!cols"] = [
+      { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 13 }, { wch: 13 },
+      { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 12 },
+    ]
+    const book = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(book, sheet, "体质健康成绩")
+    XLSX.writeFile(book, "体质健康成绩导入模板.xlsx")
+    setTemplateMessage("已下载体质健康成绩导入模板，可按示例字段填写后上传。")
   }
 
   const viewingClass = viewing ? getPeClass(viewing.classId) : undefined
@@ -248,16 +268,23 @@ function PeScoreImportPage() {
               {/* ---------------- 标题 + 统计：合并为一张顶部信息卡 ---------------- */}
               <section aria-labelledby="pe-score-import-title" className="flex flex-col gap-4 rounded-2xl border border-[#dce3f8] bg-[#f6f8ff] p-4 sm:p-5 lg:flex-row lg:items-center lg:gap-6">
                 <div className="min-w-0 flex-1 lg:max-w-[43%]">
-                  <div className="flex items-center gap-2">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_8px_16px_-10px_rgba(63,81,188,0.9)]"><HeartPulse className="size-5" aria-hidden="true" /></span>
-                    <h1 id="pe-score-import-title" className="text-lg font-bold text-foreground">体质健康成绩导入</h1>
-                    <span className="rounded-full border border-[#d7e2ff] bg-white px-2.5 py-0.5 text-xs font-semibold text-primary">
-                      {getSemesterLabel()}
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_8px_16px_-10px_rgba(63,81,188,0.9)]"><HeartPulse className="size-5" aria-hidden="true" /></span>
+                      <h1 id="pe-score-import-title" className="text-lg font-bold text-foreground">体质健康成绩导入</h1>
+                      <span className="rounded-full border border-[#d7e2ff] bg-white px-2.5 py-0.5 text-xs font-semibold text-primary">
+                        {getSemesterLabel()}
+                      </span>
+                    </div>
+                    <Button type="button" size="sm" variant="outline" className="border-primary/25 bg-white" onClick={downloadImportTemplate}>
+                      <Download className="size-3.5" aria-hidden="true" />
+                      下载导入模板
+                    </Button>
                   </div>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     按班级分别上传 1-5 年级男生 / 女生体质健康成绩（.xlsx），点击卡片即可选择文件
                   </p>
+                  {templateMessage && <p role="status" aria-live="polite" className="mt-1 text-xs font-medium text-brand-green">{templateMessage}</p>}
                 </div>
 
                 <div className="grid min-w-0 flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3 lg:min-w-[55%]">

@@ -49,16 +49,16 @@ const MALL_CART_KEY = "mzlg-mall-cart-v1"
 const MALL_REDEMPTIONS_KEY = "mzlg-mall-redemptions-v1"
 
 const DEFAULT_FLAG_CONFIGS: FlagConfig[] = [
-  { id: "week-civility", period: "week", name: "文明礼仪示范班", enabled: true, syncFiveEducation: true, syncLevel1: "德育", syncLevel2: "文明礼仪", syncLevel3: "主动问好" },
-  { id: "week-clean", period: "week", name: "卫生流动红旗", enabled: true, syncFiveEducation: false },
-  { id: "month-excellent", period: "month", name: "月度优雅班集体", enabled: true, syncFiveEducation: true, syncLevel1: "智育", syncLevel2: "学习习惯", syncLevel3: "专注听讲" },
-  { id: "month-growth", period: "month", name: "成长示范班", enabled: false, syncFiveEducation: false },
+  { id: "week-civility", period: "week", name: "文明礼仪示范班", points: 1, enabled: true, syncFiveEducation: true, syncLevel1: "德育", syncLevel2: "文明礼仪", syncLevel3: "主动问好" },
+  { id: "week-clean", period: "week", name: "卫生流动红旗", points: 1, enabled: true, syncFiveEducation: false },
+  { id: "month-excellent", period: "month", name: "月度优雅班集体", points: 1, enabled: true, syncFiveEducation: true, syncLevel1: "智育", syncLevel2: "学习习惯", syncLevel3: "专注听讲" },
+  { id: "month-growth", period: "month", name: "成长示范班", points: 1, enabled: false, syncFiveEducation: false },
 ]
 
 const DEFAULT_CLASS_RATING_CONFIGS: ClassRatingConfig[] = [
-  { id: "rating-demonstration", name: "优雅示范", description: "表现突出、礼仪规范，持续发挥班级示范作用。", image: null, defaultImage: "smile", autoIssueDay: "saturday", rankStart: "1", rankEnd: "2", theme: "blue" },
-  { id: "rating-growth", name: "稳步成长", description: "保持稳定进步，在合作与成长中形成班级特色。", image: null, defaultImage: "smile", autoIssueDay: "sunday", rankStart: "3", rankEnd: "6", theme: "green" },
-  { id: "rating-encouragement", name: "成长加油", description: "积极参与、持续改善，在每一次努力中积累成长。", image: null, defaultImage: "cry", autoIssueDay: "monday", rankStart: "7", rankEnd: "99", theme: "orange" },
+  { id: "rating-demonstration", name: "优雅示范", description: "表现突出、礼仪规范，持续发挥班级示范作用。", image: null, defaultImage: "smile", autoIssueDay: "saturday", ruleType: "rank", rankStart: "1", rankEnd: "2", scoreStart: "90", scoreEnd: "100", theme: "blue" },
+  { id: "rating-growth", name: "稳步成长", description: "保持稳定进步，在合作与成长中形成班级特色。", image: null, defaultImage: "smile", autoIssueDay: "sunday", ruleType: "rank", rankStart: "3", rankEnd: "6", scoreStart: "80", scoreEnd: "89.9", theme: "green" },
+  { id: "rating-encouragement", name: "成长加油", description: "积极参与、持续改善，在每一次努力中积累成长。", image: null, defaultImage: "cry", autoIssueDay: "monday", ruleType: "rank", rankStart: "7", rankEnd: "99", scoreStart: "0", scoreEnd: "79.9", theme: "orange" },
 ]
 
 const MALL_IMAGES = [
@@ -727,8 +727,12 @@ function normalizeActivities(items: unknown): Activity[] {
   const normalize = (item: unknown) => {
     const activity = item as Omit<Activity, "status"> & { status?: string }
     const legacyStatus = activity.status === "closed" ? "ended" : (activity.status ?? "draft")
+    const activityTypes = Array.isArray(activity.activityTypes)
+      ? activity.activityTypes.filter((value): value is string => typeof value === "string")
+      : []
     return {
       ...activity,
+      activityTypes: activityTypes.length > 0 ? activityTypes : ["综合实践"],
       status: getActivityStatus({
         ...activity,
         status: legacyStatus as Activity["status"],
@@ -875,8 +879,8 @@ interface EvaluationContextValue {
   addClassRatingConfig: (config: ClassRatingConfig) => void
   removeClassRatingConfig: (id: string) => void
   setFlag: (classId: string, periodKey: string, awarded: boolean, configId?: string, period?: FlagPeriod) => void
-  /** 为获流动红旗的班级全部学生发放“合作创享星”奖卡（+1），同一周同一班只发一次 */
-  issueFlagReward: (classId: string, weekKey: string) => void
+  /** 为获流动红旗的班级全部学生发放奖励积分，同一周期同一班只发一次 */
+  issueFlagReward: (classId: string, weekKey: string, configId?: string) => void
   awardCards: AwardCardRecord[]
   addAwardCards: (
     cards: Omit<AwardCardRecord, "id" | "createdAt" | "operatorId" | "operatorName" | "source">[],
@@ -985,8 +989,17 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
         ? mergeMissingDemoRecords(storedRecords, seedRecords().filter((item) => item.id.startsWith("seed-ranking-") || item.id.startsWith("moral-demo-record-") || item.id.startsWith("homeroom-dashboard-record-")))
         : seedRecords())
       setFlags(storedFlags ? mergeMissingDemoFlags(storedFlags, seedFlags()) : seedFlags())
-      setFlagConfigs(rawFlagConfigs ? JSON.parse(rawFlagConfigs) : DEFAULT_FLAG_CONFIGS)
-      setClassRatingConfigs(rawClassRatingConfigs ? JSON.parse(rawClassRatingConfigs) : DEFAULT_CLASS_RATING_CONFIGS)
+      const storedFlagConfigs = rawFlagConfigs ? JSON.parse(rawFlagConfigs) as Partial<FlagConfig>[] : null
+      setFlagConfigs(storedFlagConfigs ? storedFlagConfigs.map((item) => ({ ...item, points: Number.isFinite(item.points) && Number(item.points) > 0 ? Math.round(Number(item.points)) : 1 } as FlagConfig)) : DEFAULT_FLAG_CONFIGS)
+      const storedClassRatingConfigs = rawClassRatingConfigs ? JSON.parse(rawClassRatingConfigs) as Partial<ClassRatingConfig>[] : null
+      setClassRatingConfigs(storedClassRatingConfigs ? storedClassRatingConfigs.map((item) => ({
+        ...item,
+        ruleType: item.ruleType === "score" ? "score" : "rank",
+        rankStart: item.rankStart ?? "1",
+        rankEnd: item.rankEnd ?? "99",
+        scoreStart: item.scoreStart ?? "0",
+        scoreEnd: item.scoreEnd ?? "100",
+      } as ClassRatingConfig)) : DEFAULT_CLASS_RATING_CONFIGS)
       setAwardCards(storedAwardCards
         ? mergeMissingDemoRecords(storedAwardCards, seedAwardCards().filter((item) => item.id.startsWith("award-leaderboard-") || item.id.startsWith("award-moral-demo-") || item.id.startsWith("award-role-dashboard-") || item.id.startsWith("award-parent-dashboard-")))
         : seedAwardCards())
@@ -1403,7 +1416,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     setClassRatingConfigs((prev) => prev.filter((item) => item.id !== id))
   }
 
-  const issueFlagReward: EvaluationContextValue["issueFlagReward"] = (classId, weekKey) => {
+  const issueFlagReward: EvaluationContextValue["issueFlagReward"] = (classId, weekKey, configId) => {
     if (!currentTeacher) return
     // 去重：同一周同一班已发过 flag_reward 则跳过
     const already = awardCards.some(
@@ -1415,9 +1428,12 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     if (already) return
     const roster = STUDENTS.filter((s) => s.classId === classId)
     if (roster.length === 0) return
+    const flagConfig = flagConfigs.find((item) => item.id === configId) ?? flagConfigs.find((item) => item.period === "week" && item.enabled)
+    const rewardPoints = flagConfig?.points ?? 1
     const [yearStr, weekStr] = weekKey.split("-W")
-    const monday = getWeekRange(new Date(Number(yearStr), 0, 4 + (Number(weekStr) - 1) * 7)).start
-    const date = formatDate(monday)
+    const date = weekStr
+      ? formatDate(getWeekRange(new Date(Number(yearStr), 0, 4 + (Number(weekStr) - 1) * 7)).start)
+      : formatDate(new Date(`${weekKey}-01T00:00:00`))
     const stamped: AwardCardRecord[] = roster.map((s) => ({
       id: `award-flag-${weekKey}-${classId}-${s.id}`,
       studentId: s.id,
@@ -1427,7 +1443,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       level1: "劳育",
       level2: "合作创享星",
       level3: "团队协作",
-      points: 1,
+      points: rewardPoints,
       weekKey,
       date,
       source: "flag_reward",

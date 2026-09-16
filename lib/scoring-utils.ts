@@ -1,5 +1,5 @@
 import indicatorsData from "./data/evaluation-indicators.json"
-import type { IndicatorGroup, ScoreRecord } from "./types"
+import type { ClassRatingConfig, IndicatorGroup, ScoreRecord } from "./types"
 
 export const INDICATOR_GROUPS = indicatorsData as IndicatorGroup[]
 
@@ -16,6 +16,15 @@ export function getGroupByLevel2(level1: string, level2: string) {
 /** Full-mark total for one level2 group (sum of level3 maxScore) */
 export function getGroupMaxScore(group: IndicatorGroup) {
   return group.items.reduce((sum, item) => sum + item.maxScore, 0)
+}
+
+export function findClassRating(configs: ClassRatingConfig[], rank: number, score: number) {
+  return configs.find((config) => {
+    const value = config.ruleType === "score" ? score : rank
+    const start = Number(config.ruleType === "score" ? config.scoreStart : config.rankStart)
+    const end = Number(config.ruleType === "score" ? config.scoreEnd : config.rankEnd)
+    return Number.isFinite(value) && Number.isFinite(start) && Number.isFinite(end) && value >= start && value <= end
+  })
 }
 
 /** Full-mark total across all indicators (for weekly total) */

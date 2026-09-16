@@ -1,0 +1,101 @@
+.guard {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f5f8ff;
+  color: #31415e;
+}
+
+.guard > div { padding: 40px; border-radius: 24px; background: #fff; box-shadow: 0 20px 50px rgb(61 88 146 / 14%); text-align: center; }
+.guard h1 { margin: 14px 0; font-size: 20px; }
+.guard a { color: #346de8; font-weight: 700; }
+
+.screen { width: 100vw; min-height: 100dvh; height: 100dvh; overflow: hidden; position: relative; color: #33415c; font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; background: #f4f8ff; touch-action: manipulation; -webkit-tap-highlight-color: rgb(77 141 255 / 16%); }
+.aurora, .gridTexture, .signalTexture { position: absolute; inset: 0; pointer-events: none; }
+.aurora { background: radial-gradient(circle at 8% 0%, rgb(160 205 255 / 42%), transparent 28%), radial-gradient(circle at 93% 5%, rgb(255 222 153 / 42%), transparent 26%), radial-gradient(circle at 49% 100%, rgb(174 245 213 / 34%), transparent 32%); }
+.gridTexture { opacity: .48; background-image: linear-gradient(rgb(107 153 225 / 6%) 1px, transparent 1px), linear-gradient(90deg, rgb(107 153 225 / 6%) 1px, transparent 1px), radial-gradient(circle, rgb(117 145 202 / 22%) 1px, transparent 1.5px); background-size: 72px 72px, 72px 72px, 26px 26px; mask-image: linear-gradient(to bottom, black, transparent 76%); }
+.signalTexture { background: linear-gradient(90deg, rgb(84 153 255 / 14%), transparent 17%, transparent 83%, rgb(255 178 68 / 15%)), linear-gradient(180deg, rgb(255 255 255 / 35%), transparent 30%, rgb(86 161 255 / 7%)); }
+
+.viewport, .scaledViewport, .dashboard, .scaledDashboard { width: 1920px; height: 1080px; }
+.viewport { position: absolute; z-index: 1; top: 50%; left: 50%; transform-origin: center center; }
+.scaledScreen { height: 100dvh; }
+.scaledViewport { transform: translate(-50%, -50%) scale(var(--student-screen-scale)); }
+.dashboard { box-sizing: border-box; display: grid; grid-template-rows: 68px minmax(0, 1fr) 20px; gap: 14px; padding: 22px 34px 16px; background: radial-gradient(circle at 50% 18%, rgb(114 193 255 / 9%), transparent 34%), linear-gradient(135deg, rgb(248 251 255 / 97%), rgb(242 248 255 / 91%)); }
+
+.skipLink { position: fixed; z-index: 10; top: 8px; left: 8px; transform: translateY(-150%); padding: 10px 14px; border-radius: 9px; background: #253963; color: #fff; font-weight: 700; }
+.skipLink:focus { transform: translateY(0); }
+
+.header { position: relative; height: 68px; box-sizing: border-box; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 20px; border: 1px solid #d4e3f7; border-radius: 21px; background: linear-gradient(105deg, rgb(255 255 255 / 93%), rgb(247 251 255 / 91%) 55%, rgb(255 252 244 / 90%)); box-shadow: 0 12px 28px rgb(66 92 143 / 10%), inset 0 1px 0 rgb(255 255 255 / 90%), 0 0 24px rgb(74 143 235 / 7%); }
+.header::before { content: ""; position: absolute; top: -1px; left: 34px; width: 210px; height: 2px; border-radius: 99px; background: linear-gradient(90deg, transparent, #58a1ff 26%, #63d4c2 72%, transparent); box-shadow: 0 0 13px rgb(76 157 255 / 46%); }
+.headerLeft, .headerRight, .brandLockup, .panelHeading, .panelAction, .profileClass, .profileStage, .recordItem, .fitnessSummary, .footer { display: flex; align-items: center; }
+.headerLeft, .headerRight { gap: 14px; }.headerLeft { justify-self: start; }.headerRight { justify-self: end; }
+.backLink { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 13px; color: #416fe1; background: #edf3ff; box-shadow: inset 0 0 0 1px rgb(116 159 240 / 8%); transition: transform 180ms ease, background-color 180ms ease; }
+.backLink:hover { transform: translateX(-2px); background: #dce9ff; }.backLink:focus-visible { outline: 3px solid rgb(76 133 255 / 34%); outline-offset: 3px; }
+.liveDot { width: 8px; height: 8px; border-radius: 50%; background: #39c998; box-shadow: 0 0 0 5px rgb(57 201 152 / 14%); }
+.headerLeft > span:not(.liveDot):not(.headerDivider) { color: #72809c; font-size: 12px; }
+.headerDivider { width: 1px; height: 22px; background: #dce5f1; }
+.clock { color: #5a6b89; font-family: "DIN Alternate", "Arial Narrow", sans-serif; font-size: 15px; letter-spacing: 1px; }
+.brandLockup { gap: 10px; }
+.brandMark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 14px; color: #fff; background: linear-gradient(135deg, #ffb83e, #ff7f50); box-shadow: 0 8px 18px rgb(255 149 60 / 28%); }
+.brandLockup p { margin: 0; color: #6f84a4; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; line-height: 1.5; }
+.brandLockup h1 { margin: 2px 0 0; color: #2b3b59; font-size: 19px; line-height: 1; letter-spacing: 1.5px; }
+.semesterBadge, .singleStudent, .studentSwitcher { height: 34px; box-sizing: border-box; padding: 0 12px; border: 1px solid #dce5f3; border-radius: 10px; color: #53627e; background: #f8faff; font: inherit; font-size: 13px; }
+.headerStudentMeta { max-width: 300px; overflow: hidden; color: #72809c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.semesterBadge { display: inline-flex; align-items: center; color: #ec861d; background: #fff8e9; border-color: #ffe1a8; font-weight: 700; }
+.studentSwitcher { display: inline-flex; align-items: center; gap: 6px; min-width: 130px; color: #4273df; }
+.studentSwitcher:focus-within { outline: 3px solid rgb(76 133 255 / 22%); }
+.studentSwitcher select { min-width: 94px; border: 0; outline: 0; color: #53627e; background: transparent; font: inherit; }
+.studentSwitcher option { color: #33415c; background: #fff; }
+
+.metricCard { width: auto; height: 66px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 0 9px; border: 1px solid #dce8f8; border-radius: 15px; background: linear-gradient(145deg, rgb(255 255 255 / 94%), rgb(247 251 255 / 90%)); box-shadow: 0 10px 22px rgb(62 88 145 / 8%), inset 0 1px 0 rgb(255 255 255 / 90%); }
+.metricCard > div { min-width: 0; }
+.metricCard > div p { margin: 0; color: #7083a2; font-size: 12px; line-height: 1.5; }
+.metricCard > div strong { display: block; margin-top: 4px; color: #2d3e5d; font-size: 25px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.metricCard > div strong small { margin-left: 3px; color: inherit; font-size: 12px; }
+.metricIcon { display: grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; border-radius: 11px; }
+.cyan .metricIcon { color: #3979e9; background: #eaf1ff; }.mint .metricIcon { color: #1aa778; background: #e4faf0; }.amber .metricIcon { color: #e68a17; background: #fff3d9; }.violet .metricIcon { color: #8a5cdd; background: #f3ebff; }
+.cyan strong { color: #3979e9 !important; }.mint strong { color: #1aa778 !important; }.amber strong { color: #e68a17 !important; }.violet strong { color: #8a5cdd !important; }
+
+.contentGrid { display: grid; min-height: 0; grid-template-columns: minmax(300px, .92fr) minmax(560px, 1.48fr) minmax(360px, .98fr); grid-template-rows: minmax(0, 1fr) 260px; gap: 16px; }
+.leftColumn, .rightColumn { display: grid; min-width: 0; min-height: 0; gap: 16px; }.leftColumn { grid-template-rows: repeat(2, minmax(0, 1fr)); }.rightColumn { grid-template-rows: minmax(0, 1.25fr) minmax(0, .9fr); }
+.panel { position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden; box-sizing: border-box; border: 1px solid #d8e5f6; border-radius: 19px; background: linear-gradient(145deg, rgb(255 255 255 / 93%), rgb(248 251 255 / 88%)); box-shadow: 0 12px 26px rgb(63 91 146 / 8%), inset 0 1px 0 rgb(255 255 255 / 95%), 0 0 18px rgb(71 145 240 / 5%); }
+.panel::before { content: ""; position: absolute; top: 0; left: 18px; width: 58px; height: 4px; border-radius: 0 0 8px 8px; background: linear-gradient(90deg, #4d8dff, #71c8ff); box-shadow: 0 0 10px rgb(77 141 255 / 38%); }
+.panel::after { content: ""; position: absolute; top: 15px; right: 18px; width: 22px; height: 8px; border-top: 1px solid rgb(77 141 255 / 28%); border-right: 1px solid rgb(77 141 255 / 28%); opacity: .8; pointer-events: none; }
+.panelHeading { position: relative; z-index: 1; min-height: 50px; justify-content: space-between; padding: 13px 18px 4px; }
+.panelHeading > div:nth-child(2) { flex: 1; min-width: 0; }
+.panelHeading h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: #34415a; font-size: 17px; letter-spacing: .5px; text-wrap: balance; scroll-margin-top: 16px; }
+.panelHeading p { margin: 3px 0 0; color: #7183a0; font-size: 12px; line-height: 1.5; }
+.headingIcon { display: grid; flex: 0 0 auto; place-items: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 10px; color: #4e82e8; background: #edf4ff; box-shadow: inset 0 0 0 1px rgb(102 149 235 / 12%); }
+.panelAction { gap: 7px; color: #6d7f9d; font-size: 12px; }
+.dataTag, .fitnessBadge { padding: 4px 8px; border-radius: 99px; color: #3a7fdd; background: #eef4ff; font-size: 12px; font-weight: 700; }
+.scoreBadge { color: #ef8a20; font-size: 19px; font-weight: 800; }
+.chartLarge, .chartSmall, .chartMedium, .chartFitness { width: 100%; height: 0; flex: 1; min-height: 0; }
+
+.profilePanel { isolation: isolate; align-self: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 560px; min-width: 0; border: 1px solid #cfe2f8; border-radius: 20px; background: radial-gradient(circle at 50% 35%, rgb(255 232 180 / 75%), transparent 26%), radial-gradient(circle at 50% 65%, rgb(144 210 255 / 30%), transparent 46%), linear-gradient(155deg, #fbfdff, #eaf5ff); box-shadow: 0 14px 32px rgb(63 91 146 / 9%), 0 0 26px rgb(74 159 241 / 11%), inset 0 1px 0 rgb(255 255 255 / 94%); }
+.profilePanel::before, .profilePanel::after { content: ""; position: absolute; z-index: 0; width: 76px; height: 76px; border: 2px solid rgb(88 145 239 / 32%); border-radius: 23px; transform: rotate(22deg); }
+.profilePanel::before { top: 42px; left: 36px; }.profilePanel::after { right: 37px; bottom: 42px; border-color: rgb(255 169 46 / 39%); transform: rotate(-18deg); }
+.profileGlow { position: absolute; z-index: 0; inset: 14% 8% 10%; border: 1px dashed rgb(104 153 238 / 31%); border-radius: 48% 52% 45% 55%; box-shadow: inset 0 0 90px rgb(98 183 255 / 9%); }
+.profileGlow::after { content: ""; position: absolute; inset: 16%; border: 1px solid rgb(255 183 66 / 25%); border-radius: inherit; transform: rotate(-22deg); }
+.profileKicker { position: relative; z-index: 2; color: #5276bd; font-size: 12px; font-weight: 800; letter-spacing: 3px; }
+.profileIdentity { position: relative; z-index: 2; width: 100%; text-align: center; }
+.avatarOrbit { position: relative; z-index: 1; display: grid; place-items: center; width: 292px; height: 275px; margin: -3px auto -8px; }
+.avatarOrbit::before { content: ""; position: absolute; inset: 18px 36px 5px; border-radius: 50%; background: radial-gradient(ellipse at 50% 44%, rgb(255 223 130 / 45%), rgb(99 171 255 / 16%) 56%, transparent 70%); }
+.avatarOrbit::after { content: ""; position: absolute; left: 50%; bottom: 8px; width: 230px; height: 31px; border-radius: 50%; transform: translateX(-50%); background: radial-gradient(ellipse, rgb(57 126 219 / 33%), rgb(57 126 219 / 8%) 43%, transparent 72%); filter: blur(2px); }
+.orbitRing { position: absolute; inset: 12px 21px; border: 1px dashed rgb(77 141 255 / 45%); border-radius: 50%; transform: rotate(-11deg); }
+.orbitRing::before, .orbitRing::after { content: ""; position: absolute; width: 13px; height: 13px; border-radius: 50%; background: #ffb542; box-shadow: 0 0 0 5px rgb(255 181 66 / 17%); }.orbitRing::before { top: 21px; left: 41px; }.orbitRing::after { right: 31px; bottom: 41px; background: #4d8dff; box-shadow: 0 0 0 5px rgb(77 141 255 / 15%); }
+.profileAvatar { position: relative; z-index: 2; width: 230px; height: 270px; object-fit: contain; filter: drop-shadow(0 21px 17px rgb(48 77 130 / 24%)); animation: avatarFloat 5.5s ease-in-out infinite; }
+.profileName { margin: 0; color: #2a405f; font-size: 35px; letter-spacing: 4px; }.profileIdentity .profileName span { margin-left: 9px; color: #6391df; font-size: 13px; font-weight: 600; letter-spacing: 0; vertical-align: middle; }
+.profileClass, .profileStage { justify-content: center; gap: 8px; margin-top: 8px; color: #687893; font-size: 13px; }.profileStage { color: #38a37d; }.profileStage b { color: #1a9670; }
+.profileMetrics { position: relative; z-index: 2; display: grid; width: 82%; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }.profileMetrics .metricCard { min-width: 0; }.profileMetrics .metricCard > div p { white-space: nowrap; }.profileMetrics .metricCard > div strong { font-size: 22px; }
+
+.scoreList { padding: 0 16px 12px; }.scoreList > span { display: grid; grid-template-columns: 1fr 38px 32px; align-items: center; min-height: 27px; border-bottom: 1px solid #edf1f7; color: #566783; font-size: 12px; }.scoreList > span:last-child { border: 0; }.scoreList strong { color: #3d75d6; text-align: right; }.scoreList em { color: #8c9ab0; font-size: 12px; font-style: normal; text-align: right; }
+.fitnessSummary { justify-content: center; gap: 20px; padding: 1px 16px 0; color: #687995; font-size: 12px; }.fitnessSummary strong { color: #ef961f; font-size: 20px; }.fitnessSummary > div { display: flex; flex-direction: column; align-items: center; gap: 2px; }.fitnessSummary b { color: #465b7d; font-size: 13px; }.fitnessSummary small { color: #98a4b6; font-size: 12px; }
+
+.recordsRow { display: grid; grid-column: 1 / -1; min-height: 0; grid-template-columns: repeat(3, 1fr); gap: 16px; }.recordsRow .panel { min-width: 0; }.recordList { padding: 10px 18px 16px; }.recordItem { position: relative; gap: 12px; min-height: 50px; border-bottom: 1px solid #e7eef8; color: #53647e; font-size: 12px; }.recordItem:last-child { border-bottom: 0; }.recordItem > div { min-width: 0; flex: 1; }.recordItem strong { display: block; overflow: hidden; color: #425675; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.recordItem p { margin: 4px 0 0; color: #95a0b2; font-size: 12px; }.recordItem > b { color: #2fa77e; font-size: 12px; white-space: nowrap; }.recordDot, .honorDot, .activityDot { display: grid; flex: 0 0 auto; place-items: center; width: 28px; height: 28px; border-radius: 10px; }.recordDot { color: #e39b1d; background: #fff0c9; }.honorDot { color: #20a77b; background: #ddf7eb; }.activityDot { color: #3f7fdd; background: #e2eeff; }.emptyRecord { display: grid; min-height: 80px; place-items: center; color: #91a0b5; font-size: 13px; }
+.recordItem p { color: #7183a0; line-height: 1.5; }
+.footer { justify-content: space-between; height: 20px; padding: 0 6px; color: #7183a0; font-size: 12px; letter-spacing: 1px; line-height: 1.5; }.footer::before, .footer::after { content: ""; width: 300px; height: 1px; background: linear-gradient(90deg, transparent, #cbd9ef); }.footer::after { background: linear-gradient(90deg, #cbd9ef, transparent); }
+
+@keyframes avatarFloat { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
+@media (prefers-reduced-motion: reduce) { .profileAvatar { animation: none; }.backLink { transition: none; } }
+@media (max-width: 900px) { .dashboard { padding: 22px 30px 16px; }.contentGrid { grid-template-columns: minmax(280px, .92fr) minmax(500px, 1.48fr) minmax(320px, .98fr); }.header { padding: 0 14px; }.headerLeft .headerDivider, .headerLeft .clock { display: none; }.headerStudentMeta { max-width: 245px; }.footer { font-size: 12px; } }

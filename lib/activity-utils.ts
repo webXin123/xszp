@@ -4,6 +4,17 @@ import type {
   Enrollment,
 } from "./types"
 
+/** 发布活动时可选择的中文活动类型，支持多选。 */
+export const ACTIVITY_TYPE_OPTIONS = [
+  "学科活动",
+  "体育活动",
+  "艺术活动",
+  "劳动实践",
+  "社会实践",
+  "校园文化",
+  "综合实践",
+] as const
+
 /** 兼容旧活动：未配置时仍按“需要报名”处理。 */
 export function requiresActivityEnrollment(activity: Activity): boolean {
   return activity.requiresEnrollment !== false

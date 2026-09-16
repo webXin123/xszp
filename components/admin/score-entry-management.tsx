@@ -190,7 +190,7 @@ function createSeedTask(grades: Grade[]): ScoreEntryTask {
   return {
     id: "score-task-seed",
     semester: getSemesterLabel(),
-    scoreName: "期中成绩",
+    scoreName: "学期成绩",
     gradeIds: targetGrades.map((item) => item.id),
     startAt: localDateTime(-2, 8),
     endAt: localDateTime(5, 18),
@@ -200,7 +200,7 @@ function createSeedTask(grades: Grade[]): ScoreEntryTask {
     calculationItems: [],
     convertResult: false,
     conversionRules: [],
-    progress: buildProgress("score-task-seed", "期中成绩", targetGrades),
+    progress: buildProgress("score-task-seed", "学期成绩", targetGrades),
   }
 }
 

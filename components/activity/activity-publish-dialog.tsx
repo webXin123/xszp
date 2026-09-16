@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CalendarClock, ChevronLeft, ChevronRight, CircleDollarSign, MapPin, Plus, ShieldCheck, UsersRound, X } from "lucide-react"
+import { CalendarClock, Check, ChevronLeft, ChevronRight, CircleDollarSign, MapPin, Plus, ShieldCheck, UsersRound, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown"
 import { Input } from "@/components/ui/input"
@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/select"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
-import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
+import { AWARD_GROUPS, AWARD_LEVEL1_LIST } from "@/lib/award-utils"
+import { ACTIVITY_TYPE_OPTIONS } from "@/lib/activity-utils"
 import { cn } from "@/lib/utils"
 import type { Activity, ActivityPointRequirement } from "@/lib/types"
 
@@ -35,6 +36,8 @@ interface ActivityPublishDialogProps {
 }
 
 const FIELD = "h-10 rounded-xl border-[#d8e0f7] bg-[#fbfcff] shadow-[0_6px_14px_-16px_rgba(53,67,150,0.75)]"
+const NO_SECONDARY_LEVEL = "不指定二级指标"
+const NO_TERTIARY_LEVEL = "不指定三级指标"
 
 function localDateTime(offset: number, hour: number) {
   const date = new Date()
@@ -90,6 +93,7 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [activityTypes, setActivityTypes] = useState<string[]>([])
   const [selectedGradeIds, setSelectedGradeIds] = useState<string[]>([])
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([])
   const [requiresEnrollment, setRequiresEnrollment] = useState(false)
@@ -101,6 +105,12 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
   const [pointsCost, setPointsCost] = useState("1")
   const [capacity, setCapacity] = useState("0")
   const [pointRequirements, setPointRequirements] = useState<ActivityPointRequirement[]>([])
+  const [participationPointsEnabled, setParticipationPointsEnabled] = useState(false)
+  const [participationPointsLevel1, setParticipationPointsLevel1] = useState("")
+  const [participationPointsLevel2, setParticipationPointsLevel2] = useState("")
+  const [participationPointsLevel3, setParticipationPointsLevel3] = useState("")
+  const [participationPoints, setParticipationPoints] = useState("1")
+  const [participationPointsAt, setParticipationPointsAt] = useState(localDateTime(7, 18))
   const [location, setLocation] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState<1 | 2>(1)
@@ -120,6 +130,15 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
     [classes, selectedGradeIds, allowedGradeIds],
   )
 
+  const participationLevel1Group = useMemo(
+    () => AWARD_GROUPS.find((group) => group.level1 === participationPointsLevel1),
+    [participationPointsLevel1],
+  )
+  const participationLevel2Group = useMemo(
+    () => participationLevel1Group?.items.find((group) => group.level2 === participationPointsLevel2),
+    [participationLevel1Group, participationPointsLevel2],
+  )
+
   useEffect(() => {
     if (!open) return
     if (activity) {
@@ -133,6 +152,7 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
         .filter((gradeId): gradeId is string => !!gradeId)
       setTitle(activity.title)
       setDescription(activity.description)
+      setActivityTypes(activity.activityTypes?.length ? activity.activityTypes : ["综合实践"])
       setSelectedGradeIds(Array.from(new Set([...safeGradeIds, ...classGradeIds])))
       setSelectedClassIds(safeClassIds)
       setRequiresEnrollment(activity.requiresEnrollment !== false)
@@ -144,10 +164,17 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
       setPointsCost(String(activity.pointsCost || 1))
       setCapacity(String(activity.capacity))
       setPointRequirements(activity.pointRequirements ?? [])
+      setParticipationPointsEnabled(activity.participationPointsEnabled ?? false)
+      setParticipationPointsLevel1(activity.participationPointsLevel1 ?? activity.level1 ?? "")
+      setParticipationPointsLevel2(activity.participationPointsLevel2 ?? "")
+      setParticipationPointsLevel3(activity.participationPointsLevel3 ?? "")
+      setParticipationPoints(String(activity.participationPoints || 1))
+      setParticipationPointsAt(toDateTimeInput(activity.participationPointsAt ?? "", toDateTimeInput(activity.endDate, localDateTime(7, 18))))
       setLocation(activity.location)
     } else {
       setTitle("")
       setDescription("")
+      setActivityTypes([])
       setSelectedGradeIds([])
       setSelectedClassIds([])
       setRequiresEnrollment(false)
@@ -159,6 +186,12 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
       setPointsCost("1")
       setCapacity("0")
       setPointRequirements([])
+      setParticipationPointsEnabled(false)
+      setParticipationPointsLevel1("")
+      setParticipationPointsLevel2("")
+      setParticipationPointsLevel3("")
+      setParticipationPoints("1")
+      setParticipationPointsAt(localDateTime(7, 18))
       setLocation("")
     }
     setError(null)
@@ -187,11 +220,29 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
     setPointRequirements((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item))
   }
 
+  const updateParticipationLevel1 = (value: string) => {
+    setParticipationPointsLevel1(value)
+    setParticipationPointsLevel2("")
+    setParticipationPointsLevel3("")
+  }
+
+  const updateParticipationLevel2 = (value: string) => {
+    setParticipationPointsLevel2(value)
+    setParticipationPointsLevel3("")
+  }
+
+  const toggleActivityType = (value: string) => {
+    setActivityTypes((current) => current.includes(value)
+      ? current.filter((item) => item !== value)
+      : [...current, value])
+  }
+
   const validateBasic = () => {
     const trimmedTitle = title.trim()
     const trimmedLocation = location.trim()
     if (!trimmedTitle) return setError("请填写活动名称")
     if (!description.trim()) return setError("请填写活动内容")
+    if (activityTypes.length === 0) return setError("请选择至少一个活动类型")
     if (!trimmedLocation) return setError("请填写活动地点")
     if (selectedGradeIds.length === 0) return setError("请选择至少一个面向年级")
     if (selectedClassIds.length === 0) return setError("请选择至少一个面向班级")
@@ -232,9 +283,21 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
       }
     }
 
+    if (participationPointsEnabled) {
+      const level1Group = AWARD_GROUPS.find((group) => group.level1 === participationPointsLevel1)
+      const level2Group = level1Group?.items.find((group) => group.level2 === participationPointsLevel2)
+      const rewardPoints = Number(participationPoints)
+      if (!level1Group) return setError("请选择参加活动颁发积分的一级指标")
+      if (participationPointsLevel2 && !level2Group) return setError("请选择有效的参加活动颁发积分二级指标")
+      if (participationPointsLevel3 && !level2Group?.items.some((item) => item.level3 === participationPointsLevel3)) return setError("请选择有效的参加活动颁发积分三级指标")
+      if (!Number.isInteger(rewardPoints) || rewardPoints <= 0) return setError("参加活动颁发积分需设置大于 0 的整数")
+      if (!participationPointsAt) return setError("请设置积分发放时间")
+    }
+
     const payload = {
       title: trimmedTitle,
       description: description.trim(),
+      activityTypes,
       gradeIds: selectedGradeIds,
       classIds: selectedClassIds,
       requiresEnrollment,
@@ -246,6 +309,12 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
       endDate,
       pointsCost: requiresEnrollment && requiresPointsExchange ? cost : 0,
       capacity: requiresEnrollment ? cap : 0,
+      participationPointsEnabled,
+      participationPointsLevel1: participationPointsEnabled ? participationPointsLevel1 : "",
+      participationPointsLevel2: participationPointsEnabled ? participationPointsLevel2 : "",
+      participationPointsLevel3: participationPointsEnabled ? participationPointsLevel3 : "",
+      participationPoints: participationPointsEnabled ? Number(participationPoints) : 0,
+      participationPointsAt: participationPointsEnabled ? participationPointsAt : "",
       location: trimmedLocation,
     }
     if (isEdit && activity) updateActivity(activity.id, payload)
@@ -260,7 +329,7 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
           <span className="absolute -right-8 -top-10 size-32 rounded-full border border-primary/10 bg-primary/[0.035]" aria-hidden="true" />
           <div className="relative">
             <DialogTitle className="text-xl font-bold tracking-tight text-foreground">{isEdit ? "编辑活动" : "发布活动"}</DialogTitle>
-            <DialogDescription className="mt-1">填写活动信息，并按需设置报名规则。</DialogDescription>
+            <DialogDescription className="mt-1">填写活动信息、报名规则和活动积分奖励。</DialogDescription>
           </div>
         </DialogHeader>
 
@@ -272,6 +341,22 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
                 <div className="flex flex-col gap-1.5 sm:col-span-2"><Label htmlFor="act-title">活动名称 <span className="text-destructive">*</span></Label><Input id="act-title" name="activity-title" autoComplete="off" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="如：校园劳动实践周" className={FIELD} maxLength={40} /></div>
                 <div className="flex flex-col gap-1.5 sm:col-span-2"><Label htmlFor="act-location">活动地点 <span className="text-destructive">*</span></Label><Input id="act-location" name="activity-location" autoComplete="off" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="如：图书馆二楼阅览室" className={FIELD} maxLength={60} /></div>
                 <div className="flex flex-col gap-1.5 sm:col-span-2"><Label htmlFor="act-content">活动内容 <span className="text-destructive">*</span></Label><Textarea id="act-content" name="activity-content" autoComplete="off" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="说明活动目标、流程、参与要求及成果提交方式…" rows={3} maxLength={500} className="resize-none rounded-xl border-[#d8e0f7] bg-white" /></div>
+                <fieldset className="flex flex-col gap-2 sm:col-span-2">
+                  <legend className="text-sm font-medium text-foreground">活动类型 <span className="text-destructive">*</span></legend>
+                  <p className="text-xs text-muted-foreground">可同时选择多个类型，便于学生按活动主题查找。</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="活动类型（可多选）">
+                    {ACTIVITY_TYPE_OPTIONS.map((type) => {
+                      const checked = activityTypes.includes(type)
+                      return (
+                        <label key={type} className={cn("flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-colors", checked ? "border-primary/40 bg-primary/[0.07] text-primary" : "border-[#d8e0f7] bg-white text-muted-foreground hover:border-primary/25 hover:bg-primary/[0.025]")}>
+                          <input type="checkbox" name="activity-types" value={type} checked={checked} onChange={() => toggleActivityType(type)} className="peer sr-only" />
+                          <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center rounded border transition-colors", checked ? "border-primary bg-primary text-white" : "border-[#c5cfe8] bg-white text-transparent")}><Check className="size-3" strokeWidth={3} /></span>
+                          <span>{type}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </fieldset>
                 <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-2"><DateTimeField label="活动开始时间" id="act-start" value={startDate} onChange={setStartDate} /><DateTimeField label="活动结束时间" id="act-end" value={endDate} onChange={setEndDate} /></div>
               </div>
               <div className="mt-4 border-t border-[#dce4fa] pt-4">
@@ -288,6 +373,42 @@ export function ActivityPublishDialog({ open, onOpenChange, activity }: Activity
               <div className="mt-4 flex flex-col gap-3">
                 <ToggleRow label="需要活动报名" description="关闭后活动直接面向所选班级开放，不设置报名时间。" checked={requiresEnrollment} onChange={(checked) => { setRequiresEnrollment(checked); if (!checked) setRequiresPointsExchange(false) }} />
                 {!requiresEnrollment ? <div className="rounded-xl border border-dashed border-brand-green/30 bg-brand-green/5 px-3.5 py-3 text-sm text-brand-green">本活动发布后，学生无需报名即可按活动时间直接参加。</div> : <div className="flex flex-col gap-3 rounded-xl border border-[#dce4fa] bg-white p-3.5"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><DateTimeField label="报名开始时间" id="act-enroll-start" value={enrollStart} onChange={setEnrollStart} /><DateTimeField label="报名结束时间" id="act-enroll-end" value={enrollEnd} onChange={setEnrollEnd} /></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-[180px_1fr]"><div className="flex flex-col gap-1.5"><Label htmlFor="act-capacity">名额上限</Label><Input id="act-capacity" name="activity-capacity" autoComplete="off" type="number" inputMode="numeric" min={0} value={capacity} onChange={(event) => setCapacity(event.target.value)} className={FIELD} /><p className="text-xs text-muted-foreground">0 表示不限名额。</p></div><ToggleRow label="报名需要积分兑换" description="开启后可设置消耗积分和本学期积分门槛。" checked={requiresPointsExchange} onChange={setRequiresPointsExchange} /></div>{requiresPointsExchange && <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-3"><div className="flex flex-wrap items-end justify-between gap-3"><div className="flex flex-col gap-1.5"><Label htmlFor="act-cost" className="flex items-center gap-1.5"><CircleDollarSign className="size-4 text-primary" aria-hidden="true" />报名消耗总积分</Label><Input id="act-cost" name="activity-points-cost" autoComplete="off" type="number" inputMode="numeric" min={1} value={pointsCost} onChange={(event) => setPointsCost(event.target.value)} className={cn(FIELD, "w-40")} /></div><Button type="button" size="sm" variant="outline" className="bg-white" onClick={addRequirement} disabled={pointRequirements.length >= AWARD_LEVEL1_LIST.length}><Plus className="size-3.5" />添加一级指标条件</Button></div><p className="mt-3 text-xs text-muted-foreground">可添加多个一级指标，报名学生本学期获得积分须达到设定分值。</p><div className="mt-3 flex flex-col gap-2">{pointRequirements.length > 0 ? pointRequirements.map((requirement, index) => <div key={`${requirement.level1}-${index}`} className="grid grid-cols-[minmax(0,1fr)_100px_36px] items-end gap-2 rounded-xl border border-[#dce4fa] bg-white p-2.5"><div className="flex flex-col gap-1.5"><Label className="text-[11px] text-muted-foreground">一级指标</Label><Select value={requirement.level1} onValueChange={(value) => updateRequirement(index, { level1: String(value ?? "") })}><SelectTrigger aria-label="选择附加条件一级指标" className="h-9 w-full px-2.5 text-xs"><SelectValue /></SelectTrigger><SelectContent>{AWARD_LEVEL1_LIST.map((item) => <SelectItem key={item} value={item} disabled={item !== requirement.level1 && pointRequirements.some((current, currentIndex) => currentIndex !== index && current.level1 === item)}>{item}</SelectItem>)}</SelectContent></Select></div><div className="flex flex-col gap-1.5"><Label htmlFor={`act-requirement-points-${index}`} className="text-[11px] text-muted-foreground">最低积分</Label><Input id={`act-requirement-points-${index}`} name={`activity-requirement-points-${index}`} autoComplete="off" type="number" inputMode="numeric" min={1} value={String(requirement.minimumPoints)} onChange={(event) => updateRequirement(index, { minimumPoints: Number(event.target.value) })} className="h-9 rounded-lg border-[#d8e0f7] bg-white px-2 text-xs" /></div><Button type="button" variant="ghost" size="icon-sm" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={`删除${requirement.level1}积分条件`} onClick={() => setPointRequirements((current) => current.filter((_, currentIndex) => currentIndex !== index))}><X className="size-4" /></Button></div>) : <p className="rounded-xl border border-dashed border-[#cfdaf8] bg-white/70 px-3 py-2.5 text-xs text-muted-foreground">尚未添加附加条件，仅校验报名消耗总积分。</p>}</div></div>}</div>}
+              </div>
+              <div className="mt-4 border-t border-[#dce4fa] pt-4">
+                <SectionTitle icon={CircleDollarSign} title="活动积分奖励" id="activity-reward-title" description="为实际参加活动的学生发放积分，一级指标为必选。" />
+                <div className="mt-3">
+                  <ToggleRow label="参加活动颁发积分" description="开启后，按指定指标、分值和时间为参与学生发放积分。" checked={participationPointsEnabled} onChange={setParticipationPointsEnabled} />
+                  {participationPointsEnabled && <div className="mt-3 rounded-xl border border-primary/15 bg-white p-3.5 shadow-[0_8px_20px_-18px_rgba(53,67,150,0.5)]">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="act-reward-level1">发放一级指标 <span className="font-normal text-destructive">（必选）</span></Label>
+                        <Select value={participationPointsLevel1} onValueChange={(value) => updateParticipationLevel1(String(value ?? ""))}>
+                          <SelectTrigger id="act-reward-level1" aria-label="选择发放积分一级指标" className="w-full"><SelectValue placeholder="请选择一级指标" /></SelectTrigger>
+                          <SelectContent>{AWARD_GROUPS.map((group) => <SelectItem key={group.level1} value={group.level1}>{group.level1}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="act-reward-level2">发放二级指标 <span className="font-normal text-muted-foreground">（可选）</span></Label>
+                        <Select value={participationPointsLevel2 || NO_SECONDARY_LEVEL} disabled={!participationPointsLevel1} onValueChange={(value) => updateParticipationLevel2(value === NO_SECONDARY_LEVEL ? "" : String(value ?? ""))}>
+                          <SelectTrigger id="act-reward-level2" aria-label="选择发放积分二级指标" className="w-full"><SelectValue placeholder="不指定二级指标" /></SelectTrigger>
+                          <SelectContent><SelectItem value={NO_SECONDARY_LEVEL}>{NO_SECONDARY_LEVEL}</SelectItem>{participationLevel1Group?.items.map((group) => <SelectItem key={group.level2} value={group.level2}>{group.level2}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="act-reward-level3">发放三级指标 <span className="font-normal text-muted-foreground">（可选）</span></Label>
+                        <Select value={participationPointsLevel3 || NO_TERTIARY_LEVEL} disabled={!participationPointsLevel2} onValueChange={(value) => setParticipationPointsLevel3(value === NO_TERTIARY_LEVEL ? "" : String(value ?? ""))}>
+                          <SelectTrigger id="act-reward-level3" aria-label="选择发放积分三级指标" className="w-full"><SelectValue placeholder="不指定三级指标" /></SelectTrigger>
+                          <SelectContent><SelectItem value={NO_TERTIARY_LEVEL}>{NO_TERTIARY_LEVEL}</SelectItem>{participationLevel2Group?.items.map((item) => <SelectItem key={item.id} value={item.level3}>{item.level3}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div className="flex flex-col gap-1.5"><Label htmlFor="act-reward-points">发放积分分数 <span className="text-destructive">*</span></Label><div className="relative"><Input id="act-reward-points" name="activity-reward-points" autoComplete="off" type="number" inputMode="numeric" min={1} step={1} value={participationPoints} onChange={(event) => setParticipationPoints(event.target.value)} className={cn(FIELD, "pr-12")} /><span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">分/人</span></div></div>
+                      <DateTimeField label="积分发放时间" id="act-reward-at" value={participationPointsAt} onChange={setParticipationPointsAt} />
+                    </div>
+                    <p className="mt-3 rounded-lg bg-primary/[0.05] px-3 py-2 text-xs leading-5 text-muted-foreground">积分将发放至每位参与学生的成长档案，可在活动结束后统一发放。</p>
+                  </div>}
+                </div>
               </div>
             </section>
           )}

@@ -52,6 +52,7 @@ type StandaloneView = "evaluation" | "ranking"
 
 interface EvaluationDashboardProps {
   standaloneView?: StandaloneView
+  initialMainTab?: MainTab
 }
 
 interface NavItem {
@@ -60,7 +61,7 @@ interface NavItem {
   icon: typeof LayoutGrid
 }
 
-export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps) {
+export function EvaluationDashboard({ standaloneView, initialMainTab }: EvaluationDashboardProps) {
   const router = useRouter()
   const {
     canEvaluate,
@@ -75,7 +76,7 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
   const isDirector = role === "director"
   const isMoralDirector = role === "moral_director"
 
-  const [mainTab, setMainTab] = useState<MainTab>(() => standaloneView ? "score" : (
+  const [mainTab, setMainTab] = useState<MainTab>(() => initialMainTab ?? (standaloneView ? "score" : (
     isParent
       ? "parent_home"
       : isHomeroom
@@ -87,7 +88,7 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
             : canEvaluate
               ? "score"
               : "award"
-  ))
+  )))
   const handleNavigate = (tab: MainTab) => {
     if (tab === "score") {
       router.push("/class-evaluation")
@@ -211,6 +212,16 @@ export function EvaluationDashboard({ standaloneView }: EvaluationDashboardProps
               >
                 <ChartNoAxesCombined className="size-4" aria-hidden="true" />
                 数据大屏
+              </Link>
+            )}
+
+{isParent && !standaloneView && (
+              <Link
+                href="/student-command-center"
+                className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+              >
+                <ChartNoAxesCombined className="size-4" aria-hidden="true" />
+                成长大屏
               </Link>
             )}
 

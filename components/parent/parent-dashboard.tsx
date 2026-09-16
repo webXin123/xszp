@@ -12,6 +12,7 @@ import {
   GraduationCap,
   HeartPulse,
   Medal,
+  MonitorPlay,
   Megaphone,
   Radar as RadarIcon,
   ShoppingBag,

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
-import { computeWeeklyScore, formatDate, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek, getWeekRange } from "@/lib/scoring-utils"
+import { computeWeeklyScore, findClassRating, formatDate, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek, getWeekRange } from "@/lib/scoring-utils"
 
 type RankingPeriod = "day" | "week" | "month"
 type ScoreDetailKind = "addition" | "deduction"
@@ -124,9 +124,8 @@ export function ClassRankingTab() {
 
   const getMedalImage = (rank: number) => RANK_MEDAL_IMAGES[Math.min(Math.max(rank, 1), 3) as 1 | 2 | 3]
 
-  const getRating = (rank: number) => {
-    const currentRank = rank + 1
-    const config = classRatingConfigs.find((item) => currentRank >= Number(item.rankStart) && currentRank <= Number(item.rankEnd))
+  const getRating = (rank: number, score: number) => {
+    const config = findClassRating(classRatingConfigs, rank + 1, score)
     if (config) return { label: config.name, image: config.image ?? (config.defaultImage === "cry" ? `${DEFAULT_ICON_PATH}/rating-cry.svg` : `${DEFAULT_ICON_PATH}/rating-smile.svg`) }
     return { label: "成长加油", image: `${DEFAULT_ICON_PATH}/rating-cry.svg` }
   }
@@ -138,7 +137,7 @@ export function ClassRankingTab() {
   const handleFlag = () => {
     if (!canManageFlags || isHistorical || !flagDialog || !selectedFlagConfig || selectedFlagAwarded) return
     setFlag(flagDialog.classId, periodKey, true, selectedFlagConfig.id, selectedFlagConfig.period)
-    if (syncPoints && selectedFlagConfig.syncFiveEducation) issueFlagReward(flagDialog.classId, periodKey)
+    if (syncPoints && selectedFlagConfig.syncFiveEducation) issueFlagReward(flagDialog.classId, periodKey, selectedFlagConfig.id)
     setFlagDialog(null)
   }
 
@@ -202,7 +201,7 @@ export function ClassRankingTab() {
             </thead>
             <tbody>
               {ranking.length === 0 ? <tr><td colSpan={tableColumnCount} className="px-4 py-12 text-center text-sm text-muted-foreground">当前筛选条件下暂无班级数据</td></tr> : ranking.map((row, index) => {
-                const rating = getRating(index)
+                const rating = getRating(index, row.total)
                 return <tr key={row.cls.id} className={cn("border-b border-[#edf0fa] transition-colors last:border-0 hover:bg-[#f5f7ff]", index === 0 && "bg-[#fbfaff]", index === 1 && "bg-slate-50/50", index === 2 && "bg-[#fffdfa]")}>
                   <td className="px-4 py-2.5 text-center"><span className={cn("inline-flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-sm", index === 0 ? "bg-gradient-to-br from-[#ffd976] to-[#f3aa4b] text-[#72501b]" : index === 1 ? "bg-gradient-to-br from-[#e7ecff] to-[#aebae5] text-[#55617f]" : index === 2 ? "bg-gradient-to-br from-[#ffcfad] to-[#ef9268] text-[#874527]" : "bg-muted text-muted-foreground")}>{index + 1}</span></td>
                   <td className="px-4 py-2.5 text-center"><button type="button" onClick={() => setDetailClassId(row.cls.id)} className="rounded-sm text-center font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">{row.cls.name}<span className="ml-2 text-xs font-normal text-muted-foreground">{row.grade?.name}</span></button></td>

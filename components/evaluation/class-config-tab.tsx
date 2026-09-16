@@ -102,6 +102,11 @@ const autoIssueOptions: { id: AutoIssueDay; label: string }[] = [
   { id: "monday", label: "下周一" },
 ]
 
+const ratingRuleOptions = [
+  { id: "rank" as const, label: "按照排名", description: "按班级在排行榜中的名次匹配" },
+  { id: "score" as const, label: "按照分数区间", description: "按班级总分落入的区间匹配" },
+]
+
 const DEFAULT_ICON_PATH = "/xszp/images"
 
 const defaultRatingImage: Record<ClassRatingConfig["defaultImage"], string> = {
@@ -335,6 +340,26 @@ function FlagEditor({ period, items, onAdd, onChange, onRemove }: FlagEditorProp
                 onChange={(event) => onChange(item.id, { name: event.target.value })}
                 className="h-9 min-w-0 flex-1 rounded-lg border border-border/70 bg-white px-2.5 text-sm font-semibold outline-none transition focus:border-primary"
               />
+              <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <span>积分</span>
+                <input
+                  aria-label={`${title}${item.name}奖励积分`}
+                  name={`${period}-${item.id}-points`}
+                  autoComplete="off"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={item.points ?? 1}
+                  onChange={(event) => {
+                    const points = Number(event.target.value)
+                    if (Number.isInteger(points) && points >= 1 && points <= 100) onChange(item.id, { points })
+                  }}
+                  className="h-9 w-16 rounded-lg border border-border/70 bg-white px-2 text-center text-sm font-semibold text-foreground outline-none transition focus:border-primary"
+                />
+                <span>分</span>
+              </label>
               <button
                 type="button"
                 aria-label={`删除${item.name}`}
@@ -395,6 +420,7 @@ export function ClassConfigTab() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [flagDialog, setFlagDialog] = useState<FlagPeriod | null>(null)
   const [newFlagName, setNewFlagName] = useState("")
+  const [newFlagPoints, setNewFlagPoints] = useState("1")
   const [newFlagSync, setNewFlagSync] = useState(false)
   const [newFlagLevel1, setNewFlagLevel1] = useState("")
   const [newFlagLevel2, setNewFlagLevel2] = useState("")
@@ -527,6 +553,11 @@ export function ClassConfigTab() {
       notify("请输入流动红旗名称")
       return
     }
+    const points = Number(newFlagPoints)
+    if (!Number.isInteger(points) || points < 1 || points > 100) {
+      notify("请输入 1-100 的整数积分")
+      return
+    }
     if (newFlagSync && !newFlagLevel1) {
       notify("请选择同步的一级指标")
       return
@@ -535,6 +566,7 @@ export function ClassConfigTab() {
       id: `${flagDialog}-${Date.now()}`,
       period: flagDialog,
       name: newFlagName.trim(),
+      points,
       enabled: true,
       syncFiveEducation: newFlagSync,
       syncLevel1: newFlagSync ? newFlagLevel1 : undefined,
@@ -548,6 +580,7 @@ export function ClassConfigTab() {
 
   const openFlagDialog = (period: FlagPeriod) => {
     setNewFlagName("")
+    setNewFlagPoints("1")
     setNewFlagSync(false)
     setNewFlagLevel1("")
     setNewFlagLevel2("")
@@ -566,8 +599,11 @@ export function ClassConfigTab() {
       image: null,
       defaultImage: "smile",
       autoIssueDay: "saturday",
+      ruleType: "rank",
       rankStart: "11",
       rankEnd: "20",
+      scoreStart: "0",
+      scoreEnd: "79.9",
       theme: "blue",
     }
     addClassRatingConfig(nextAppearance)
@@ -588,10 +624,11 @@ export function ClassConfigTab() {
     if (!selectedAppearance) return
     if (!selectedAppearance.name.trim()) return notify("请填写形象名称")
     if (!selectedAppearance.description.trim()) return notify("请填写简介信息")
-    const start = Number(selectedAppearance.rankStart)
-    const end = Number(selectedAppearance.rankEnd)
-    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < 1) return notify("请填写有效的排名区间")
-    if (start > end) return notify("排名起始名次不能大于结束名次")
+    const start = Number(selectedAppearance.ruleType === "score" ? selectedAppearance.scoreStart : selectedAppearance.rankStart)
+    const end = Number(selectedAppearance.ruleType === "score" ? selectedAppearance.scoreEnd : selectedAppearance.rankEnd)
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < 0) return notify(selectedAppearance.ruleType === "score" ? "请填写有效的分数区间" : "请填写有效的排名区间")
+    if (selectedAppearance.ruleType === "rank" && (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < 1)) return notify("排名区间必须为正整数")
+    if (start > end) return notify(selectedAppearance.ruleType === "score" ? "分数起始值不能大于结束值" : "排名起始名次不能大于结束名次")
     notify("班级评级已保存")
   }
 
@@ -627,7 +664,7 @@ export function ClassConfigTab() {
           </div>
           <div className="min-w-0">
             <p className="text-right text-sm font-bold">{isHomeroomTeacher ? "班级评级配置" : "统一维护班级评价规则"}</p>
-            <p className="mt-1 text-right text-xs text-muted-foreground">{isHomeroomTeacher ? "维护班级评级图片、自动发放时间及班级排名区间。" : "维护评价指标、流动红旗和班级评级三类配置。"}</p>
+            <p className="mt-1 text-right text-xs text-muted-foreground">{isHomeroomTeacher ? "维护班级评级图片、自动发放时间及排名/分数区间。" : "维护评价指标、流动红旗和班级评级三类配置。"}</p>
           </div>
         </div>
 
@@ -734,16 +771,16 @@ export function ClassConfigTab() {
               <div className="absolute inset-0 bg-slate-950/20" />
               <div className="relative flex h-full min-h-[260px] flex-col justify-between">
                 <div className="flex items-center justify-between"><span className="rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-xs font-semibold backdrop-blur">班级评级预览</span><Smile aria-hidden="true" className="size-5" /></div>
-                <div><p className="text-2xl font-bold tracking-tight">{selectedAppearance.name || "评级名称"}</p><p className="mt-2 text-sm font-medium text-white/90">班级排名第 {selectedAppearance.rankStart || "—"} 至 {selectedAppearance.rankEnd || "—"} 名</p><p className="mt-3 max-w-sm text-xs leading-5 text-white/80">{selectedAppearance.description || "填写评级简介信息。"}</p><span className="mt-4 inline-flex rounded-full border border-white/25 bg-white/15 px-2.5 py-1.5 text-[11px] font-semibold backdrop-blur">自动发放 · {autoIssueOptions.find((item) => item.id === selectedAppearance.autoIssueDay)?.label}</span></div>
+                <div><p className="text-2xl font-bold tracking-tight">{selectedAppearance.name || "评级名称"}</p><p className="mt-2 text-sm font-medium text-white/90">{selectedAppearance.ruleType === "score" ? `班级分数 ${selectedAppearance.scoreStart || "—"} 至 ${selectedAppearance.scoreEnd || "—"} 分` : `班级排名第 ${selectedAppearance.rankStart || "—"} 至 ${selectedAppearance.rankEnd || "—"} 名`}</p><p className="mt-3 max-w-sm text-xs leading-5 text-white/80">{selectedAppearance.description || "填写评级简介信息。"}</p><span className="mt-4 inline-flex rounded-full border border-white/25 bg-white/15 px-2.5 py-1.5 text-[11px] font-semibold backdrop-blur">自动发放 · {autoIssueOptions.find((item) => item.id === selectedAppearance.autoIssueDay)?.label}</span></div>
               </div>
             </div>
 
             <section className="config-subpanel rounded-2xl p-4">
-              <div className="flex items-start justify-between gap-3"><div><h2 className="text-sm font-bold">评级档案</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">按班级排名匹配不同的评级图片。</p></div><Button type="button" variant="outline" onClick={addAppearance} className="h-10 shrink-0 rounded-lg bg-transparent px-3 text-xs"><Plus aria-hidden="true" className="size-3.5" />新增评级</Button></div>
+              <div className="flex items-start justify-between gap-3"><div><h2 className="text-sm font-bold">评级档案</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">可按班级排名或分数区间匹配不同评级。</p></div><Button type="button" variant="outline" onClick={addAppearance} className="h-10 shrink-0 rounded-lg bg-transparent px-3 text-xs"><Plus aria-hidden="true" className="size-3.5" />新增评级</Button></div>
               <div className="mt-4 space-y-2">
                 {appearances.map((item) => <button key={item.id} type="button" aria-pressed={selectedAppearanceId === item.id} onClick={() => setSelectedAppearanceId(item.id)} className={cn("flex min-h-16 w-full items-center gap-3 rounded-xl border p-2.5 text-left transition hover:border-primary/35 hover:bg-primary/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", selectedAppearanceId === item.id ? "border-primary/35 bg-primary/[0.06]" : "border-border/60 bg-background/25")}>
                   <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-primary to-primary-2"><img src={item.image ?? defaultRatingImage[item.defaultImage]} alt="" width={44} height={44} className="size-full object-cover" /></span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-foreground">{item.name || "未命名评级"}</span><span className="mt-1 block truncate text-[11px] text-muted-foreground">排名第 {item.rankStart || "—"} 至 {item.rankEnd || "—"} 名 · {autoIssueOptions.find((option) => option.id === item.autoIssueDay)?.label}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-foreground">{item.name || "未命名评级"}</span><span className="mt-1 block truncate text-[11px] text-muted-foreground">{item.ruleType === "score" ? `分数 ${item.scoreStart || "—"} 至 ${item.scoreEnd || "—"} 分` : `排名第 ${item.rankStart || "—"} 至 ${item.rankEnd || "—"} 名`} · {autoIssueOptions.find((option) => option.id === item.autoIssueDay)?.label}</span></span>
                   {selectedAppearanceId === item.id && <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />}
                 </button>)}
               </div>
@@ -751,11 +788,13 @@ export function ClassConfigTab() {
           </div>
 
           <section className="config-editor-panel rounded-2xl p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="flex size-10 items-center justify-center rounded-xl bg-brand-pink/15 text-brand-pink"><Palette aria-hidden="true" className="size-5" /></span><div><h2 className="text-base font-bold">班级评级配置</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">配置评级名称、默认图片或上传图片、自动发放时间及排名区间。</p></div></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-full bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary sm:inline-flex">正在编辑</span><Button type="button" variant="outline" onClick={() => setAppearanceToDelete(selectedAppearance.id)} className="h-10 rounded-lg border-destructive/30 bg-transparent px-3 text-xs text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"><Trash2 aria-hidden="true" className="size-3.5" />删除评级</Button></div></div>
+            <div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="flex size-10 items-center justify-center rounded-xl bg-brand-pink/15 text-brand-pink"><Palette aria-hidden="true" className="size-5" /></span><div><h2 className="text-base font-bold">班级评级配置</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">配置评级名称、匹配方式、区间、评级图片和自动发放时间。</p></div></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-full bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary sm:inline-flex">正在编辑</span><Button type="button" variant="outline" onClick={() => setAppearanceToDelete(selectedAppearance.id)} className="h-10 rounded-lg border-destructive/30 bg-transparent px-3 text-xs text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"><Trash2 aria-hidden="true" className="size-3.5" />删除评级</Button></div></div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground sm:col-span-2">评级名称<input name={`appearance-${selectedAppearance.id}-name`} autoComplete="off" value={selectedAppearance.name} onChange={(event) => updateAppearance(selectedAppearance.id, { name: event.target.value })} placeholder="例如：优雅示范…" className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label>
 
-              <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">班级排名区间</legend><div className="mt-1 flex items-center gap-2"><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>第</span><input name={`appearance-${selectedAppearance.id}-rank-start`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={selectedAppearance.rankStart} onChange={(event) => updateAppearance(selectedAppearance.id, { rankStart: event.target.value })} aria-label="排名起始名次" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>名</span></label><span className="text-sm font-semibold text-muted-foreground">至</span><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>第</span><input name={`appearance-${selectedAppearance.id}-rank-end`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={selectedAppearance.rankEnd} onChange={(event) => updateAppearance(selectedAppearance.id, { rankEnd: event.target.value })} aria-label="排名结束名次" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>名</span></label></div></fieldset>
+              <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">匹配方式</legend><div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="班级评级匹配方式">{ratingRuleOptions.map((option) => <button key={option.id} type="button" role="radio" aria-checked={selectedAppearance.ruleType === option.id} onClick={() => updateAppearance(selectedAppearance.id, { ruleType: option.id })} className={cn("rounded-lg border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", selectedAppearance.ruleType === option.id ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><span className="block text-xs font-bold">{option.label}</span><span className="mt-1 block text-[11px] font-normal leading-4">{option.description}</span></button>)}</div></fieldset>
+
+              {selectedAppearance.ruleType === "score" ? <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">班级分数区间</legend><div className="mt-1 flex items-center gap-2"><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>从</span><input name={`appearance-${selectedAppearance.id}-score-start`} autoComplete="off" inputMode="decimal" type="number" min="0" step="0.1" value={selectedAppearance.scoreStart} onChange={(event) => updateAppearance(selectedAppearance.id, { scoreStart: event.target.value })} aria-label="分数起始值" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>分</span></label><span className="text-sm font-semibold text-muted-foreground">至</span><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>到</span><input name={`appearance-${selectedAppearance.id}-score-end`} autoComplete="off" inputMode="decimal" type="number" min="0" step="0.1" value={selectedAppearance.scoreEnd} onChange={(event) => updateAppearance(selectedAppearance.id, { scoreEnd: event.target.value })} aria-label="分数结束值" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>分</span></label></div></fieldset> : <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">班级排名区间</legend><div className="mt-1 flex items-center gap-2"><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>第</span><input name={`appearance-${selectedAppearance.id}-rank-start`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={selectedAppearance.rankStart} onChange={(event) => updateAppearance(selectedAppearance.id, { rankStart: event.target.value })} aria-label="排名起始名次" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>名</span></label><span className="text-sm font-semibold text-muted-foreground">至</span><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>第</span><input name={`appearance-${selectedAppearance.id}-rank-end`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={selectedAppearance.rankEnd} onChange={(event) => updateAppearance(selectedAppearance.id, { rankEnd: event.target.value })} aria-label="排名结束名次" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>名</span></label></div></fieldset>}
 
               <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">自动发放时间</legend><div className="mt-1 grid gap-2 sm:grid-cols-3">{autoIssueOptions.map((option) => <label key={option.id} className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition", selectedAppearance.autoIssueDay === option.id ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><input type="radio" name={`appearance-${selectedAppearance.id}-auto-issue-day`} value={option.id} checked={selectedAppearance.autoIssueDay === option.id} onChange={() => updateAppearance(selectedAppearance.id, { autoIssueDay: option.id })} className="size-4 shrink-0 accent-[var(--primary)]" />{option.label}</label>)}</div></fieldset>
 
@@ -784,6 +823,7 @@ export function ClassConfigTab() {
       <Dialog open={flagDialog !== null} onOpenChange={(open) => { if (!open) setFlagDialog(null) }}>
         <DialogContent className="glass-surface sm:max-w-lg"><DialogHeader><DialogTitle>新增{flagDialog === "week" ? "周" : "月"}流动红旗</DialogTitle></DialogHeader><div className="grid gap-4">
           <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">红旗名称<input name="new-flag-name" autoComplete="off" autoFocus value={newFlagName} onChange={(event) => setNewFlagName(event.target.value)} placeholder="例如：阅读推广示范班…" className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none focus:border-primary" /></label>
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">奖励积分<input name="new-flag-points" autoComplete="off" type="number" inputMode="numeric" min="1" max="100" step="1" value={newFlagPoints} onChange={(event) => setNewFlagPoints(event.target.value)} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none focus:border-primary" /><span className="font-normal leading-5">颁发该流动红旗时，每位学生获得的积分，支持 1-100 的整数。</span></label>
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/25 p-3"><div><p className="text-xs font-semibold text-foreground">同步到五育指标</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">开启后可选择同步的一级、二级和三级指标。</p></div><ToggleSwitch checked={newFlagSync} onChange={() => setNewFlagSync((current) => !current)} label="新增流动红旗同步到五育指标" /></div>
           {newFlagSync && <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/[0.035] p-3">
             <div><p className="text-xs font-semibold text-foreground">同步指标范围</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">一级指标为必选项，二级和三级指标可按需细化。</p></div>

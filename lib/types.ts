@@ -140,6 +140,8 @@ export interface FlagConfig {
   id: string
   period: FlagPeriod
   name: string
+  /** 颁发流动红旗时，为班级全部学生同步的奖励积分。 */
+  points: number
   /** 用户上传的流动红旗展示图片；为空时使用内置发放状态图标 */
   image?: string | null
   enabled: boolean
@@ -151,6 +153,7 @@ export interface FlagConfig {
 
 export type ClassRatingDefaultImage = "smile" | "cry"
 export type ClassRatingTheme = "blue" | "green" | "orange"
+export type ClassRatingRuleType = "rank" | "score"
 
 export interface ClassRatingConfig {
   id: string
@@ -160,8 +163,11 @@ export interface ClassRatingConfig {
   image: string | null
   defaultImage: ClassRatingDefaultImage
   autoIssueDay: "saturday" | "sunday" | "monday"
+  ruleType: ClassRatingRuleType
   rankStart: string
   rankEnd: string
+  scoreStart: string
+  scoreEnd: string
   theme: ClassRatingTheme
 }
 
@@ -329,6 +335,8 @@ export interface Activity {
   title: string
   /** 活动描述/简介 */
   description: string
+  /** 活动类型，可多选；保存值与界面展示均使用中文。 */
+  activityTypes?: string[]
   /** 一级指标，用于兼容历史活动关联的综评数据来源。 */
   level1?: string
   /** 参与年级 id 列表 */
@@ -341,6 +349,18 @@ export interface Activity {
   requiresPointsExchange?: boolean
   /** 报名时需满足的本学期一级指标积分条件。 */
   pointRequirements?: ActivityPointRequirement[]
+  /** 参加活动后是否自动颁发积分。 */
+  participationPointsEnabled?: boolean
+  /** 参加活动颁发积分对应的五育一级指标（必选）。 */
+  participationPointsLevel1?: string
+  /** 参加活动颁发积分对应的二级指标（可选）。 */
+  participationPointsLevel2?: string
+  /** 参加活动颁发积分对应的三级指标（可选）。 */
+  participationPointsLevel3?: string
+  /** 每位参与学生颁发的积分分数。 */
+  participationPoints?: number
+  /** 积分发放时间 yyyy-MM-ddTHH:mm。 */
+  participationPointsAt?: string
   /** 报名开始时间 yyyy-MM-ddTHH:mm */
   enrollStart: string
   /** 报名结束时间 yyyy-MM-ddTHH:mm */
@@ -394,6 +414,10 @@ export interface ActivitySubmission {
   content: string
   /** 图片 data URL 列表 */
   imageUrls: string[]
+  /** 上传来源；历史数据缺失时按学生上传兼容 */
+  submittedBy?: "student" | "homeroom"
+  /** 代传教师姓名，学生上传时为空 */
+  submittedByName?: string
   createdAt: string
 }
 

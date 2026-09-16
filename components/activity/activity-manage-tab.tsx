@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import { useMemo, useState } from "react"
+import Link from "next/link"
 import {
   CalendarRange,
   ClipboardCheck,
@@ -25,8 +26,6 @@ import {
 import { cn } from "@/lib/utils"
 import type { Activity, ActivityStatus, Teacher } from "@/lib/types"
 import { ActivityPublishDialog } from "./activity-publish-dialog"
-import { EnrollmentReviewDialog } from "./enrollment-review-dialog"
-import { ActivitySubmissionsDialog } from "./activity-submissions-dialog"
 
 type Filter = "all" | ActivityStatus
 
@@ -43,8 +42,6 @@ export function ActivityManageTab() {
   const [filter, setFilter] = useState<Filter>("all")
   const [publishOpen, setPublishOpen] = useState(false)
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
-  const [reviewActivity, setReviewActivity] = useState<Activity | null>(null)
-  const [submissionsActivity, setSubmissionsActivity] = useState<Activity | null>(null)
 
   // 管理员可见范围：director 看全部，moral_director 只看本年级发布的活动
   const visibleActivities = useMemo(() => {
@@ -135,7 +132,7 @@ export function ActivityManageTab() {
           暂无活动
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((activity) => {
             const meta = ACTIVITY_STATUS_META[activity.status]
             const progress = getActivityProgress(activity, enrollments)
@@ -149,44 +146,57 @@ export function ActivityManageTab() {
             const targetLabel = targetClasses.length <= 1
               ? `${targetGrade} · ${targetClasses[0] ?? "指定班级"}`
               : `${targetGrade} · ${targetClasses[0]} 等 ${targetClasses.length} 班`
+            const activityTypeLabels = activity.activityTypes?.length ? activity.activityTypes : ["综合实践"]
             const requirementLabel = (activity.pointRequirements ?? [])
               .map((item) => `${item.level1} ≥ ${item.minimumPoints}分`)
               .join(" · ")
             return (
-              <div key={activity.id} className="flex flex-col gap-3 rounded-2xl border border-[#dbe2f8] bg-white p-4 shadow-[0_12px_26px_-24px_rgba(53,67,150,0.7)] transition hover:border-primary/35 hover:shadow-[0_16px_30px_-24px_rgba(53,67,150,0.78)]">
-                <div className="flex items-start gap-2">
+              <article
+                key={activity.id}
+                className="relative flex flex-col gap-4 rounded-2xl border border-[#dbe2f8] bg-white p-5 shadow-[0_12px_26px_-24px_rgba(53,67,150,0.7)] transition hover:border-primary/35 hover:shadow-[0_16px_30px_-24px_rgba(53,67,150,0.78)]"
+              >
+                <Link href={`/activities/manage-detail?id=${encodeURIComponent(activity.id)}`} className="flex flex-col gap-4 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" aria-label={`查看活动详情：${activity.title}`}>
+                <div className="flex items-start gap-3 pr-16">
                   <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <CalendarRange className="size-4" aria-hidden="true" />
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-base font-semibold text-foreground">{activity.title}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="min-w-0 truncate text-base font-semibold text-foreground">{activity.title}</span>
                       <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", meta.className)}>
                         <span className={cn("size-1.5 rounded-full", meta.dot)} />
                         {meta.label}
                       </span>
                     </div>
                     {activity.level1 && <p className="mt-0.5 text-xs text-muted-foreground">关联指标 · {activity.level1}</p>}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {activityTypeLabels.map((type) => <span key={type} className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-xs font-medium text-brand-blue">{type}</span>)}
+                    </div>
                   </div>
                 </div>
 
-                <p className="line-clamp-2 text-sm text-muted-foreground">{activity.description}</p>
+                <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">{activity.description}</p>
 
-                <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                  <span className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/55 px-2.5 py-2 text-muted-foreground"><MapPin className="size-3.5 shrink-0 text-primary" aria-hidden="true" /><span className="truncate">{activity.location || "未设活动地点"}</span></span>
-                  <span className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/55 px-2.5 py-2 text-muted-foreground"><Users className="size-3.5 shrink-0 text-primary" aria-hidden="true" /><span className="truncate">{targetLabel}</span></span>
+                <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+                  <span className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/55 px-3 py-3 text-muted-foreground"><MapPin className="size-3.5 shrink-0 text-primary" aria-hidden="true" /><span className="truncate">{activity.location || "未设活动地点"}</span></span>
+                  <span className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/55 px-3 py-3 text-muted-foreground"><Users className="size-3.5 shrink-0 text-primary" aria-hidden="true" /><span className="truncate">{targetLabel}</span></span>
                 </div>
 
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs leading-5 text-muted-foreground">
                   {needsEnrollment && <span>报名：{formatActivityDateRange(activity.enrollStart, activity.enrollEnd)}</span>}
                   <span>活动：{formatActivityDateRange(activity.startDate, activity.endDate)}</span>
                 </div>
 
-                <div className="flex flex-wrap gap-2 text-xs">
+                <div className="flex flex-wrap gap-2.5 text-xs">
                   {needsEnrollment ? <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary"><ShieldCheck className="mr-1 inline size-3" aria-hidden="true" />需要报名</span> : <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground">无需报名</span>}
                   {needsPointsExchange && activity.pointsCost > 0 && (
                     <span className="rounded-full bg-brand-orange/15 px-2 py-0.5 font-medium text-brand-orange">
                       消耗 {activity.pointsCost} 积分
+                    </span>
+                  )}
+                  {activity.participationPointsEnabled && (activity.participationPoints ?? 0) > 0 && (
+                    <span className="rounded-full bg-brand-green/15 px-2 py-0.5 font-medium text-brand-green">
+                      参与奖励 +{activity.participationPoints} 分
                     </span>
                   )}
                   {needsEnrollment && activity.capacity > 0 && (
@@ -198,7 +208,7 @@ export function ActivityManageTab() {
                 </div>
 
                 {/* 报名进度 */}
-                {needsEnrollment && <div className="rounded-xl border border-[#e4e8f8] bg-[#f8f9ff] p-2.5">
+                {needsEnrollment && <div className="rounded-xl border border-[#e4e8f8] bg-[#f8f9ff] p-3.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1 font-medium text-foreground">
                       <Users className="size-3.5 text-muted-foreground" />
@@ -218,41 +228,21 @@ export function ActivityManageTab() {
                     </div>
                   )}
                 </div>}
-
-                {/* 操作 */}
-                <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
-                  {needsEnrollment && <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-transparent"
-                    onClick={() => setReviewActivity(activity)}
-                  >
-                    <ClipboardCheck className="size-3.5" />
-                    报名审核{progress.pending > 0 ? `（${progress.pending}）` : ""}
-                  </Button>}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-transparent"
-                    onClick={() => setSubmissionsActivity(activity)}
-                  >
-                    <FolderOpen className="size-3.5" />
-                    学生成果
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-auto"
-                    onClick={() => {
-                      setEditingActivity(activity)
-                      setPublishOpen(true)
-                    }}
-                  >
-                    <Pencil className="size-3.5" />
-                    编辑
-                  </Button>
-                </div>
-              </div>
+                </Link>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-2 z-10 shrink-0 text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                  onClick={() => {
+                    setEditingActivity(activity)
+                    setPublishOpen(true)
+                  }}
+                >
+                  <Pencil className="size-3.5" />
+                  编辑
+                </Button>
+              </article>
             )
           })}
         </div>
@@ -262,16 +252,6 @@ export function ActivityManageTab() {
         open={publishOpen}
         onOpenChange={setPublishOpen}
         activity={editingActivity}
-      />
-      <EnrollmentReviewDialog
-        activity={reviewActivity}
-        open={!!reviewActivity}
-        onOpenChange={(o) => !o && setReviewActivity(null)}
-      />
-      <ActivitySubmissionsDialog
-        activity={submissionsActivity}
-        open={!!submissionsActivity}
-        onOpenChange={(o) => !o && setSubmissionsActivity(null)}
       />
     </div>
   )
