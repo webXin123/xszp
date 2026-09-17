@@ -127,7 +127,6 @@ export function StudentCommandCenter() {
   const awards = useMemo(() => awardCards.filter((item) => item.studentId === studentId).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 2), [awardCards, studentId])
   const studentHonors = useMemo(() => honors.filter((item) => item.studentId === studentId && item.reviewStatus !== "rejected").slice().sort((a, b) => b.awardDate.localeCompare(a.awardDate)).slice(0, 2), [honors, studentId])
   const joinedActivities = useMemo(() => enrollments.filter((item) => item.studentId === studentId && item.status !== "cancelled").map((item) => ({ enrollment: item, activity: activities.find((activity) => activity.id === item.activityId) })).filter((item): item is { enrollment: typeof enrollments[number]; activity: typeof activities[number] } => !!item.activity).sort((a, b) => b.enrollment.enrolledAt.localeCompare(a.enrollment.enrolledAt)).slice(0, 2), [activities, enrollments, studentId])
-
   const maxFiveEducation = Math.max(20, Math.ceil(Math.max(...fiveEducation, 1) / 10) * 10)
   const radarOption = useMemo<EChartsOption>(() => ({
     radar: { center: ["50%", "57%"], radius: "67%", splitNumber: 4, indicator: AWARD_LEVEL1_LIST.map((name) => ({ name, max: maxFiveEducation })), axisName: { color: "#4b5d7d", fontSize: 12 }, axisLine: { lineStyle: { color: "rgba(92, 119, 180, .22)" } }, splitLine: { lineStyle: { color: "rgba(92, 119, 180, .17)" } }, splitArea: { areaStyle: { color: ["rgba(77, 141, 255, .025)", "rgba(52, 199, 154, .07)"] } } },
@@ -163,7 +162,7 @@ export function StudentCommandCenter() {
       <div className={`${styles.dashboard} ${scaled ? styles.scaledDashboard : ""}`}>
         <header className={styles.header}>
           <div className={styles.headerLeft}>
-            <Link href="/" className={styles.backLink} aria-label="返回家长首页"><ArrowLeft size={18} aria-hidden="true" /></Link>
+            <a className={styles.backLink} href="/xszp/" aria-label="返回家长首页"><ArrowLeft size={18} aria-hidden="true" /></a>
             <span className={styles.liveDot} aria-hidden="true" />
             <span>成长数据实时同步</span>
             <span className={styles.headerDivider} aria-hidden="true" />
