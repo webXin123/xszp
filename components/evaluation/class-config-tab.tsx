@@ -1,9 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
 import {
-  ArrowLeft,
   Check,
   ChevronDown,
   ChevronRight,
@@ -617,14 +615,11 @@ export function ClassConfigTab() {
 
   const addDialogTitle = addTarget?.kind === "level1" ? "新增一级指标" : addTarget?.kind === "level2" ? "新增二级指标" : "新增三级指标"
   return (
-    <div className="min-h-[100dvh] px-4 py-4 sm:px-6 lg:px-8">
-      <a href="#config-content" className="sr-only z-[60] rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">跳转到主要内容</a>
-      <main id="config-content" tabIndex={-1} className="config-page-shell mx-auto flex w-full max-w-[1440px] flex-col gap-5 rounded-3xl p-4 sm:p-6">
+    <div className="w-full">
+      <a href="#class_config-main" className="sr-only z-[60] rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">跳转到主要内容</a>
+      <main id="class_config-main" tabIndex={-1} className="flex w-full min-w-0 flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e4e9fa] pb-5">
           <div className="flex min-w-0 items-center gap-3">
-            <Link href="/" className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background/60 text-muted-foreground transition hover:border-primary/35 hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50" aria-label="返回学生综评首页">
-              <ArrowLeft className="size-4" aria-hidden="true" />
-            </Link>
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-2 text-primary-foreground shadow-lg shadow-primary/25"><Settings2 className="size-4" aria-hidden="true" /></span>
             <div className="min-w-0">
               <p className="text-xs font-medium text-muted-foreground">班级评价 / 配置中心</p>
@@ -632,12 +627,7 @@ export function ClassConfigTab() {
             </div>
           </div>
           <div className="min-w-0">
-            <p className="text-right text-sm font-bold">{isHomeroomTeacher ? "班级评级配置" : "统一维护班级评价规则"}</p>
-            <p className="mt-1 text-right text-xs text-muted-foreground">{isHomeroomTeacher ? "维护班级评级图片、自动发放时间及排名/分数区间。" : "维护评价指标、流动红旗和班级评级三类配置。"}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-end justify-between gap-3">
+  <div className="flex flex-wrap items-end justify-between gap-3">
           {!isHomeroomTeacher && <div className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-[#dce2fa] bg-[#eef1ff] p-1" role="tablist" aria-label="班级评价配置分类">
             {([
               { key: "indicator" as const, label: "指标配置", icon: Settings2 },
@@ -649,6 +639,10 @@ export function ClassConfigTab() {
             })}
           </div>}
         </div>
+          </div>
+        </div>
+
+      
 
         {page === "indicator" && (
           <div className="grid gap-4 xl:grid-cols-[minmax(330px,.82fr)_minmax(0,1.18fr)]">

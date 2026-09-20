@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
 import type { EChartsOption } from "echarts"
 import { Award, ArrowRight, CalendarDays, ClipboardList, FileSpreadsheet, LayoutGrid, NotebookPen, PieChart, ShoppingBag, Trophy, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -15,6 +14,7 @@ import { AwardLineChart } from "./award-line-chart"
 import type { MainTab } from "../evaluation/evaluation-dashboard"
 import { MoralDirectorDashboard } from "./moral-director-dashboard"
 import styles from "./admin-dashboard.module.css"
+import roleStyles from "../role-home.module.css"
 
 interface AdminDashboardProps {
   onNavigate: (tab: MainTab) => void
@@ -109,15 +109,6 @@ function LegacyAdminDashboard({ onNavigate }: AdminDashboardProps) {
 
   const weeklyAwardCount = useMemo(() => dailyAwardData.reduce((sum, item) => sum + item.count, 0), [dailyAwardData])
 
-  const shortcuts = [
-    { label: "班级评价", icon: LayoutGrid, href: "/class-evaluation", tone: "bg-primary/10 text-primary", labelTone: "group-hover:text-primary", hover: "hover:border-primary/45 hover:bg-primary/[0.05]" },
-    { label: "奖卡发放", icon: Award, onClick: () => onNavigate("award"), tone: "bg-[#fff3db] text-[#c27a12]", labelTone: "group-hover:text-[#a9650c]", hover: "hover:border-[#e8bd70] hover:bg-[#fffaf1]" },
-    { label: "活动管理", icon: CalendarDays, onClick: () => onNavigate("activity"), tone: "bg-[#f2f0ff] text-[#7166b3]", labelTone: "group-hover:text-[#5d539d]", hover: "hover:border-[#a39bd0] hover:bg-[#faf9ff]" },
-    { label: "成绩录入管理", icon: FileSpreadsheet, href: "/score-entry-management", tone: "bg-[#e7f7ef] text-[#21845b]", labelTone: "group-hover:text-[#1a704c]", hover: "hover:border-[#89c9a9] hover:bg-[#f5fcf8]" },
-    { label: "学期评价管理", icon: NotebookPen, href: "/comment-entry-management", tone: "bg-[#fff0ee] text-[#c1645d]", labelTone: "group-hover:text-[#a94f49]", hover: "hover:border-[#e1aaa4] hover:bg-[#fff8f7]" },
-    { label: "商城管理", icon: ShoppingBag, href: "/mall-management", tone: "bg-primary/10 text-primary", labelTone: "group-hover:text-primary", hover: "hover:border-primary/45 hover:bg-primary/[0.05]" },
-  ]
-
   const awardPieData = useMemo(() => {
     const range = awardRange === "week" ? currentWeek : awardRange === "month" ? { start: monthStart, end: monthEnd } : { start: semesterStart, end: semesterEnd }
     const counts = new Map<string, number>(AWARD_LEVEL1_LIST.map((level1) => [level1, 0]))
@@ -141,16 +132,10 @@ function LegacyAdminDashboard({ onNavigate }: AdminDashboardProps) {
   }), [awardPieData])
 
   return (
-    <div className={cn("flex min-h-0 flex-col gap-4 bg-transparent p-0", styles.dashboard)}>
+    <div className={cn("flex min-h-0 flex-col gap-5 bg-transparent p-0 sm:gap-6", styles.dashboard, roleStyles.workspaceHome)}>
       <section className={cn("p-5 sm:p-6", styles.card, styles.overviewCard)} aria-labelledby="admin-overview-title">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><h2 id="admin-overview-title" className="text-xl font-bold tracking-tight text-foreground">管理员首页</h2><p className="mt-1 text-sm text-muted-foreground">聚焦本周重点，轻松掌握录入与激励进展</p></div>
-          <span className="inline-flex min-h-9 items-center rounded-full bg-white/70 px-3 text-xs font-semibold tabular-nums text-primary ring-1 ring-[#dce3fa]">{formatDate(currentWeek.start)} 至 {formatDate(currentWeek.end)}</span>
-        </div>
-
-        <nav aria-label="快捷入口" className={cn("mt-5", styles.topShortcuts)}>
-          {shortcuts.map((shortcut) => { const content = <><span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105 motion-reduce:transform-none", shortcut.tone)}><shortcut.icon className="size-[18px]" aria-hidden="true" /></span><span className={cn("min-w-0 truncate text-sm font-semibold transition-colors", shortcut.labelTone)}>{shortcut.label}</span><ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground/60 opacity-0 transition duration-200 group-hover:translate-x-0.5 group-hover:opacity-100 motion-reduce:transform-none" aria-hidden="true" /></>; const className = cn("group flex min-h-[68px] cursor-pointer items-center gap-3 border border-transparent px-3.5 text-left transition duration-200 hover:bg-white/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", shortcut.hover); return shortcut.href ? <Link key={shortcut.label} href={shortcut.href} className={className}>{content}</Link> : <button key={shortcut.label} type="button" onClick={shortcut.onClick} className={className}>{content}</button> })}
-        </nav>
+        <div><h1 id="admin-overview-title" className="text-xl font-bold tracking-tight text-foreground">管理员首页</h1><p className="mt-1 text-sm text-muted-foreground">聚焦本周重点，轻松掌握录入与激励进展</p></div>
+        <div className={roleStyles.homeMetaGrid} aria-label="学校工作摘要"><div className={roleStyles.homeMetaItem}><p className={roleStyles.homeMetaLabel}>在校班级</p><strong className={roleStyles.homeMetaValue}>{classes.length}<span className={roleStyles.homeMetaHint}>个</span></strong></div><div className={roleStyles.homeMetaItem}><p className={roleStyles.homeMetaLabel}>学生总数</p><strong className={roleStyles.homeMetaValue}>{students.length}<span className={roleStyles.homeMetaHint}>名</span></strong></div><div className={roleStyles.homeMetaItem}><p className={roleStyles.homeMetaLabel}>本周奖卡发放</p><strong className={roleStyles.homeMetaValue}>{weeklyAwardCount}<span className={roleStyles.homeMetaHint}>张</span></strong></div></div>
       </section>
       <div className="grid gap-4 xl:grid-cols-2">
         <section className={cn("flex h-[320px] min-h-0 flex-col p-4 sm:p-5", styles.card, styles.contentCard)} aria-labelledby="award-trend-title">
@@ -167,7 +152,7 @@ function LegacyAdminDashboard({ onNavigate }: AdminDashboardProps) {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <section className={cn("flex h-[320px] min-h-0 flex-col p-4 sm:p-5", styles.card, styles.contentCard)} aria-labelledby="class-ranking-title">
-          <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><ClipboardList className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-primary">班级运营</p><h3 id="class-ranking-title" className="mt-0.5 text-[15px] font-bold tracking-tight text-foreground">上周班级总分排名</h3><p className="mt-0.5 text-xs tabular-nums text-muted-foreground">{formatDate(previousWeek.start)} 至 {formatDate(previousWeek.end)}</p></div></div><Link href="/class-ranking" aria-label="查看班级排行榜" className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2 text-xs font-bold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看排行<ArrowRight className="size-3.5" aria-hidden="true" /></Link></div>
+          <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><ClipboardList className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-primary">班级运营</p><h3 id="class-ranking-title" className="mt-0.5 text-[15px] font-bold tracking-tight text-foreground">上周班级总分排名</h3><p className="mt-0.5 text-xs tabular-nums text-muted-foreground">{formatDate(previousWeek.start)} 至 {formatDate(previousWeek.end)}</p></div></div><button type="button" onClick={() => onNavigate("ranking")} aria-label="查看班级排行榜" className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2 text-xs font-bold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看排行<ArrowRight className="size-3.5" aria-hidden="true" /></button></div>
           {lastWeekClassRanking.length > 0 ? <ol tabIndex={0} aria-label="上周班级总分排名（同分并列）" className="mt-3 min-h-0 flex-1 divide-y divide-[#e7ebfa] overflow-y-auto rounded-xl border border-[#e2e7f8] bg-[#fbfcff] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">{lastWeekClassRanking.map((schoolClass) => <li key={schoolClass.id} className="flex items-center gap-3 py-2.5 transition-colors hover:bg-primary/[0.04]"><RankMark rank={schoolClass.rank} /><span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{schoolClass.name}</span><span className="shrink-0 text-sm font-bold tabular-nums text-primary">{schoolClass.total} 分</span></li>)}</ol> : <div className="mt-3 flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-[#cfd7f6] text-sm text-muted-foreground">上周暂无班级评价记录</div>}
         </section>
 

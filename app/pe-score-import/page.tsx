@@ -44,7 +44,7 @@ function expectedCount(cls: PeClass, gender: PeGender) {
   return gender === "male" ? cls.maleCount : cls.femaleCount
 }
 
-function PeScoreImportPage() {
+export function PeScoreImportPage({ embedded = false }: { embedded?: boolean }) {
   const { peScoreUploads, addPeScoreUpload } = useEvaluation()
   const { canImportPeScores, peClassIds } = usePermission()
 
@@ -238,7 +238,7 @@ function PeScoreImportPage() {
     )
   }
 
-  return <StandalonePageShell mainId="pe-score-import-main" activeLabel="体质健康成绩导入" activeIcon="heart">
+  return <StandalonePageShell embedded={embedded} mainId="pe-score-import-main" activeLabel="体质健康成绩导入" activeIcon="heart">
       <input
         ref={fileInputRef}
         type="file"
@@ -248,7 +248,7 @@ function PeScoreImportPage() {
         aria-label="选择成绩 Excel 文件"
       />
 
-      <main id="pe-score-import-main" className="flex w-full min-w-0 flex-col gap-5 rounded-[26px] border border-[#cbd5f5] bg-white p-4 shadow-[0_24px_52px_-34px_rgba(48,62,139,0.76)] sm:p-6">
+      <main id="pe-score-import-main" className="flex w-full min-w-0 flex-col gap-5 bg-transparent p-0">
           {!canImportPeScores ? (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#c8d4f7] bg-[#f7f8ff] py-16 text-center">
               <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><HeartPulse className="size-7" aria-hidden="true" /></span>

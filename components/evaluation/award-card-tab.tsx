@@ -1,8 +1,7 @@
 ﻿"use client"
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react"
-import { ArrowRight, ChevronDown, ChevronRight, Download, Info, Mic, Search, Sparkles, User, Users } from "lucide-react"
-import Link from "next/link"
+import { ArrowRight, ChevronDown, ChevronRight, Info, Mic, Search, Sparkles, User, Users } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,11 +26,10 @@ type ConfirmAwardIndicator = {
 }
 
 type IssueMode = "batch" | "single"
-
+type MobileAwardStep = "selection" | "issue"
 export function AwardCardTab() {
   const { grades, students, awardCards, addAwardCards } = useEvaluation()
-  const { awardClasses, role } = usePermission()
-
+  const { awardClasses } = usePermission()
   const weekKey = getISOWeekKey(new Date())
   const today = formatDate(new Date())
 
@@ -40,6 +38,7 @@ export function AwardCardTab() {
   const [collapsedClasses, setCollapsedClasses] = useState<string[]>([])
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
   const [issueMode, setIssueMode] = useState<IssueMode>("batch")
+  const [mobileStep, setMobileStep] = useState<MobileAwardStep>("selection")
   const [singleClassId, setSingleClassId] = useState("")
   const [singleStudent, setSingleStudent] = useState<Student | null>(null)
   const [singleIndicator, setSingleIndicator] = useState<ConfirmAwardIndicator | null>(null)
@@ -273,34 +272,32 @@ export function AwardCardTab() {
     [],
   )
   const activeLevel2Group = level2Options.find((group) => group.level2 === activeLevel2)
+  const canContinueMobile = selectedStudentIds.length > 0
 
   return (
-    <div className="relative rounded-[26px] border border-[#cfd8f6] bg-white p-3 shadow-[0_24px_52px_-36px_rgba(53,67,150,0.72)] sm:p-4">
+    <div className="relative w-full min-w-0 bg-transparent p-0 pb-24 lg:pb-0">
+      <section id="award-online-panel" aria-labelledby="award-online-title">
       <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce4fa] bg-[#f8f9ff] p-3.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             {issueMode === "batch" ? <Users className="size-5" aria-hidden="true" /> : <User className="size-5" aria-hidden="true" />}
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-foreground">线上奖卡发放</p>
+            <h1 id="award-online-title" className="text-sm font-bold text-foreground">奖卡发放</h1>
             <p className="mt-0.5 truncate text-xs text-muted-foreground">
               {issueMode === "batch" ? "选择多名学生后批量发放奖卡" : "按班级查看学生本周奖卡，并单独发放"}
             </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {role === "director" && (
-            <Link href="/offline-award-cards" className="flex min-h-10 items-center gap-1.5 rounded-lg border border-[#d6def7] bg-white px-3 text-xs font-semibold text-primary transition hover:border-primary/45 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-4">
-              <Download className="size-3.5" aria-hidden="true" />
-              线下奖卡导出
-            </Link>
-          )}
           <div className="flex rounded-xl border border-[#d6def7] bg-white p-1" role="tablist" aria-label="奖卡发放方式">
           <button
+            id="award-batch-tab"
             type="button"
             role="tab"
             aria-selected={issueMode === "batch"}
-            onClick={() => setIssueMode("batch")}
+            aria-controls="award-batch-panel"
+            onClick={() => { setIssueMode("batch"); setMobileStep("selection") }}
             className={cn(
               "flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-4",
               issueMode === "batch"
@@ -312,10 +309,12 @@ export function AwardCardTab() {
             批量发放
           </button>
           <button
+            id="award-single-tab"
             type="button"
             role="tab"
             aria-selected={issueMode === "single"}
-            onClick={() => setIssueMode("single")}
+            aria-controls="award-single-panel"
+            onClick={() => { setIssueMode("single"); setMobileStep("selection") }}
             className={cn(
               "flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-4",
               issueMode === "single"
@@ -331,16 +330,13 @@ export function AwardCardTab() {
       </div>
 
       {issueMode === "single" ? (
-        <section className="flex flex-col gap-4" aria-labelledby="single-student-issue-title">
+        <section id="award-single-panel" role="tabpanel" aria-labelledby="award-single-tab" className="flex flex-col gap-4">
           <div className="rounded-2xl border border-[#dbe2f8] bg-[#f7f8ff] p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p id="single-student-issue-title" className="text-sm font-bold text-foreground">单学生发放</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">切换班级后，点击学生卡片查看本周记录并发放奖卡。</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                <span className="size-2 rounded-full bg-primary" aria-hidden="true" />
-                当前班级：{selectedSingleClass?.name ?? "暂无可用班级"}
               </div>
             </div>
             <div className="min-w-0 max-w-full touch-pan-x overscroll-x-contain overflow-x-auto pb-2" role="group" aria-label="切换班级">
@@ -401,9 +397,13 @@ export function AwardCardTab() {
           )}
         </section>
       ) : (
-      <div className="flex flex-col items-start gap-4 lg:flex-row">
+      <div id="award-batch-panel" role="tabpanel" aria-labelledby="award-batch-tab" className="flex flex-col items-start gap-4 lg:flex-row">
         {/* ---------------- 左侧：班级 / 学生选择 ---------------- */}
-        <aside className="flex w-full shrink-0 flex-col gap-3 rounded-2xl border border-[#dbe2f8] bg-[#f7f8ff] p-4 shadow-[0_10px_24px_-24px_rgba(53,67,150,0.65)] lg:w-80">
+        <aside className={cn("w-full shrink-0 flex-col gap-3 rounded-2xl border border-[#dbe2f8] bg-[#f7f8ff] p-4 shadow-[0_10px_24px_-24px_rgba(53,67,150,0.65)] lg:flex lg:w-80", mobileStep === "selection" ? "flex" : "hidden")}>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-white/80 px-3 py-2 lg:hidden">
+            <div><p className="text-sm font-bold">选择学生</p><p className="mt-0.5 text-[11px] text-muted-foreground">先选学生，再选择奖卡</p></div>
+            <span className="rounded-full bg-brand-green/12 px-2.5 py-1 text-xs font-semibold text-brand-green">已选 {selectedStudentIds.length} 人</span>
+          </div>
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-foreground">选择学生</p>
             <span className="rounded-full bg-brand-green/15 px-2.5 py-0.5 text-xs font-medium text-brand-green">
@@ -417,6 +417,7 @@ export function AwardCardTab() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="姓名、学号或班级…"
+              aria-label="按姓名、学号或班级搜索学生"
               className="h-10 rounded-xl border-[#dbe2f5] bg-white pl-9 shadow-[0_6px_14px_-16px_rgba(53,67,150,0.75)]"
             />
           </div>
@@ -542,7 +543,11 @@ export function AwardCardTab() {
         </aside>
 
         {/* ---------------- 右侧：奖卡指标 ---------------- */}
-        <section className="flex w-full flex-1 flex-col gap-4 rounded-2xl border border-[#dbe2f8] bg-white p-4 shadow-[0_10px_24px_-24px_rgba(53,67,150,0.65)] sm:p-6">
+        <section className={cn("w-full flex-1 flex-col gap-4 rounded-2xl border border-[#dbe2f8] bg-white p-4 shadow-[0_10px_24px_-24px_rgba(53,67,150,0.65)] sm:p-6 lg:flex", mobileStep === "issue" ? "flex" : "hidden")}>
+          <div className="flex items-center gap-2 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2 lg:hidden">
+            <button type="button" onClick={() => setMobileStep("selection")} className="inline-flex min-h-9 items-center rounded-lg border border-primary/20 bg-white px-3 text-xs font-bold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">返回选择学生</button>
+            <span className="text-xs text-muted-foreground">已选 {selectedStudentIds.length} 人</span>
+          </div>
           <section className="rounded-2xl border border-[#dce4fa] bg-[#f8f9ff] p-3.5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -629,6 +634,8 @@ export function AwardCardTab() {
                           <img
                             src={item.image}
                             alt={`${item.level3} - ${activeLevel2Group.level1} 奖卡正面`}
+                            width={320}
+                            height={240}
                             className="aspect-[4/3] w-full bg-white object-contain transition-transform duration-200 group-hover:scale-[1.03]"
                           />
                         ) : (
@@ -659,9 +666,15 @@ export function AwardCardTab() {
               </div>
             )}
           </section>
-        </section>
+      </section>
       </div>
       )}
+      </section>
+
+      {issueMode === "batch" && <div className={cn("fixed inset-x-0 bottom-0 z-50 flex items-center gap-3 border-t border-[#d7def4] bg-white/96 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-16px_34px_-24px_rgba(44,63,132,.7)] backdrop-blur-xl lg:hidden", mobileStep !== "selection" && "hidden")}>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-green">已选 {selectedStudentIds.length} 人</span>
+        <Button type="button" disabled={!canContinueMobile} onClick={() => setMobileStep("issue")} className="min-h-12 shrink-0 rounded-xl px-5 text-sm font-bold shadow-[0_10px_20px_-14px_rgba(44,99,196,.8)]">下一步：选择奖卡</Button>
+      </div>}
 
       <div
         role="group"
@@ -831,6 +844,8 @@ export function AwardCardTab() {
             <img
               src={zoomImage.src}
               alt={`${zoomImage.title} 奖卡正面`}
+              width={1024}
+              height={768}
               className="max-h-[70vh] w-full rounded-xl object-contain"
             />
           )}
@@ -880,7 +895,7 @@ export function AwardCardTab() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
     </div>
   )
 }

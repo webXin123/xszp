@@ -55,7 +55,7 @@ function newEntryId() {
   return `entry-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
-function OfflineAwardCardsPage() {
+export function OfflineAwardCardsPage({ embedded = false }: { embedded?: boolean }) {
   const { addAwardCards } = useEvaluation()
   const { role } = usePermission()
   // 仅管理员（director）可下载奖卡
@@ -164,13 +164,13 @@ function OfflineAwardCardsPage() {
   // 权限门禁：仅管理员可下载奖卡
   if (!isAdmin) {
     return (
-      <StandalonePageShell mainId="offline-award-cards-main" activeLabel="线下奖卡下载" activeIcon="download">
+      <StandalonePageShell embedded={embedded} mainId="offline-award-cards-main" activeLabel="线下奖卡导出" activeIcon="download">
         <main id="offline-award-cards-main" className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
         <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-3xl border border-[#cfd8f6] bg-white p-8 text-center shadow-[0_24px_50px_-34px_rgba(53,67,150,0.7)]">
         <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Download className="size-7" /></span>
         <p className="text-base font-bold text-foreground">无下载权限</p>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          线下奖卡下载仅对管理员开放。可在右上角切换身份为「李静 · 管理员」后体验。
+          线下奖卡导出仅对管理员开放。可在右上角切换身份为「李静 · 管理员」后体验。
         </p>
         <Link
           href="/"
@@ -185,13 +185,17 @@ function OfflineAwardCardsPage() {
   }
 
   return (
-    <StandalonePageShell mainId="offline-award-cards-main" activeLabel="线下奖卡下载" activeIcon="download">
-        <main id="offline-award-cards-main" className="flex w-full min-w-0 flex-col gap-6 rounded-[26px] border border-[#cfd8f6] bg-white p-4 shadow-[0_24px_54px_-36px_rgba(53,67,150,0.72)] sm:p-6">
+    <StandalonePageShell embedded={embedded} mainId="offline-award-cards-main" activeLabel="线下奖卡导出" activeIcon="download">
+        <main id="offline-award-cards-main" className="flex w-full min-w-0 flex-col gap-6 bg-transparent p-0">
           {/* ---------------- 标题 + 操作 ---------------- */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dee4f8] bg-gradient-to-r from-[#f1f3ff] via-white to-[#f8f4ff] p-4 sm:p-5">
             <div className="min-w-0">
               <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">线下发放</span>
-              <h1 className="mt-2 text-xl font-bold text-foreground">线下奖卡下载</h1>
+              {embedded ? (
+                <h2 className="mt-2 text-xl font-bold text-foreground">线下奖卡导出</h2>
+              ) : (
+                <h1 className="mt-2 text-xl font-bold text-foreground">线下奖卡导出</h1>
+              )}
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 点击「增加奖卡」选择一级、二级、三级指标，设置数量与积分，确认后点右上「确认导出」生成 Excel
               </p>

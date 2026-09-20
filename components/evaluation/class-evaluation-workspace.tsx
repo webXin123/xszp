@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
-import Link from "next/link"
 import {
   CalendarDays,
   Check,
@@ -15,7 +14,6 @@ import {
   Plus,
   ScanLine,
   Search,
-  Settings2,
   X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -27,15 +25,17 @@ import { usePermission } from "@/lib/use-permission"
 import { INDICATOR_GROUPS, LEVEL1_LIST, formatDate } from "@/lib/scoring-utils"
 
 type TargetMode = "class" | "student"
+type MobileEvaluationStep = "selection" | "evaluation"
 
 export function ClassEvaluationWorkspace() {
   const { grades, classes, students, records, addRecord } = useEvaluation()
-  const { visibleGrades, scoringClasses, role } = usePermission()
+  const { visibleGrades, scoringClasses } = usePermission()
   const availableGrades = visibleGrades.length > 0 ? visibleGrades : grades
   const availableClasses = scoringClasses.length > 0 ? scoringClasses : classes
   const workspaceRef = useRef<HTMLDivElement>(null)
 
   const [mode, setMode] = useState<TargetMode>("class")
+  const [mobileStep, setMobileStep] = useState<MobileEvaluationStep>("selection")
   const [date, setDate] = useState(formatDate(new Date()))
   const [selectedClassId, setSelectedClassId] = useState(availableClasses[0]?.id ?? "")
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>(availableClasses[0]?.id ? [availableClasses[0].id] : [])
@@ -63,6 +63,8 @@ export function ClassEvaluationWorkspace() {
   const isAddIndicator = (currentIndicator?.penalty ?? -1) > 0
   const defaultScore = Math.abs(currentIndicator?.penalty ?? 0)
   const today = formatDate(new Date())
+  const selectionCount = mode === "class" ? selectedClassIds.length : selectedStudentIds.length
+  const selectionLabel = mode === "class" ? "班级" : "学生"
 
   const classStudents = useMemo(
     () => students.filter((student) => student.classId === currentClass?.id).sort((a, b) => Number(a.studentNo) - Number(b.studentNo)),
@@ -234,7 +236,7 @@ export function ClassEvaluationWorkspace() {
   }
 
   return (
-    <div className="relative flex flex-col gap-4">
+    <div className="relative flex flex-col gap-4 pb-24 lg:pb-0">
       <div className="flex min-w-0 items-center gap-3 overflow-x-auto rounded-2xl border border-[#d7def8] bg-white/95 p-2 shadow-[0_14px_30px_-25px_rgba(52,68,145,0.78)]" role="tablist" aria-label="班级评价页面">
         <div className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-[#eef1ff] p-1" aria-label="评价对象">
           {(["class", "student"] as TargetMode[]).map((item) => <button key={item} type="button" role="tab" aria-selected={mode === item} onClick={() => setMode(item)} className={cn("min-h-10 touch-manipulation rounded-lg px-3.5 py-1.5 text-[12px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 md:px-4 md:text-[14px]", mode === item ? "bg-primary text-primary-foreground shadow-[0_6px_14px_-8px_rgba(63,81,188,0.9)]" : "text-muted-foreground hover:bg-white hover:text-foreground")}>{item === "class" ? "评价班级" : "评价学生"}</button>)}
@@ -245,19 +247,22 @@ export function ClassEvaluationWorkspace() {
             <input aria-label="评价日期" type="date" max={today} value={date} onChange={(event) => setDate(event.target.value)} className="w-28 bg-transparent text-xs font-semibold outline-none" />
           </label>
           <Button variant="outline" className="size-10 shrink-0 rounded-lg border-[#e0e5f8] bg-[#f8f9ff] p-0 hover:border-primary/35 hover:bg-primary/5" onClick={() => setHistoryOpen(true)} aria-label="查看历史扣分记录" title="历史记录"><History className="size-4" /></Button>
-          {(role === "director" || role === "moral_director") && <Link href="/class-evaluation-config" aria-label="评价配置" title="评价配置" className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#e0e5f8] bg-[#f8f9ff] text-primary transition hover:border-primary/35 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"><Settings2 aria-hidden="true" className="size-4" /></Link>}
         </div>
       </div>
 
-      <div ref={workspaceRef} style={panelStyle} className="flex min-h-[520px] flex-col overflow-hidden rounded-[24px] border border-[#cfd7f6] bg-white shadow-[0_22px_48px_-32px_rgba(48,62,139,0.7)] lg:h-[calc(100vh-13rem)] lg:min-h-[520px] lg:flex-row">
-        <aside className="min-h-0 w-full shrink-0 bg-[#f7f8ff] p-3 lg:w-[var(--split-width)]">
+      <div ref={workspaceRef} style={panelStyle} className="flex min-h-[520px] flex-col overflow-hidden rounded-[24px] border border-[#cfd7f6] bg-white shadow-[0_22px_48px_-32px_rgba(48,62,139,0.7)] lg:flex-row">
+        <aside className={cn("min-h-0 w-full shrink-0 bg-[#f7f8ff] p-3 lg:w-[var(--split-width)]", mobileStep === "selection" ? "flex" : "hidden", "lg:flex")}>
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-white/80 px-3 py-2 lg:hidden">
+            <div><p className="text-sm font-bold">选择{selectionLabel}</p><p className="mt-0.5 text-[11px] text-muted-foreground">选好后进入评价面板</p></div>
+            <span className="rounded-full bg-brand-green/12 px-2.5 py-1 text-xs font-semibold text-brand-green">已选 {selectionCount} {selectionLabel}</span>
+          </div>
           {mode === "student" ? (
-            <div className="flex min-h-0 h-full flex-col">
+            <div className="flex flex-col">
               <div className="mb-3 flex items-center gap-2">
                 <Select value={currentClass?.name ?? ""} onValueChange={(value) => selectClass(availableClasses.find((item) => item.name === value)?.id ?? "")}><SelectTrigger aria-label="选择班级" className="h-9 min-w-0 flex-1 rounded-lg bg-white px-2.5 text-sm font-semibold"><SelectValue placeholder="请选择班级" /></SelectTrigger><SelectContent>{availableClasses.map((item) => <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>)}</SelectContent></Select>
               </div>
               <div
-                className="grid min-h-0 flex-1 content-start gap-1.5 overflow-y-auto pr-1"
+                className="grid content-start gap-1.5 pr-1"
                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(108px, 1fr))" }}
               >
                 {classStudents.map((student) => {
@@ -272,9 +277,9 @@ export function ClassEvaluationWorkspace() {
               </div>
             </div>
           ) : (
-            <div className="flex min-h-0 h-full flex-col">
+            <div className="flex flex-col">
               <div className="mb-2 flex items-center px-1"><span className="text-sm font-bold">班级</span></div>
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="pr-1">
                 {availableGrades.map((grade) => {
                   const gradeClasses = availableClasses.filter((item) => item.gradeId === grade.id)
                   const expanded = expandedGradeId === grade.id
@@ -310,7 +315,11 @@ export function ClassEvaluationWorkspace() {
           <span className="relative flex size-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm"><GripVertical className="size-4" /></span>
         </div>
 
-        <section className="min-h-0 min-w-0 flex-1 overflow-y-auto border-t border-[#dde3f8] bg-white p-3 lg:border-t-0 lg:p-4">
+        <section className={cn("min-w-0 flex-1 border-t border-[#dde3f8] bg-white p-3 lg:border-t-0 lg:p-4", mobileStep === "evaluation" ? "block" : "hidden", "lg:block")}>
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2 lg:hidden">
+            <button type="button" onClick={() => setMobileStep("selection")} className="inline-flex min-h-9 items-center rounded-lg border border-primary/20 bg-white px-3 text-xs font-bold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">返回选择{selectionLabel}</button>
+            <span className="text-xs text-muted-foreground">已选 {selectionCount} {selectionLabel}</span>
+          </div>
           <div className="flex items-center justify-between gap-2 border-b border-[#edf0fb] pb-3">
             <div><span className="text-sm font-bold">评价面板</span><p className="mt-0.5 text-[11px] text-muted-foreground">选择指标后录入本次评价</p></div>
           </div>
@@ -320,7 +329,7 @@ export function ClassEvaluationWorkspace() {
             <label className="ml-auto flex h-10 w-36 shrink-0 items-center gap-1.5 rounded-lg border border-[#e2e6f8] bg-[#f8f9ff] px-2"><Search className="size-3.5 text-muted-foreground" /><input aria-label="搜索指标" value={indicatorSearch} onChange={(event) => setIndicatorSearch(event.target.value)} placeholder="搜索指标" className="min-w-0 flex-1 bg-transparent text-xs outline-none" /></label>
           </div>
 
-          <div className="mt-4 flex min-h-[360px] flex-col gap-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-24rem)]">
+          <div className="mt-4 flex min-h-[360px] flex-col gap-2 pr-1">
             {visibleGroups.map((group) => <div key={`${group.level1}-${group.level2}`} className="rounded-xl border border-[#e1e6f8] bg-[#fafbff] p-2.5"><div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted-foreground"><span className="size-1.5 rounded-full bg-primary" />{group.level2}</div><div className="grid gap-1.5 sm:grid-cols-2">{group.items.map((item) => { const active = item.id === indicatorId; const isAdd = item.penalty > 0; return <button key={item.id} type="button" onClick={() => setIndicatorId(item.id)} className={cn("flex min-h-12 items-center justify-between gap-2 rounded-lg border px-2.5 text-left text-xs transition-colors", active ? "border-primary bg-primary/10 text-primary" : "border-[#e4e8f8] bg-white text-foreground hover:border-primary/40 hover:bg-primary/[0.03]")}><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{item.name}</span><span className={cn("mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold", isAdd ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>{isAdd ? "加分" : "扣分"} · {isAdd ? "+" : "−"}{Math.abs(item.penalty)} 分</span></span>{active && <Check className="size-3.5 shrink-0" />}</button> })}</div></div>)}
           </div>
 
@@ -331,6 +340,11 @@ export function ClassEvaluationWorkspace() {
             <div className="mt-3 flex flex-wrap items-center gap-2"><label className="group flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-xl border border-dashed border-[#cfd8f4] bg-white p-2 transition hover:border-primary/55 hover:bg-primary/[0.025] focus-within:ring-2 focus-within:ring-primary/30"><span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 text-primary">{imageDataUrl ? <img src={imageDataUrl} alt="已上传的评价图片缩略图" width={36} height={36} className="size-full object-cover" /> : <ImagePlus aria-hidden="true" className="size-4" />}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-foreground">{imageName || "上传评价图片"}</span><span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">支持 JPG、PNG，大小不超过 5MB</span></span><span className="rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">{imageDataUrl ? "已上传" : "选择图片"}</span><input type="file" accept="image/*" className="sr-only" onChange={handleImageChange} /></label>{imageDataUrl && <button type="button" onClick={() => { setImageName(""); setImageDataUrl(null) }} className="h-10 rounded-lg border border-border/70 bg-white px-2.5 text-xs font-semibold text-muted-foreground transition hover:border-destructive/30 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">移除</button>}<Button type="button" className="h-10 gap-1.5 rounded-lg px-4 text-xs" onClick={handleSubmit}><Check className="size-3.5" />确认评价</Button></div>
           </div>
         </section>
+      </div>
+
+      <div className={cn("fixed inset-x-0 bottom-0 z-50 flex items-center gap-3 border-t border-[#d7def4] bg-white/96 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-16px_34px_-24px_rgba(44,63,132,.7)] backdrop-blur-xl lg:hidden", mobileStep !== "selection" && "hidden")}>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-green">已选 {selectionCount} {selectionLabel}</span>
+        <Button type="button" disabled={selectionCount === 0} onClick={() => setMobileStep("evaluation")} className="min-h-12 shrink-0 rounded-xl px-5 text-sm font-bold shadow-[0_10px_20px_-14px_rgba(44,99,196,.8)]">下一步：评价{selectionLabel}</Button>
       </div>
 
       <div

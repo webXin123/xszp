@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
 import {
   Award,
   BarChart3,
@@ -61,7 +60,6 @@ interface DashboardTodo {
   icon: typeof LayoutGrid
   actionLabel: string
   onClick?: () => void
-  href?: string
 }
 
 interface CommentProgressItem {
@@ -319,7 +317,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
       count: pendingCommentCount,
       icon: NotebookPen,
       actionLabel: "去完成",
-      href: "/comment-entry",
+      onClick: () => onNavigate("comment_entry"),
     },
     {
       id: "semester-evaluation",
@@ -328,7 +326,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
       count: pendingEvaluationCount,
       icon: ClipboardCheck,
       actionLabel: "去评价",
-      href: "/semester-evaluation",
+      onClick: () => onNavigate("semester_evaluation"),
     },
     {
       id: "honor-entry",
@@ -357,11 +355,12 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
   }
 
   return (
-    <div className={cn("relative -m-4 flex flex-col gap-4 p-4 sm:-m-6 sm:gap-5 sm:p-6", styles.teacherHome, styles.homeroomHome)}>
+    <div className={cn("relative -m-4 flex flex-col gap-5 p-4 sm:-m-6 sm:gap-6 sm:p-6", styles.workspaceHome, styles.homeroomHome)}>
       <section className="overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]" aria-label="班主任信息、最新消息与待办事项">
         <div className="grid xl:grid-cols-[minmax(340px,0.82fr)_minmax(0,1.18fr)]">
           <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] p-4 sm:p-5 xl:border-r xl:border-[#e4e9f8]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><p className="text-xs font-semibold tracking-[0.16em] text-primary">班级工作台</p><h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">班主任首页</h1><p className="mt-1 text-xs text-muted-foreground">关注班级表现与本周待办，及时推进评价工作。</p></div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3"><span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground">班</span><div className="min-w-0"><p className="text-sm font-bold text-foreground">{currentClass.homeroomTeacher}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{currentClass.name} 班主任</p></div></div>
               <button type="button" onClick={() => setClassSwitchOpen(true)} aria-haspopup="dialog" className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-[#dbe3fa] bg-white px-3 text-left transition-colors hover:border-primary/45 hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">{currentClass.name.slice(0, 1)}</span><span className="text-sm font-bold text-foreground">{currentClass.name}</span><span className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-primary">切换班级<ChevronDown className="size-3.5" aria-hidden="true" /></span></button>
             </div>
@@ -512,10 +511,10 @@ function MessageCard({ message, onClick }: { message: DashboardMessage; onClick:
   return <button type="button" onClick={onClick} className="group flex h-[68px] w-full items-center gap-3 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] px-3 py-2.5 text-left transition-colors hover:border-primary/35 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", styles[message.tone])}><Icon className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="flex min-w-0 items-center gap-2"><span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground ring-1 ring-[#e4e8f5]">{message.category}</span><span className="truncate text-sm font-semibold text-foreground">{message.title}</span></span><span className="mt-1 block truncate text-xs text-muted-foreground">{message.summary}</span></span><span className="hidden shrink-0 text-xs font-semibold text-primary sm:inline">查看详情</span><ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-hover:translate-x-0.5" aria-hidden="true" /></button>
 }
 
-function TodoItem({ icon: Icon, title, description, count, actionLabel, onClick, href }: DashboardTodo) {
+function TodoItem({ icon: Icon, title, description, count, actionLabel, onClick }: DashboardTodo) {
   const actionClassName = "group inline-flex min-h-9 shrink-0 items-center rounded-lg px-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
   const actionContent = <><span>{actionLabel}</span><ChevronRight className="size-4 transition-transform motion-reduce:transition-none group-hover:translate-x-0.5" aria-hidden="true" /></>
-  return <div className="flex h-[76px] items-center gap-3 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#eef2ff] text-primary"><Icon className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-foreground">{title}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{description}</span></span><span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums", count > 0 ? "bg-[#fff1e9] text-brand-orange" : "bg-[#eaf8f1] text-brand-green")}>{count > 0 ? count : <CheckCircle2 className="size-4" aria-label="已完成" />}</span>{href ? <Link href={href} className={actionClassName}>{actionContent}</Link> : <button type="button" onClick={onClick} className={actionClassName}>{actionContent}</button>}</div>
+  return <div className="flex h-[76px] items-center gap-3 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#eef2ff] text-primary"><Icon className="size-4" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-foreground">{title}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{description}</span></span><span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums", count > 0 ? "bg-[#fff1e9] text-brand-orange" : "bg-[#eaf8f1] text-brand-green")}>{count > 0 ? count : <CheckCircle2 className="size-4" aria-label="已完成" />}</span><button type="button" onClick={onClick} className={actionClassName}>{actionContent}</button></div>
 }
 
 function MessageDetailDialog({ message }: { message: DashboardMessage }) {

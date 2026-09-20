@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
 import type { EChartsOption } from "echarts"
 import {
   Award,
@@ -23,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EChart } from "../command-center/echart"
 import type { MainTab } from "../evaluation/evaluation-dashboard"
 import styles from "./moral-director-dashboard.module.css"
+import roleStyles from "../role-home.module.css"
 
 interface MoralDirectorDashboardProps {
   onNavigate: (tab: MainTab) => void
@@ -30,37 +30,6 @@ interface MoralDirectorDashboardProps {
 
 function getTimeRange(range: TimeRange, now: Date) {
   return range === "week" ? getWeekRange(now) : range === "month" ? getMonthRange(now) : getSemesterRange(now)
-}
-
-function ShortcutCard({
-  label,
-  description,
-  icon: Icon,
-  href,
-  onClick,
-  tone,
-}: {
-  label: string
-  description: string
-  icon: typeof LayoutGrid
-  href?: string
-  onClick?: () => void
-  tone: string
-}) {
-  const content = (
-    <>
-      <span className={cn(styles.shortcutIcon, tone)}>
-        <Icon className="size-5" aria-hidden="true" />
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-bold text-foreground">{label}</span>
-        <span className="mt-1 block truncate text-xs text-muted-foreground">{description}</span>
-      </span>
-      <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-    </>
-  )
-  const className = `${styles.shortcut} group`
-  return href ? <Link href={href} className={className}>{content}</Link> : <button type="button" onClick={onClick} className={className}>{content}</button>
 }
 
 function TimeRangeControl({
@@ -193,14 +162,14 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
   }), [teacherAwardFrequency])
 
   const shortcuts = [
-    { label: "班级评价", description: "查看与录入班级表现", icon: LayoutGrid, href: "/class-evaluation", tone: "bg-[#edf1ff] text-primary" },
-    { label: "流动红旗颁发", description: "按班级排行颁发荣誉", icon: Flag, href: "/class-ranking", tone: "bg-[#fff3db] text-[#c27a12]" },
-    { label: "班级评价配置", description: "维护指标与红旗规则", icon: Settings2, href: "/class-evaluation-config", tone: "bg-[#f2f0ff] text-[#7166b3]" },
+    { label: "班级评价", description: "查看与录入班级表现", icon: LayoutGrid, onClick: () => onNavigate("score"), tone: "bg-[#edf1ff] text-primary" },
+    { label: "流动红旗颁发", description: "按班级排行颁发荣誉", icon: Flag, onClick: () => onNavigate("ranking"), tone: "bg-[#fff3db] text-[#c27a12]" },
+    { label: "班级评价配置", description: "维护指标与红旗规则", icon: Settings2, onClick: () => onNavigate("class_config"), tone: "bg-[#f2f0ff] text-[#7166b3]" },
     { label: "奖卡发放", description: "为学生发放五育奖卡", icon: Award, onClick: () => onNavigate("award"), tone: "bg-[#e7f7ef] text-[#21845b]" },
   ]
 
   return (
-    <div className={styles.dashboard}>
+    <div className={cn(styles.dashboard, roleStyles.workspaceHome)}>
       <section className={styles.hero}>
         <div className={styles.heroHeading}>
           <div>
@@ -210,9 +179,7 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
           </div>
           <span className={styles.datePill}>本周 {formatDate(currentWeek.start)} 至 {formatDate(currentWeek.end)}</span>
         </div>
-        <div className={styles.shortcuts}>
-          {shortcuts.map((shortcut) => <ShortcutCard key={shortcut.label} {...shortcut} />)}
-        </div>
+        <div className={roleStyles.homeMetaGrid} aria-label="德育工作摘要"><div className={roleStyles.homeMetaItem}><p className={roleStyles.homeMetaLabel}>覆盖班级</p><strong className={roleStyles.homeMetaValue}>{classes.length}<span className={roleStyles.homeMetaHint}>个</span></strong></div><div className={roleStyles.homeMetaItem}><p className={roleStyles.homeMetaLabel}>上周流动红旗</p><strong className={roleStyles.homeMetaValue}>{lastWeekFlags.length}<span className={roleStyles.homeMetaHint}>面</span></strong></div><div className={roleStyles.homeMetaItem}><p className={roleStyles.homeMetaLabel}>本周奖卡发放</p><strong className={roleStyles.homeMetaValue}>{awardTotal}<span className={roleStyles.homeMetaHint}>张</span></strong></div></div>
       </section>
 
       <div className={styles.primaryGrid}>
@@ -231,7 +198,7 @@ export function MoralDirectorDashboard({ onNavigate }: MoralDirectorDashboardPro
         </section>
 
         <section className={cn(styles.panel, styles.flagPanel)} aria-labelledby="last-week-flags-title">
-          <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff3db] text-[#c27a12]"><Trophy className="size-5" aria-hidden="true" /></span><div><h3 id="last-week-flags-title" className="text-base font-bold text-foreground">上周流动红旗</h3><p className="mt-1 text-xs text-muted-foreground">表现优秀班级 · {lastWeekFlags.length} 个班级获得</p></div></div><Link href="/class-ranking" aria-label="查看班级排行榜" className="inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-[#9a5e08] transition-colors hover:bg-[#fff3db] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看排行榜<ArrowRight className="size-3.5" aria-hidden="true" /></Link></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff3db] text-[#c27a12]"><Trophy className="size-5" aria-hidden="true" /></span><div><h3 id="last-week-flags-title" className="text-base font-bold text-foreground">上周流动红旗</h3><p className="mt-1 text-xs text-muted-foreground">表现优秀班级 · {lastWeekFlags.length} 个班级获得</p></div></div><button type="button" onClick={() => onNavigate("ranking")} aria-label="查看班级排行榜" className="inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-[#9a5e08] transition-colors hover:bg-[#fff3db] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看排行榜<ArrowRight className="size-3.5" aria-hidden="true" /></button></div>
           {lastWeekFlags.length === 0 ? <div className="mt-3 flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-[#ead8aa] bg-[#fffcf6] text-sm text-muted-foreground">上周暂未颁发流动红旗</div> : <ul className="mt-3 min-h-0 flex-1 divide-y divide-[#f0e6c9] overflow-y-auto rounded-xl border border-[#eadfbd] bg-[#fffcf6] px-2.5 pr-1.5">{lastWeekFlags.map((flag, index) => <li key={`${flag.classId}-${flag.configId ?? index}`} className="flex items-center gap-2.5 py-2"><span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#fff0b8] text-xs font-black tabular-nums text-[#9a6b16]">{index + 1}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-foreground">{flag.className}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{flag.flagName} · 上周周榜</span></span><img src={flag.image} alt={`${flag.flagName}图片`} width={32} height={32} loading="lazy" className="size-8 shrink-0 rounded-lg object-cover" /></li>)}</ul>}
         </section>
       </div>

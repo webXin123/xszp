@@ -59,6 +59,10 @@
 
 :root {
   color-scheme: light;
+  --workspace-gradient:
+    radial-gradient(circle at 4% 0%, rgb(89 131 227 / 18%), transparent 31rem),
+    radial-gradient(circle at 96% 8%, rgb(87 186 143 / 14%), transparent 29rem),
+    linear-gradient(135deg, rgb(243 247 255) 0%, rgb(238 244 255) 48%, rgb(240 249 246) 100%);
   --background: #eef3fa;
   --foreground: #20324f;
   --card: #ffffff;
@@ -175,8 +179,7 @@
 }
 
 .prototype-page-loading {
-  background: rgb(238 243 250 / 84%);
-  backdrop-filter: blur(2px);
+  background: #eef3fa;
 }
 
 .prototype-skeleton-block {
@@ -217,6 +220,29 @@
     position: relative;
     isolation: isolate;
     background-color: var(--background);
+    background-image: var(--workspace-gradient);
+  }
+
+  .app-standalone-page {
+    min-height: 100dvh;
+    width: 100%;
+    background-color: var(--background);
+    background-image: var(--workspace-gradient);
+  }
+
+  .app-standalone-content {
+    min-height: 100dvh;
+    width: 100%;
+    min-width: 0;
+    padding: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .app-standalone-content { padding: 1.5rem; }
+  }
+
+  @media (min-width: 1024px) {
+    .app-standalone-content { padding: 1.75rem; }
   }
 
   .app-page-shell::before {
@@ -241,15 +267,40 @@
   }
 
   .app-content {
-    border-color: rgb(203 216 234 / 94%);
-    box-shadow: 0 24px 60px -42px rgb(32 63 122 / 64%);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .app-workspace {
-    border: 1px solid rgb(203 216 234 / 94%);
-    border-radius: 1rem;
-    background: linear-gradient(180deg, rgb(255 255 255 / 94%) 0%, rgb(248 251 255 / 90%) 100%);
-    box-shadow: 0 24px 60px -42px rgb(32 63 122 / 64%);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* 数据卡统一使用轻量色彩分层，避免业务页面全部落在纯白背景上。 */
+  .app-content section[class*="bg-white"],
+  .app-content article[class*="bg-white"],
+  .app-standalone-content section[class*="bg-white"],
+  .app-standalone-content article[class*="bg-white"] {
+    background-image: linear-gradient(145deg, rgb(255 255 255 / 96%) 0%, rgb(242 247 255 / 96%) 100%);
+  }
+
+  .app-content section[class*="bg-white"]:nth-of-type(3n),
+  .app-standalone-content section[class*="bg-white"]:nth-of-type(3n) {
+    background-image: linear-gradient(145deg, rgb(255 255 255 / 96%) 0%, rgb(241 250 247 / 96%) 100%);
+  }
+
+  .app-content section[class*="bg-white"]:nth-of-type(3n + 1),
+  .app-standalone-content section[class*="bg-white"]:nth-of-type(3n + 1) {
+    background-image: linear-gradient(145deg, rgb(255 255 255 / 96%) 0%, rgb(255 248 241 / 96%) 100%);
+  }
+
+  .app-content [class*="bg-\[#fbfcff\]"],
+  .app-standalone-content [class*="bg-\[#fbfcff\]"] {
+    background-color: rgb(244 247 255 / 92%);
   }
 
   .app-section {
@@ -281,10 +332,6 @@
   }
 
   /* 配置页保留内部编辑卡，移除独立页面工作区的重复白色外框。 */
-  .class-config-standalone-page .app-standalone-content {
-    max-width: 1440px;
-  }
-
   .class-config-standalone-page .app-workspace {
     gap: 0;
     border: 0;

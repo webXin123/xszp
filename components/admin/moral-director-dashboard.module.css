@@ -30,7 +30,7 @@
 .primaryGrid, .secondaryGrid { display: grid; gap: 18px; }
 .primaryGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .secondaryGrid { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); }
-.panel { display: flex; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid #dbe7eb; border-radius: 20px; padding: 22px; background: #fff; box-shadow: 0 16px 30px -30px rgb(46 79 97 / 50%); }
+.panel { display: flex; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid #dbe7eb; border-radius: 20px; padding: 22px; background: linear-gradient(145deg, #ffffff 0%, #f1faf7 100%); box-shadow: 0 16px 30px -30px rgb(46 79 97 / 50%); }
 .scorePanel, .flagPanel { height: 390px; }
 .awardPanel, .feedPanel { height: 390px; }
 .scorePanel { border-top: 3px solid #e29a61; }

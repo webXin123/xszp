@@ -1014,7 +1014,12 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       setMallConfig(rawMallConfig ? JSON.parse(rawMallConfig) : seedMallConfig())
       setMallCartItems(rawMallCart ? JSON.parse(rawMallCart) : [])
       setMallRedemptions(rawMallRedemptions ? JSON.parse(rawMallRedemptions) : seedMallRedemptions())
-      if (rawCurrentUser) {
+      const userFromIframeQuery = new URLSearchParams(window.location.search).get("user")
+      if (userFromIframeQuery) {
+        const queryParent = PARENT_USERS.find((parent) => parent.id === userFromIframeQuery)
+        const queryTeacher = TEACHERS.find((teacher) => teacher.id === userFromIframeQuery)
+        setCurrentUser(queryParent ?? queryTeacher ?? TEACHERS.find((t) => t.id === "teacher-chen") ?? TEACHERS[0])
+      } else if (rawCurrentUser) {
         const parsed = JSON.parse(rawCurrentUser) as CurrentUser
         // 校验持久化的身份：必须存在于种子数据中
         // （旧版本可能残留 kind: "student" 等已移除的身份，直接丢弃回退默认）

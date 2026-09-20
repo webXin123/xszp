@@ -8,7 +8,7 @@
   overflow: hidden;
   border: 1px solid var(--admin-card-border);
   border-radius: 20px;
-  background: rgb(255 255 255 / 94%);
+  background: linear-gradient(145deg, rgb(255 255 255 / 96%) 0%, rgb(242 247 255 / 96%) 100%);
   box-shadow: var(--admin-card-shadow);
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
@@ -51,7 +51,7 @@
 }
 
 .contentCard {
-  background: linear-gradient(180deg, #fff 0%, #fcfdff 100%);
+  background: linear-gradient(145deg, #ffffff 0%, #f1f7ff 100%);
 }
 
 .awardPieCard {

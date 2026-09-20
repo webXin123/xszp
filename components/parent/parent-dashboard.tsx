@@ -76,6 +76,7 @@ const GROWTH_STAGES = [
 
 type QuickPanel = "academic" | "fitness" | null
 type RecordTab = "awards" | "honors" | "activities"
+export type ParentMobileTab = "home" | "honors" | "activities"
 
 function formatPublishedDate(value: string) {
   const date = new Date(value)
@@ -107,7 +108,7 @@ function QuickEntry({ icon: Icon, label, color, onClick, href }: {
   return href ? <Link href={href} className={className}>{content}</Link> : <button type="button" onClick={onClick} className={className}>{content}</button>
 }
 
-export function ParentDashboard() {
+export function ParentDashboard({ mobileTab = "home" }: { mobileTab?: ParentMobileTab }) {
   const {
     currentUser,
     students,
@@ -128,6 +129,12 @@ export function ParentDashboard() {
   const [studentPickerOpen, setStudentPickerOpen] = useState(false)
   const [recordTab, setRecordTab] = useState<RecordTab>("awards")
   const [activityDialogTarget, setActivityDialogTarget] = useState<Activity | null>(null)
+
+  useEffect(() => {
+    if (mobileTab === "honors") setRecordTab("honors")
+    if (mobileTab === "activities") setRecordTab("activities")
+    if (mobileTab === "home") setRecordTab("awards")
+  }, [mobileTab])
 
   useEffect(() => {
     if (children.length === 0) {
@@ -286,7 +293,7 @@ export function ParentDashboard() {
 
   return (
     <div className={cn("relative flex flex-col gap-3 pb-6 lg:gap-3", styles.parentHome)}>
-      <div aria-label="最新动态" className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#dde3f8] bg-white px-3 py-2.5 shadow-[0_12px_26px_-26px_rgba(64,80,166,0.75)]">
+      <div aria-label="最新动态" className={cn("flex flex-wrap items-center gap-3 rounded-2xl border border-[#dde3f8] bg-white px-3 py-2.5 shadow-[0_12px_26px_-26px_rgba(64,80,166,0.75)]", mobileTab !== "home" && "hidden lg:flex")}>
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Megaphone className="size-4" aria-hidden="true" /></span>
         {notifications[0] ? (() => {
           const notice = notifications[0]
@@ -296,7 +303,7 @@ export function ParentDashboard() {
         {notifications.length > 1 && <span className="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">+{notifications.length - 1}</span>}
       </div>
 
-      <section className="rounded-[18px] border border-[#d7def8] bg-white p-2 shadow-[0_18px_38px_-34px_rgba(64,80,166,0.68)] sm:p-2.5">
+      <section className={cn("rounded-[18px] border border-[#d7def8] bg-white p-2 shadow-[0_18px_38px_-34px_rgba(64,80,166,0.68)] sm:p-2.5", mobileTab !== "home" && "hidden lg:block")}>
         <div className="grid gap-2 lg:grid-cols-[minmax(0,1.08fr)_minmax(250px,.72fr)_minmax(250px,.72fr)]">
           <div className="grid gap-2">
             <div className="flex min-w-0 items-center justify-between gap-4 rounded-2xl bg-[#fbfcff] p-3 sm:p-3.5">
@@ -316,13 +323,13 @@ export function ParentDashboard() {
         </div>
       </section>
 
-      <div className="grid gap-3 xl:grid-cols-[1.05fr_.95fr]">
+      <div className={cn("grid gap-3 xl:grid-cols-[1.05fr_.95fr]", mobileTab !== "home" && "hidden lg:grid")}>
         <section className="flex min-h-[360px] flex-col rounded-[18px] border border-[#dce3f8] bg-white p-3.5 shadow-[0_18px_40px_-32px_rgba(64,80,166,.65)] sm:p-4"><div className="flex items-center justify-between gap-3"><h2 className="flex items-center gap-1.5 text-base font-bold text-foreground"><RadarIcon className="size-4 text-primary" aria-hidden="true" />五育发展</h2><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{semesterLabel}</span></div><div className="mt-2 min-h-0 flex-1"><PointsRadarChart series={radarSeries} /></div></section>
         <section className="flex min-h-[360px] flex-col rounded-[18px] border border-[#dce3f8] bg-white p-3.5 shadow-[0_18px_40px_-32px_rgba(64,80,166,.65)] sm:p-4"><div className="flex items-center justify-between gap-3"><h2 className="flex items-center gap-1.5 text-base font-bold text-foreground"><TrendingUp className="size-4 text-primary" aria-hidden="true" />成长趋势</h2><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">积分</span></div><div className="mt-3 min-h-0 flex-1"><SemesterGrowthChart data={historyTrend} studentName={currentChild.name} /></div></section>
       </div>
 
-      <section className="flex min-h-[340px] flex-col rounded-[18px] border border-[#dce3f8] bg-white p-3.5 shadow-[0_18px_40px_-32px_rgba(64,80,166,.65)] sm:p-4">
-        <div role="tablist" aria-label="本学期成长记录分类" className="inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-[#d5ddf8] bg-white p-1 shadow-[0_8px_18px_-14px_rgba(64,80,166,.75)]">
+      <section className={cn("flex min-h-[340px] flex-col rounded-[18px] border border-[#dce3f8] bg-white p-3.5 shadow-[0_18px_40px_-32px_rgba(64,80,166,.65)] sm:p-4", mobileTab !== "home" && "lg:flex")}>
+        <div role="tablist" aria-label="本学期成长记录分类" className={cn("inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-[#d5ddf8] bg-white p-1 shadow-[0_8px_18px_-14px_rgba(64,80,166,.75)]", mobileTab !== "home" && "hidden lg:inline-flex")}>
           <button type="button" role="tab" aria-selected={recordTab === "awards"} onClick={() => setRecordTab("awards")} className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", recordTab === "awards" ? "bg-primary text-primary-foreground shadow-[0_5px_12px_rgba(113,140,255,.35)]" : "text-primary hover:bg-primary/8")}><Gift className="size-4" aria-hidden="true" />奖卡记录</button>
           <button type="button" role="tab" aria-selected={recordTab === "honors"} onClick={() => setRecordTab("honors")} className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", recordTab === "honors" ? "bg-primary text-primary-foreground shadow-[0_5px_12px_rgba(113,140,255,.35)]" : "text-primary hover:bg-primary/8")}><Medal className="size-4" aria-hidden="true" />荣誉记录</button>
           <button type="button" role="tab" aria-selected={recordTab === "activities"} onClick={() => setRecordTab("activities")} className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", recordTab === "activities" ? "bg-primary text-primary-foreground shadow-[0_5px_12px_rgba(113,140,255,.35)]" : "text-primary hover:bg-primary/8")}><CalendarRange className="size-4" aria-hidden="true" />活动列表</button>
