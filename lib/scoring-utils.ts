@@ -20,6 +20,7 @@ export function getGroupMaxScore(group: IndicatorGroup) {
 
 export function findClassRating(configs: ClassRatingConfig[], rank: number, score: number) {
   return configs.find((config) => {
+    if (config.autoIssueEnabled === false) return false
     const value = config.ruleType === "score" ? score : rank
     const start = Number(config.ruleType === "score" ? config.scoreStart : config.rankStart)
     const end = Number(config.ruleType === "score" ? config.scoreEnd : config.rankEnd)

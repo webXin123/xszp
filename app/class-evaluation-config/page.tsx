@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function ClassEvaluationConfigPage() {
   return (
     <EvaluationProvider>
-      <StandalonePageShell mainId="class-evaluation-config-main" activeLabel="评价配置" activeIcon="settings">
+      <StandalonePageShell mainId="class-evaluation-config-main" activeLabel="评价配置" activeIcon="settings" className="class-config-standalone-page">
         <div id="class-evaluation-config-main" tabIndex={-1} className="w-full">
           <ClassConfigTab />
         </div>

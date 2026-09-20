@@ -56,9 +56,9 @@ const DEFAULT_FLAG_CONFIGS: FlagConfig[] = [
 ]
 
 const DEFAULT_CLASS_RATING_CONFIGS: ClassRatingConfig[] = [
-  { id: "rating-demonstration", name: "优雅示范", description: "表现突出、礼仪规范，持续发挥班级示范作用。", image: null, defaultImage: "smile", autoIssueDay: "saturday", ruleType: "rank", rankStart: "1", rankEnd: "2", scoreStart: "90", scoreEnd: "100", theme: "blue" },
-  { id: "rating-growth", name: "稳步成长", description: "保持稳定进步，在合作与成长中形成班级特色。", image: null, defaultImage: "smile", autoIssueDay: "sunday", ruleType: "rank", rankStart: "3", rankEnd: "6", scoreStart: "80", scoreEnd: "89.9", theme: "green" },
-  { id: "rating-encouragement", name: "成长加油", description: "积极参与、持续改善，在每一次努力中积累成长。", image: null, defaultImage: "cry", autoIssueDay: "monday", ruleType: "rank", rankStart: "7", rankEnd: "99", scoreStart: "0", scoreEnd: "79.9", theme: "orange" },
+  { id: "rating-demonstration", name: "优雅示范", description: "表现突出、礼仪规范，持续发挥班级示范作用。", image: null, defaultImage: "smile", autoIssueEnabled: true, autoIssueDay: "saturday", ruleType: "rank", rankStart: "1", rankEnd: "2", scoreStart: "90", scoreEnd: "100", theme: "blue" },
+  { id: "rating-growth", name: "稳步成长", description: "保持稳定进步，在合作与成长中形成班级特色。", image: null, defaultImage: "neutral", autoIssueEnabled: true, autoIssueDay: "sunday", ruleType: "rank", rankStart: "3", rankEnd: "6", scoreStart: "80", scoreEnd: "89.9", theme: "green" },
+  { id: "rating-encouragement", name: "成长加油", description: "积极参与、持续改善，在每一次努力中积累成长。", image: null, defaultImage: "cry", autoIssueEnabled: true, autoIssueDay: "monday", ruleType: "rank", rankStart: "7", rankEnd: "99", scoreStart: "0", scoreEnd: "79.9", theme: "orange" },
 ]
 
 const MALL_IMAGES = [
@@ -994,6 +994,8 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       const storedClassRatingConfigs = rawClassRatingConfigs ? JSON.parse(rawClassRatingConfigs) as Partial<ClassRatingConfig>[] : null
       setClassRatingConfigs(storedClassRatingConfigs ? storedClassRatingConfigs.map((item) => ({
         ...item,
+        defaultImage: item.defaultImage === "cry" || item.defaultImage === "neutral" ? item.defaultImage : "smile",
+        autoIssueEnabled: item.autoIssueEnabled !== false,
         ruleType: item.ruleType === "score" ? "score" : "rank",
         rankStart: item.rankStart ?? "1",
         rankEnd: item.rankEnd ?? "99",

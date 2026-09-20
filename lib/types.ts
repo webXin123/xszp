@@ -151,7 +151,7 @@ export interface FlagConfig {
   syncLevel3?: string
 }
 
-export type ClassRatingDefaultImage = "smile" | "cry"
+export type ClassRatingDefaultImage = "smile" | "neutral" | "cry"
 export type ClassRatingTheme = "blue" | "green" | "orange"
 export type ClassRatingRuleType = "rank" | "score"
 
@@ -162,6 +162,8 @@ export interface ClassRatingConfig {
   /** 用户上传的评级图片；为空时使用 defaultImage 对应的内置图片 */
   image: string | null
   defaultImage: ClassRatingDefaultImage
+  /** 是否按配置规则自动发放班级评级；关闭后仅保留为手动可用评级 */
+  autoIssueEnabled: boolean
   autoIssueDay: "saturday" | "sunday" | "monday"
   ruleType: ClassRatingRuleType
   rankStart: string

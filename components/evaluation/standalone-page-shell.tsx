@@ -39,10 +39,10 @@ export function StandalonePageShell({ children, mainId, activeLabel, activeIcon,
   const homeLabel = getHomeLabel(role)
   const ActiveIcon = ACTIVE_ICONS[activeIcon]
 
-  return <div className={cn("app-page-shell min-h-screen bg-background px-4 pb-6 pt-16 sm:px-6", className)}>
+  return <div className={cn("app-page-shell min-h-screen px-4 pb-6 pt-16 sm:px-6", className)}>
     <a href={`#${mainId}`} className="sr-only z-[60] rounded-md bg-white px-3 py-2 text-sm font-semibold text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:ring-2 focus-visible:ring-primary/50">跳转到主要内容</a>
     <header className="app-header fixed inset-x-0 top-0 z-50 border-b bg-background/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-3 px-4">
+      <div className="mx-auto flex h-14 w-full max-w-[1280px] items-center justify-between gap-3 px-4">
         <Link href="/" className="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
           <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-border/60"><Image src="/xszp/images/logo.png" alt="屹力学生综评" width={30} height={30} /></span>
           <span className="hidden flex-col leading-tight md:flex"><span className="text-sm font-bold text-foreground">屹力学生综评</span><span className="text-xs text-muted-foreground">综合评价平台</span></span>
@@ -54,6 +54,8 @@ export function StandalonePageShell({ children, mainId, activeLabel, activeIcon,
         <div className="flex shrink-0 items-center"><TeacherSwitcher /></div>
       </div>
     </header>
-    <div className="app-standalone-content mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-5">{children}</div>
+    <div className="app-standalone-content mx-auto flex w-full max-w-[1280px] flex-1 flex-col">
+      <div className="app-content app-workspace flex w-full min-w-0 flex-col gap-5 p-4 sm:p-6">{children}</div>
+    </div>
   </div>
 }

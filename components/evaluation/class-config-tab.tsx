@@ -10,10 +10,10 @@ import {
   Flag,
   ImagePlus,
   Palette,
+  Pencil,
   Plus,
   Save,
   Settings2,
-  ShieldCheck,
   Smile,
   Trash2,
   Users,
@@ -110,8 +110,9 @@ const ratingRuleOptions = [
 const DEFAULT_ICON_PATH = "/xszp/images"
 
 const defaultRatingImage: Record<ClassRatingConfig["defaultImage"], string> = {
-  smile: `${DEFAULT_ICON_PATH}/rating-smile.svg`,
-  cry: `${DEFAULT_ICON_PATH}/rating-cry.svg`,
+  smile: `${DEFAULT_ICON_PATH}/rating-smile-generated.png`,
+  neutral: `${DEFAULT_ICON_PATH}/rating-neutral-generated.png`,
+  cry: `${DEFAULT_ICON_PATH}/rating-cry-generated.png`,
 }
 
 const FIVE_EDUCATION_OPTIONS: Record<string, Record<string, string[]>> = {
@@ -287,115 +288,40 @@ interface FlagEditorProps {
   period: FlagPeriod
   items: FlagConfig[]
   onAdd: () => void
-  onChange: (id: string, patch: Partial<FlagConfig>) => void
-  onRemove: (id: string) => void
+  onEdit: (item: FlagConfig) => void
 }
 
-function FlagEditor({ period, items, onAdd, onChange, onRemove }: FlagEditorProps) {
+function FlagEditor({ period, items, onAdd, onEdit }: FlagEditorProps) {
   const isWeek = period === "week"
   const title = isWeek ? "周流动红旗" : "月流动红旗"
-  const description = isWeek ? "每周评选一次，适合即时班级表现反馈。" : "每月评选一次，适合阶段性班级荣誉。"
-  const [imageError, setImageError] = useState("")
-
-  const handleFlagImage = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      event.target.value = ""
-      setImageError("流动红旗图片不能超过 2MB")
-      return
-    }
-    setImageError("")
-    const reader = new FileReader()
-    reader.onload = () => onChange(id, { image: typeof reader.result === "string" ? reader.result : null })
-    reader.readAsDataURL(file)
-  }
 
   return (
-    <section className="config-editor-panel rounded-2xl p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", isWeek ? "bg-brand-yellow/15 text-brand-yellow" : "bg-brand-orange/15 text-brand-orange")}>
-            <Flag className="size-5" />
+    <section className="config-editor-panel rounded-2xl p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", isWeek ? "bg-brand-yellow/15 text-brand-yellow" : "bg-brand-orange/15 text-brand-orange")}>
+            <Flag aria-hidden="true" className="size-4" />
           </span>
-          <div>
-            <h2 className="text-base font-bold">{title}</h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold">{title}</h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">共 {items.length} 项配置</p>
           </div>
         </div>
-        <Button type="button" variant="outline" onClick={onAdd} className="h-10 shrink-0 rounded-lg bg-transparent px-3 text-xs">
+        <Button type="button" variant="outline" onClick={onAdd} className="h-9 shrink-0 rounded-lg bg-transparent px-2.5 text-xs">
           <Plus className="size-3.5" />新增
         </Button>
       </div>
 
-      <div className="mt-4 space-y-2.5">
-        {items.map((item) => (
-          <div key={item.id} className={cn("rounded-xl border p-3 transition", item.enabled ? "border-primary/30 bg-primary/[0.06] shadow-[0_8px_18px_-18px_rgba(82,95,184,0.75)]" : "border-[#e0e5fa] bg-white")}>
-            <div className="flex items-center gap-2.5">
-              <input
-                aria-label={`${title}${item.name}名称`}
-                name={`${period}-${item.id}-name`}
-                autoComplete="off"
-                value={item.name}
-                onChange={(event) => onChange(item.id, { name: event.target.value })}
-                className="h-9 min-w-0 flex-1 rounded-lg border border-border/70 bg-white px-2.5 text-sm font-semibold outline-none transition focus:border-primary"
-              />
-              <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                <span>积分</span>
-                <input
-                  aria-label={`${title}${item.name}奖励积分`}
-                  name={`${period}-${item.id}-points`}
-                  autoComplete="off"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  max="100"
-                  step="1"
-                  value={item.points ?? 1}
-                  onChange={(event) => {
-                    const points = Number(event.target.value)
-                    if (Number.isInteger(points) && points >= 1 && points <= 100) onChange(item.id, { points })
-                  }}
-                  className="h-9 w-16 rounded-lg border border-border/70 bg-white px-2 text-center text-sm font-semibold text-foreground outline-none transition focus:border-primary"
-                />
-                <span>分</span>
-              </label>
-              <button
-                type="button"
-                aria-label={`删除${item.name}`}
-                onClick={() => onRemove(item.id)}
-                className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border/50 pt-3">
-              <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                <img src={item.image ?? `${DEFAULT_ICON_PATH}/flag-unissued.svg`} alt="" width={40} height={40} className="size-10 shrink-0 rounded-lg object-cover" />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-foreground">{item.image ? "已上传流动红旗图片" : "使用默认状态图标"}</p>
-                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground">未上传时按发放状态显示灰色或红色图标</p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {item.image && <button type="button" onClick={() => onChange(item.id, { image: null })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-2.5 text-xs font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">恢复默认</button>}
-                <label className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 text-xs font-semibold text-primary transition hover:bg-primary/10 focus-within:ring-2 focus-within:ring-primary/30"><ImagePlus aria-hidden="true" className="size-3.5" />{item.image ? "更换图片" : "上传图片"}<input name={`${period}-${item.id}-image`} type="file" accept="image/*" onChange={(event) => handleFlagImage(item.id, event)} className="sr-only" /></label>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-3">
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">{item.enabled ? "已启用，评选时可发放" : "未启用，不在评选列表显示"}</p>
-                <p className="mt-1 truncate text-[11px] text-muted-foreground/80">{item.syncFiveEducation ? `同步五育：${[item.syncLevel1, item.syncLevel2, item.syncLevel3].filter(Boolean).join(" / ") || "待配置指标"}` : "不同步五育指标"}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2.5">
-                <span className="text-xs font-semibold text-foreground">是否使用</span>
-                <ToggleSwitch checked={item.enabled} onChange={() => onChange(item.id, { enabled: !item.enabled })} label={`${item.enabled ? "停用" : "启用"}${item.name}`} />
-              </div>
-            </div>
+      <div className="mt-4 space-y-3">
+        {items.map((item) => <article key={item.id} className={cn("min-h-[112px] min-w-0 rounded-2xl border p-4 transition", item.enabled ? "border-primary/30 bg-primary/[0.055]" : "border-[#e0e5fa] bg-white")}>
+          <div className="flex items-start gap-3">
+            <span className={cn("flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl", isWeek ? "bg-brand-yellow/15 text-brand-yellow" : "bg-brand-orange/15 text-brand-orange")}>{item.image ? <img src={item.image} alt={`${item.name}流动红旗图标`} width={44} height={44} className="size-full object-cover" /> : <Flag aria-hidden="true" className="size-5" />}</span>
+            <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-foreground">{item.name}</p><p className="mt-1.5 truncate text-xs text-muted-foreground">{item.syncFiveEducation ? [item.syncLevel1, item.syncLevel2, item.syncLevel3].filter(Boolean).join(" / ") : "未关联五育指标"}</p></div>
+            <button type="button" aria-label={`编辑${item.name}`} onClick={() => onEdit(item)} className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"><Pencil aria-hidden="true" className="size-3.5" /></button>
           </div>
-        ))}
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-3"><span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", item.enabled ? "bg-brand-green/15 text-brand-green" : "bg-muted text-muted-foreground")}>{item.enabled ? "已启用" : "未启用"}</span><span className="text-xs font-semibold text-primary">发放积分 {item.points ?? 1} 分</span></div>
+        </article>)}
       </div>
-      {imageError && <p role="status" aria-live="polite" className="mt-3 text-xs font-medium text-destructive">{imageError}</p>}
     </section>
   )
 }
@@ -419,13 +345,21 @@ export function ClassConfigTab() {
   const [newScore, setNewScore] = useState("-1")
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [flagDialog, setFlagDialog] = useState<FlagPeriod | null>(null)
+  const [editingFlagId, setEditingFlagId] = useState<string | null>(null)
+  const [flagToDelete, setFlagToDelete] = useState<string | null>(null)
   const [newFlagName, setNewFlagName] = useState("")
   const [newFlagPoints, setNewFlagPoints] = useState("1")
   const [newFlagSync, setNewFlagSync] = useState(false)
+  const [newFlagEnabled, setNewFlagEnabled] = useState(true)
   const [newFlagLevel1, setNewFlagLevel1] = useState("")
   const [newFlagLevel2, setNewFlagLevel2] = useState("")
   const [newFlagLevel3, setNewFlagLevel3] = useState("")
+  const [newFlagImage, setNewFlagImage] = useState<string | null>(null)
+  const [newFlagImageError, setNewFlagImageError] = useState("")
   const [selectedAppearanceId, setSelectedAppearanceId] = useState("")
+  const [appearanceDraft, setAppearanceDraft] = useState<ClassRatingConfig | null>(null)
+  const [appearanceDrawerOpen, setAppearanceDrawerOpen] = useState(false)
+  const [editingAppearanceId, setEditingAppearanceId] = useState<string | null>(null)
   const [appearanceToDelete, setAppearanceToDelete] = useState<string | null>(null)
   const [toast, setToast] = useState("")
 
@@ -438,14 +372,16 @@ export function ClassConfigTab() {
   const newFlagLevel2Options = newFlagLevel1 ? Object.keys(FIVE_EDUCATION_OPTIONS[newFlagLevel1] ?? {}) : []
   const newFlagLevel3Options = newFlagLevel1 && newFlagLevel2 ? FIVE_EDUCATION_OPTIONS[newFlagLevel1]?.[newFlagLevel2] ?? [] : []
   const selectedAppearance = useMemo(() => appearances.find((item) => item.id === selectedAppearanceId) ?? appearances[0], [appearances, selectedAppearanceId])
-
-  useEffect(() => {
-    if (selected?.kind === "level3") setScoreDraft(String(selected.node.defaultScore))
-  }, [selectedId])
+  const appearanceEditor = appearanceDraft ?? selectedAppearance
+  const isNewAppearance = editingAppearanceId === null
 
   useEffect(() => {
     if (appearances.length > 0 && !appearances.some((item) => item.id === selectedAppearanceId)) setSelectedAppearanceId(appearances[0].id)
   }, [appearances, selectedAppearanceId])
+
+  useEffect(() => {
+    if (selected?.kind === "level3") setScoreDraft(String(selected.node.defaultScore))
+  }, [selectedId])
 
   useEffect(() => {
     if (isHomeroomTeacher) setPage("appearance")
@@ -539,22 +475,28 @@ export function ClassConfigTab() {
     updateSelected({ defaultScore: score })
   }
 
-  const updateFlag = (_period: FlagPeriod, id: string, patch: Partial<FlagConfig>) => {
-    updateFlagConfig(id, patch)
+  const handleNewFlagImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      event.target.value = ""
+      setNewFlagImageError("流动红旗图片不能超过 2MB")
+      return
+    }
+    setNewFlagImageError("")
+    const reader = new FileReader()
+    reader.onload = () => setNewFlagImage(typeof reader.result === "string" ? reader.result : null)
+    reader.readAsDataURL(file)
   }
 
-  const removeFlag = (_period: FlagPeriod, id: string) => {
-    removeFlagConfig(id)
-  }
-
-  const addFlag = () => {
+  const saveFlag = () => {
     if (!flagDialog) return
     if (!newFlagName.trim()) {
       notify("请输入流动红旗名称")
       return
     }
     const points = Number(newFlagPoints)
-    if (!Number.isInteger(points) || points < 1 || points > 100) {
+    if (newFlagSync && (!Number.isInteger(points) || points < 1 || points > 100)) {
       notify("请输入 1-100 的整数积分")
       return
     }
@@ -562,73 +504,101 @@ export function ClassConfigTab() {
       notify("请选择同步的一级指标")
       return
     }
-    const newFlag = {
-      id: `${flagDialog}-${Date.now()}`,
+    const existingFlag = editingFlagId ? flagConfigs.find((item) => item.id === editingFlagId) : undefined
+    const nextFlag = {
       period: flagDialog,
       name: newFlagName.trim(),
-      points,
-      enabled: true,
+      points: newFlagSync ? points : 1,
+      image: newFlagImage,
+      enabled: newFlagEnabled,
       syncFiveEducation: newFlagSync,
       syncLevel1: newFlagSync ? newFlagLevel1 : undefined,
       syncLevel2: newFlagSync ? newFlagLevel2 || undefined : undefined,
       syncLevel3: newFlagSync ? newFlagLevel3 || undefined : undefined,
     }
-    addFlagConfig(newFlag)
+    if (existingFlag) updateFlagConfig(existingFlag.id, nextFlag)
+    else addFlagConfig({ id: `${flagDialog}-${Date.now()}`, ...nextFlag })
     setFlagDialog(null)
-    notify("流动红旗已新增")
+    setEditingFlagId(null)
+    notify(existingFlag ? "流动红旗已保存" : "流动红旗已新增")
   }
 
-  const openFlagDialog = (period: FlagPeriod) => {
-    setNewFlagName("")
-    setNewFlagPoints("1")
-    setNewFlagSync(false)
-    setNewFlagLevel1("")
-    setNewFlagLevel2("")
-    setNewFlagLevel3("")
+  const openFlagDialog = (period: FlagPeriod, item?: FlagConfig) => {
+    setEditingFlagId(item?.id ?? null)
+    setNewFlagName(item?.name ?? "")
+    setNewFlagPoints(String(item?.points ?? 1))
+    setNewFlagSync(item?.syncFiveEducation ?? false)
+    setNewFlagEnabled(item?.enabled ?? true)
+    setNewFlagLevel1(item?.syncLevel1 ?? "")
+    setNewFlagLevel2(item?.syncLevel2 ?? "")
+    setNewFlagLevel3(item?.syncLevel3 ?? "")
+    setNewFlagImage(item?.image ?? null)
+    setNewFlagImageError("")
     setFlagDialog(period)
   }
 
-  const updateAppearance = updateClassRatingConfig
-
-  const addAppearance = () => {
-    const id = `appearance-${Date.now()}`
-    const nextAppearance: ClassRatingConfig = {
-      id,
-      name: "新班级评级",
-      description: "填写该形象的简介信息。",
-      image: null,
-      defaultImage: "smile",
-      autoIssueDay: "saturday",
-      ruleType: "rank",
-      rankStart: "11",
-      rankEnd: "20",
-      scoreStart: "0",
-      scoreEnd: "79.9",
-      theme: "blue",
+  const updateAppearance = (target: string | Partial<ClassRatingConfig>, legacyPatch?: Partial<ClassRatingConfig>) => {
+    if (typeof target === "string") {
+      if (appearanceDraft?.id === target) setAppearanceDraft((current) => current ? { ...current, ...(legacyPatch ?? {}) } : current)
+      else updateClassRatingConfig(target, legacyPatch ?? {})
+      return
     }
-    addClassRatingConfig(nextAppearance)
-    setSelectedAppearanceId(id)
-    notify("已新增班级评级")
+    setAppearanceDraft((current) => current ? { ...current, ...target } : current)
   }
 
-  const handleAppearanceImage = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
+  const openAppearanceDrawer = (item?: ClassRatingConfig) => {
+    const id = `appearance-${Date.now()}`
+    setEditingAppearanceId(item?.id ?? null)
+    setAppearanceDraft(item ? { ...item } : {
+      id,
+      name: "新班级评级",
+      description: "",
+      image: null,
+      defaultImage: "smile",
+      autoIssueEnabled: false,
+      autoIssueDay: "saturday",
+      ruleType: "rank",
+      rankStart: "1",
+      rankEnd: "1",
+      scoreStart: "0",
+      scoreEnd: "100",
+      theme: "blue",
+    })
+    setAppearanceDrawerOpen(true)
+  }
+
+  const addAppearance = () => openAppearanceDrawer()
+
+  const closeAppearanceDrawer = () => {
+    setAppearanceDrawerOpen(false)
+    setAppearanceDraft(null)
+    setEditingAppearanceId(null)
+  }
+
+  const handleAppearanceImage = (target: React.ChangeEvent<HTMLInputElement> | string, legacyEvent?: React.ChangeEvent<HTMLInputElement>) => {
+    const event = typeof target === "string" ? legacyEvent : target
+    if (!event) return
     const file = event.target.files?.[0]
     if (!file) return
     if (file.size > 2 * 1024 * 1024) return notify("评级图片不能超过 2MB")
     const reader = new FileReader()
-    reader.onload = () => updateAppearance(id, { image: typeof reader.result === "string" ? reader.result : null })
+    reader.onload = () => typeof target === "string" ? updateAppearance(target, { image: typeof reader.result === "string" ? reader.result : null }) : updateAppearance({ image: typeof reader.result === "string" ? reader.result : null })
     reader.readAsDataURL(file)
   }
 
   const saveAppearance = () => {
-    if (!selectedAppearance) return
-    if (!selectedAppearance.name.trim()) return notify("请填写形象名称")
-    if (!selectedAppearance.description.trim()) return notify("请填写简介信息")
-    const start = Number(selectedAppearance.ruleType === "score" ? selectedAppearance.scoreStart : selectedAppearance.rankStart)
-    const end = Number(selectedAppearance.ruleType === "score" ? selectedAppearance.scoreEnd : selectedAppearance.rankEnd)
-    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < 0) return notify(selectedAppearance.ruleType === "score" ? "请填写有效的分数区间" : "请填写有效的排名区间")
-    if (selectedAppearance.ruleType === "rank" && (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < 1)) return notify("排名区间必须为正整数")
-    if (start > end) return notify(selectedAppearance.ruleType === "score" ? "分数起始值不能大于结束值" : "排名起始名次不能大于结束名次")
+    if (!appearanceEditor) return
+    if (!appearanceEditor.name.trim()) return notify("请填写等级名称")
+    if (appearanceEditor.autoIssueEnabled) {
+      const start = Number(appearanceEditor.ruleType === "score" ? appearanceEditor.scoreStart : appearanceEditor.rankStart)
+      const end = Number(appearanceEditor.ruleType === "score" ? appearanceEditor.scoreEnd : appearanceEditor.rankEnd)
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < 0) return notify(appearanceEditor.ruleType === "score" ? "请填写有效的分数区间" : "请填写有效的排名区间")
+      if (appearanceEditor.ruleType === "rank" && (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < 1)) return notify("排名区间必须为正整数")
+      if (start > end) return notify(appearanceEditor.ruleType === "score" ? "分数起始值不能大于结束值" : "排名起始名次不能大于结束名次")
+    }
+    if (isNewAppearance) addClassRatingConfig(appearanceEditor)
+    else if (editingAppearanceId) updateClassRatingConfig(editingAppearanceId, appearanceEditor)
+    closeAppearanceDrawer()
     notify("班级评级已保存")
   }
 
@@ -639,16 +609,15 @@ export function ClassConfigTab() {
       notify("请至少保留一条班级评级配置")
       return
     }
-    const nextAppearance = appearances.find((item) => item.id !== appearanceToDelete)
     removeClassRatingConfig(appearanceToDelete)
-    setSelectedAppearanceId(nextAppearance?.id ?? "")
     setAppearanceToDelete(null)
+    closeAppearanceDrawer()
     notify("班级评级已删除")
   }
 
   const addDialogTitle = addTarget?.kind === "level1" ? "新增一级指标" : addTarget?.kind === "level2" ? "新增二级指标" : "新增三级指标"
   return (
-    <div className="min-h-screen px-4 py-4 sm:px-6 lg:px-8">
+    <div className="min-h-[100dvh] px-4 py-4 sm:px-6 lg:px-8">
       <a href="#config-content" className="sr-only z-[60] rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">跳转到主要内容</a>
       <main id="config-content" tabIndex={-1} className="config-page-shell mx-auto flex w-full max-w-[1440px] flex-col gap-5 rounded-3xl p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e4e9fa] pb-5">
@@ -682,7 +651,7 @@ export function ClassConfigTab() {
         </div>
 
         {page === "indicator" && (
-          <div className="grid min-h-[650px] gap-4 xl:grid-cols-[minmax(330px,.82fr)_minmax(0,1.18fr)]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(330px,.82fr)_minmax(0,1.18fr)]">
             <aside className="config-subpanel min-w-0 rounded-2xl p-4">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
@@ -720,7 +689,7 @@ export function ClassConfigTab() {
               </div>
             </aside>
 
-            <section className="config-editor-panel min-w-0 rounded-2xl p-4 sm:p-5">
+            <section className="config-editor-panel flex min-w-0 flex-col rounded-2xl p-4 sm:p-5">
               {selected ? <>
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 pb-4">
                   <div>
@@ -731,9 +700,12 @@ export function ClassConfigTab() {
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">{selectedPath}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {selected.kind !== "level3" && <Button type="button" variant="outline" onClick={() => openAddDialog(selected.kind === "level1" ? "level2" : "level3", selected.node.id)} className="h-10 rounded-lg bg-transparent px-3 text-xs"><Plus className="size-3.5" />{selectedAddLabel}</Button>}
-                    <Button type="button" variant="outline" onClick={() => setConfirmDeleteOpen(true)} className="h-10 rounded-lg bg-transparent px-3 text-xs text-destructive hover:text-destructive"><Trash2 className="size-3.5" />删除</Button>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2">
+                      {selected.kind !== "level3" && <Button type="button" variant="outline" onClick={() => openAddDialog(selected.kind === "level1" ? "level2" : "level3", selected.node.id)} className="h-10 rounded-lg bg-transparent px-3 text-xs"><Plus className="size-3.5" />{selectedAddLabel}</Button>}
+                      <Button type="button" variant="outline" onClick={() => setConfirmDeleteOpen(true)} className="h-10 rounded-lg bg-transparent px-3 text-xs text-destructive hover:text-destructive"><Trash2 className="size-3.5" />删除</Button>
+                    </div>
+                    <Button type="button" onClick={() => { if (selected.node.permission === "specified" && selected.node.memberIds.length === 0) { notify("请至少添加一名指定成员"); return }; commitScore(); notify("指标配置已保存") }} className="h-10 rounded-lg px-3 text-xs"><Save className="size-3.5" />保存指标</Button>
                   </div>
                 </div>
 
@@ -753,60 +725,60 @@ export function ClassConfigTab() {
                   </>}
                 </div>
 
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/[0.035] p-4">
-                  <div className="flex items-start gap-2.5"><span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><ShieldCheck className="size-4" /></span><p className="text-xs leading-5 text-muted-foreground">名称与权限修改将作用于当前层级；三级指标仅通过带符号的默认分值区分扣分和加分。</p></div>
-                  <Button type="button" onClick={() => { if (selected.node.permission === "specified" && selected.node.memberIds.length === 0) { notify("请至少添加一名指定成员"); return }; commitScore(); notify("指标配置已保存") }} className="h-10 rounded-lg px-3 text-xs"><Save className="size-3.5" />保存指标</Button>
-                </div>
               </> : <p className="py-20 text-center text-sm text-muted-foreground">暂无可编辑指标</p>}
             </section>
           </div>
         )}
 
-        {page === "flag" && <div className="grid gap-4 xl:grid-cols-2"><FlagEditor period="week" items={weeklyFlags} onAdd={() => openFlagDialog("week")} onChange={(id, patch) => updateFlag("week", id, patch)} onRemove={(id) => removeFlag("week", id)} /><FlagEditor period="month" items={monthlyFlags} onAdd={() => openFlagDialog("month")} onChange={(id, patch) => updateFlag("month", id, patch)} onRemove={(id) => removeFlag("month", id)} /></div>}
+        {page === "flag" && <div className="grid gap-4 xl:grid-cols-2"><FlagEditor period="week" items={weeklyFlags} onAdd={() => openFlagDialog("week")} onEdit={(item) => openFlagDialog(item.period, item)} /><FlagEditor period="month" items={monthlyFlags} onAdd={() => openFlagDialog("month")} onEdit={(item) => openFlagDialog(item.period, item)} /></div>}
 
-        {page === "appearance" && selectedAppearance && <section className="grid gap-4 xl:grid-cols-[minmax(280px,.72fr)_minmax(0,1.28fr)]">
-          <div className="space-y-4">
-            <div className="relative min-h-[300px] overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary-2 p-5 text-white shadow-lg">
-              {selectedAppearance.image ? <img src={selectedAppearance.image} alt={`${selectedAppearance.name}展示图片`} width={1200} height={675} className="absolute inset-0 size-full object-cover opacity-55" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/10 text-white/75"><img src={defaultRatingImage[selectedAppearance.defaultImage]} alt="" width={96} height={96} className="size-20" /><span className="text-xs">当前使用默认评级图片</span></div>}
-              <div className="absolute inset-0 bg-slate-950/20" />
-              <div className="relative flex h-full min-h-[260px] flex-col justify-between">
-                <div className="flex items-center justify-between"><span className="rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-xs font-semibold backdrop-blur">班级评级预览</span><Smile aria-hidden="true" className="size-5" /></div>
-                <div><p className="text-2xl font-bold tracking-tight">{selectedAppearance.name || "评级名称"}</p><p className="mt-2 text-sm font-medium text-white/90">{selectedAppearance.ruleType === "score" ? `班级分数 ${selectedAppearance.scoreStart || "—"} 至 ${selectedAppearance.scoreEnd || "—"} 分` : `班级排名第 ${selectedAppearance.rankStart || "—"} 至 ${selectedAppearance.rankEnd || "—"} 名`}</p><p className="mt-3 max-w-sm text-xs leading-5 text-white/80">{selectedAppearance.description || "填写评级简介信息。"}</p><span className="mt-4 inline-flex rounded-full border border-white/25 bg-white/15 px-2.5 py-1.5 text-[11px] font-semibold backdrop-blur">自动发放 · {autoIssueOptions.find((item) => item.id === selectedAppearance.autoIssueDay)?.label}</span></div>
-              </div>
+        {page === "appearance" && appearanceEditor && false && <section className="grid gap-4 xl:grid-cols-[minmax(280px,.72fr)_minmax(0,1.28fr)]">
+          <aside className="config-subpanel min-w-0 rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-3"><div><h2 className="text-sm font-bold">已配置评级</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">选择一项后可在右侧编辑发放规则与评级图片。</p></div><Button type="button" variant="outline" onClick={addAppearance} className="h-10 shrink-0 rounded-lg bg-transparent px-3 text-xs"><Plus aria-hidden="true" className="size-3.5" />新增评级</Button></div>
+            <div className="mt-4 space-y-2">
+              {appearances.map((item) => <button key={item.id} type="button" aria-pressed={!isNewAppearance && selectedAppearanceId === item.id} onClick={() => { setAppearanceDraft(null); setSelectedAppearanceId(item.id) }} className={cn("flex min-h-16 w-full items-center gap-3 rounded-xl border p-2.5 text-left transition hover:border-primary/35 hover:bg-primary/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", !isNewAppearance && selectedAppearanceId === item.id ? "border-primary/35 bg-primary/[0.06]" : "border-border/60 bg-background/25")}>
+                <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-primary to-primary-2"><img src={item.image ?? defaultRatingImage[item.defaultImage]} alt="" width={44} height={44} className="size-full object-cover" /></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-foreground">{item.name || "未命名评级"}</span><span className="mt-1 block truncate text-[11px] text-muted-foreground">{item.autoIssueEnabled === false ? "未开启自动发放" : `${item.ruleType === "score" ? `分数 ${item.scoreStart || "—"}–${item.scoreEnd || "—"} 分` : `排名 ${item.rankStart || "—"}–${item.rankEnd || "—"} 名`} · ${autoIssueOptions.find((option) => option.id === item.autoIssueDay)?.label}`}</span></span>
+                {!isNewAppearance && selectedAppearanceId === item.id && <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />}
+              </button>)}
             </div>
+          </aside>
 
-            <section className="config-subpanel rounded-2xl p-4">
-              <div className="flex items-start justify-between gap-3"><div><h2 className="text-sm font-bold">评级档案</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">可按班级排名或分数区间匹配不同评级。</p></div><Button type="button" variant="outline" onClick={addAppearance} className="h-10 shrink-0 rounded-lg bg-transparent px-3 text-xs"><Plus aria-hidden="true" className="size-3.5" />新增评级</Button></div>
-              <div className="mt-4 space-y-2">
-                {appearances.map((item) => <button key={item.id} type="button" aria-pressed={selectedAppearanceId === item.id} onClick={() => setSelectedAppearanceId(item.id)} className={cn("flex min-h-16 w-full items-center gap-3 rounded-xl border p-2.5 text-left transition hover:border-primary/35 hover:bg-primary/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", selectedAppearanceId === item.id ? "border-primary/35 bg-primary/[0.06]" : "border-border/60 bg-background/25")}>
-                  <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-primary to-primary-2"><img src={item.image ?? defaultRatingImage[item.defaultImage]} alt="" width={44} height={44} className="size-full object-cover" /></span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-foreground">{item.name || "未命名评级"}</span><span className="mt-1 block truncate text-[11px] text-muted-foreground">{item.ruleType === "score" ? `分数 ${item.scoreStart || "—"} 至 ${item.scoreEnd || "—"} 分` : `排名第 ${item.rankStart || "—"} 至 ${item.rankEnd || "—"} 名`} · {autoIssueOptions.find((option) => option.id === item.autoIssueDay)?.label}</span></span>
-                  {selectedAppearanceId === item.id && <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />}
-                </button>)}
-              </div>
-            </section>
-          </div>
-
-          <section className="config-editor-panel rounded-2xl p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="flex size-10 items-center justify-center rounded-xl bg-brand-pink/15 text-brand-pink"><Palette aria-hidden="true" className="size-5" /></span><div><h2 className="text-base font-bold">班级评级配置</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">配置评级名称、匹配方式、区间、评级图片和自动发放时间。</p></div></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-full bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary sm:inline-flex">正在编辑</span><Button type="button" variant="outline" onClick={() => setAppearanceToDelete(selectedAppearance.id)} className="h-10 rounded-lg border-destructive/30 bg-transparent px-3 text-xs text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"><Trash2 aria-hidden="true" className="size-3.5" />删除评级</Button></div></div>
+          <section className="config-editor-panel min-w-0 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-4"><div className="flex min-w-0 items-center gap-2"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-pink/15 text-brand-pink"><Palette aria-hidden="true" className="size-5" /></span><div className="min-w-0"><h2 className="text-base font-bold">{isNewAppearance ? "新增班级评级" : "编辑班级评级"}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">配置名称、图片和自动发放规则。</p></div></div>{isNewAppearance ? <Button type="button" onClick={saveAppearance} className="h-10 shrink-0 rounded-lg px-3 text-xs"><Save aria-hidden="true" className="size-3.5" />保存评级</Button> : <Button type="button" variant="outline" onClick={() => setAppearanceToDelete(appearanceEditor.id)} className="h-10 shrink-0 rounded-lg border-destructive/30 bg-transparent px-3 text-xs text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"><Trash2 aria-hidden="true" className="size-3.5" />删除评级</Button>}</div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground sm:col-span-2">评级名称<input name={`appearance-${selectedAppearance.id}-name`} autoComplete="off" value={selectedAppearance.name} onChange={(event) => updateAppearance(selectedAppearance.id, { name: event.target.value })} placeholder="例如：优雅示范…" className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label>
+              <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground sm:col-span-2">等级名称<input name={`appearance-${appearanceEditor.id}-name`} autoComplete="off" value={appearanceEditor.name} onChange={(event) => updateAppearance(appearanceEditor.id, { name: event.target.value })} placeholder="例如：优雅示范…" className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label>
 
-              <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">匹配方式</legend><div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="班级评级匹配方式">{ratingRuleOptions.map((option) => <button key={option.id} type="button" role="radio" aria-checked={selectedAppearance.ruleType === option.id} onClick={() => updateAppearance(selectedAppearance.id, { ruleType: option.id })} className={cn("rounded-lg border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", selectedAppearance.ruleType === option.id ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><span className="block text-xs font-bold">{option.label}</span><span className="mt-1 block text-[11px] font-normal leading-4">{option.description}</span></button>)}</div></fieldset>
+              <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">评级图片</legend><div className="mt-1 grid gap-2 sm:grid-cols-3">{([{ value: "smile" as const, label: "笑脸" }, { value: "neutral" as const, label: "平脸" }, { value: "cry" as const, label: "哭脸" }]).map((option) => <button key={option.value} type="button" aria-pressed={appearanceEditor.defaultImage === option.value} onClick={() => updateAppearance(appearanceEditor.id, { defaultImage: option.value })} className={cn("flex min-h-12 items-center gap-2 rounded-lg border px-3 text-left text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", appearanceEditor.defaultImage === option.value ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><img src={defaultRatingImage[option.value]} alt="" width={28} height={28} className="size-7" />{option.label}</button>)}</div></fieldset>
 
-              {selectedAppearance.ruleType === "score" ? <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">班级分数区间</legend><div className="mt-1 flex items-center gap-2"><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>从</span><input name={`appearance-${selectedAppearance.id}-score-start`} autoComplete="off" inputMode="decimal" type="number" min="0" step="0.1" value={selectedAppearance.scoreStart} onChange={(event) => updateAppearance(selectedAppearance.id, { scoreStart: event.target.value })} aria-label="分数起始值" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>分</span></label><span className="text-sm font-semibold text-muted-foreground">至</span><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>到</span><input name={`appearance-${selectedAppearance.id}-score-end`} autoComplete="off" inputMode="decimal" type="number" min="0" step="0.1" value={selectedAppearance.scoreEnd} onChange={(event) => updateAppearance(selectedAppearance.id, { scoreEnd: event.target.value })} aria-label="分数结束值" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>分</span></label></div></fieldset> : <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">班级排名区间</legend><div className="mt-1 flex items-center gap-2"><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>第</span><input name={`appearance-${selectedAppearance.id}-rank-start`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={selectedAppearance.rankStart} onChange={(event) => updateAppearance(selectedAppearance.id, { rankStart: event.target.value })} aria-label="排名起始名次" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>名</span></label><span className="text-sm font-semibold text-muted-foreground">至</span><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground"><span>第</span><input name={`appearance-${selectedAppearance.id}-rank-end`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={selectedAppearance.rankEnd} onChange={(event) => updateAppearance(selectedAppearance.id, { rankEnd: event.target.value })} aria-label="排名结束名次" className="h-10 min-w-0 w-full rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /><span>名</span></label></div></fieldset>}
+              <div className="flex flex-col gap-2 text-xs font-semibold text-muted-foreground sm:col-span-2"><span>自定义评级图片</span><div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border/80 bg-background/35 p-3"><div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary-2 text-white"><img src={appearanceEditor.image ?? defaultRatingImage[appearanceEditor.defaultImage]} alt={`${appearanceEditor.name || "班级评级"}图片缩略图`} width={80} height={80} className="size-full object-cover" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-foreground">{appearanceEditor.image ? "已上传自定义图片" : "当前使用默认表情图片"}</p><p className="mt-1 text-[11px] font-normal leading-4 text-muted-foreground">支持常见图片格式，单张不超过 2MB。</p></div><div className="flex items-center gap-2">{appearanceEditor.image && <button type="button" onClick={() => updateAppearance(appearanceEditor.id, { image: null })} className="min-h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-xs font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">恢复默认</button>}<label className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border/70 bg-background/55 px-3 text-xs font-semibold text-foreground transition hover:border-primary/45 hover:bg-primary/[0.035] focus-within:ring-2 focus-within:ring-primary/30"><ImagePlus aria-hidden="true" className="size-4 text-primary" />{appearanceEditor.image ? "更换图片" : "上传图片"}<input name={`appearance-${appearanceEditor.id}-image`} type="file" accept="image/*" onChange={(event) => handleAppearanceImage(appearanceEditor.id, event)} className="sr-only" /></label></div></div></div>
 
-              <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">自动发放时间</legend><div className="mt-1 grid gap-2 sm:grid-cols-3">{autoIssueOptions.map((option) => <label key={option.id} className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition", selectedAppearance.autoIssueDay === option.id ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><input type="radio" name={`appearance-${selectedAppearance.id}-auto-issue-day`} value={option.id} checked={selectedAppearance.autoIssueDay === option.id} onChange={() => updateAppearance(selectedAppearance.id, { autoIssueDay: option.id })} className="size-4 shrink-0 accent-[var(--primary)]" />{option.label}</label>)}</div></fieldset>
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/25 p-3 sm:col-span-2"><div><p className="text-xs font-semibold text-foreground">是否自动发放</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">开启后按所选规则自动匹配班级评级。</p></div><ToggleSwitch checked={appearanceEditor.autoIssueEnabled} onChange={() => updateAppearance(appearanceEditor.id, { autoIssueEnabled: !appearanceEditor.autoIssueEnabled })} label={`${appearanceEditor.name || "班级评级"}自动发放`} /></div>
 
-              <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">默认评级图片</legend><div className="mt-1 grid gap-2 sm:grid-cols-2">{([{ value: "smile" as const, label: "笑脸默认图" }, { value: "cry" as const, label: "哭脸默认图" }]).map((option) => <button key={option.value} type="button" aria-pressed={selectedAppearance.defaultImage === option.value} onClick={() => updateAppearance(selectedAppearance.id, { defaultImage: option.value })} className={cn("flex min-h-12 items-center gap-2 rounded-lg border px-3 text-left text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", selectedAppearance.defaultImage === option.value ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><img src={defaultRatingImage[option.value]} alt="" width={28} height={28} className="size-7" />{option.label}</button>)}</div><p className="mt-2 text-[11px] font-normal text-muted-foreground">未上传自定义图片时，排行榜将展示此默认图片。</p></fieldset>
-
-              <div className="flex flex-col gap-2 text-xs font-semibold text-muted-foreground sm:col-span-2"><span>自定义评级图片</span><div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border/80 bg-background/35 p-3"><div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary-2 text-white"><img src={selectedAppearance.image ?? defaultRatingImage[selectedAppearance.defaultImage]} alt={`${selectedAppearance.name}评级图片缩略图`} width={80} height={80} className="size-full object-cover" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-foreground">{selectedAppearance.image ? "已上传自定义图片" : "当前使用默认 SVG 图标"}</p><p className="mt-1 text-[11px] font-normal leading-4 text-muted-foreground">上传后将优先在周榜、月榜的班级评级中展示，图片不超过 2MB。</p></div><div className="flex items-center gap-2">{selectedAppearance.image && <button type="button" onClick={() => updateAppearance(selectedAppearance.id, { image: null })} className="min-h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-xs font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">恢复默认</button>}<label className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border/70 bg-background/55 px-3 text-xs font-semibold text-foreground transition hover:border-primary/45 hover:bg-primary/[0.035] focus-within:ring-2 focus-within:ring-primary/30"><ImagePlus aria-hidden="true" className="size-4 text-primary" />{selectedAppearance.image ? "更换图片" : "上传图片"}<input name={`appearance-${selectedAppearance.id}-image`} type="file" accept="image/*" onChange={(event) => handleAppearanceImage(selectedAppearance.id, event)} className="sr-only" /></label></div></div></div>
-
-              <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground sm:col-span-2">简介信息<textarea name={`appearance-${selectedAppearance.id}-description`} autoComplete="off" value={selectedAppearance.description} onChange={(event) => updateAppearance(selectedAppearance.id, { description: event.target.value })} placeholder="介绍该评级对应的班级气质与展示场景…" className="min-h-28 resize-none rounded-lg border border-border/70 bg-background/55 px-3 py-2 text-sm font-normal leading-6 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label>
-
+              {appearanceEditor.autoIssueEnabled && <><fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">发放方式</legend><div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="班级评级自动发放方式">{ratingRuleOptions.map((option) => <button key={option.id} type="button" role="radio" aria-checked={appearanceEditor.ruleType === option.id} onClick={() => updateAppearance(appearanceEditor.id, { ruleType: option.id })} className={cn("rounded-lg border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", appearanceEditor.ruleType === option.id ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><span className="block text-xs font-bold">{option.label}</span><span className="mt-1 block text-[11px] font-normal leading-4">{option.description}</span></button>)}</div></fieldset>
+              {appearanceEditor.ruleType === "score" ? <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">分数区间</legend><div className="mt-1 grid gap-3 sm:grid-cols-2"><label className="flex flex-col gap-1.5 text-xs text-muted-foreground">起始分数<input name={`appearance-${appearanceEditor.id}-score-start`} autoComplete="off" inputMode="decimal" type="number" min="0" step="0.1" value={appearanceEditor.scoreStart} onChange={(event) => updateAppearance(appearanceEditor.id, { scoreStart: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label><label className="flex flex-col gap-1.5 text-xs text-muted-foreground">结束分数（包含）<input name={`appearance-${appearanceEditor.id}-score-end`} autoComplete="off" inputMode="decimal" type="number" min="0" step="0.1" value={appearanceEditor.scoreEnd} onChange={(event) => updateAppearance(appearanceEditor.id, { scoreEnd: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label></div></fieldset> : <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">年级排名区间</legend><div className="mt-1 grid gap-3 sm:grid-cols-2"><label className="flex flex-col gap-1.5 text-xs text-muted-foreground">开始排名<input name={`appearance-${appearanceEditor.id}-rank-start`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={appearanceEditor.rankStart} onChange={(event) => updateAppearance(appearanceEditor.id, { rankStart: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label><label className="flex flex-col gap-1.5 text-xs text-muted-foreground">结束排名（包含）<input name={`appearance-${appearanceEditor.id}-rank-end`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={appearanceEditor.rankEnd} onChange={(event) => updateAppearance(appearanceEditor.id, { rankEnd: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label></div></fieldset>}
+              <fieldset className="rounded-xl border border-border/60 bg-background/35 p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">自动发放时间</legend><div className="mt-1 grid gap-2 sm:grid-cols-3">{autoIssueOptions.map((option) => <label key={option.id} className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition", appearanceEditor.autoIssueDay === option.id ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><input type="radio" name={`appearance-${appearanceEditor.id}-auto-issue-day`} value={option.id} checked={appearanceEditor.autoIssueDay === option.id} onChange={() => updateAppearance(appearanceEditor.id, { autoIssueDay: option.id })} className="size-4 shrink-0 accent-[var(--primary)]" />{option.label}</label>)}</div></fieldset></>}
             </div>
-            <div className="mt-5 flex justify-end"><Button type="button" onClick={saveAppearance} className="h-10 rounded-lg px-3 text-xs"><Save aria-hidden="true" className="size-3.5" />保存班级评级</Button></div>
           </section>
+        </section>}
+
+        {page === "appearance" && <section className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-xs font-semibold text-primary">班级评价 / 评级管理</p><h2 className="mt-1 text-lg font-bold tracking-tight text-foreground">班级评级配置</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">维护评级图片及自动发放规则，评级会同步用于班级排行榜展示。</p></div>
+            <Button type="button" onClick={() => openAppearanceDrawer()} className="h-10 rounded-lg px-3 text-xs"><Plus aria-hidden="true" className="size-3.5" />新增班级评级</Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {appearances.map((item) => {
+              const ruleLabel = item.ruleType === "score" ? "分数区间" : "年级排名"
+              const ruleRange = item.ruleType === "score" ? `${item.scoreStart || "—"}–${item.scoreEnd || "—"} 分` : `${item.rankStart || "—"}–${item.rankEnd || "—"} 名`
+              const issueDay = autoIssueOptions.find((option) => option.id === item.autoIssueDay)?.label ?? "—"
+              return <article key={item.id} className="group flex min-h-[252px] flex-col rounded-2xl border border-border/70 bg-background/65 p-4 shadow-[0_10px_28px_rgba(32,58,105,0.06)] transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_14px_34px_rgba(47,102,230,0.12)]">
+                <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/15 bg-primary/[0.06] text-primary"><img src={item.image ?? defaultRatingImage[item.defaultImage]} alt={`${item.name || "班级评级"}图片`} width={56} height={56} className="size-full object-cover" /></span><div className="min-w-0"><h3 className="truncate text-base font-bold text-foreground">{item.name || "未命名评级"}</h3><p className="mt-1 text-[11px] text-muted-foreground">{item.image ? "已上传评级图片" : "默认等级图片"}</p></div></div><button type="button" aria-label={`编辑${item.name || "班级评级"}`} onClick={() => openAppearanceDrawer(item)} className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/65 text-muted-foreground transition hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"><Pencil aria-hidden="true" className="size-4" /></button></div>
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-muted/35 px-3 py-2.5"><span className="text-xs font-semibold text-foreground">自动发放</span><span className={cn("rounded-full px-2.5 py-1 text-[11px] font-bold", item.autoIssueEnabled ? "bg-emerald-500/12 text-emerald-700" : "bg-muted text-muted-foreground")}>{item.autoIssueEnabled ? "已开启" : "未开启"}</span></div>
+                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3 text-xs"><div><dt className="text-[11px] text-muted-foreground">发放方式</dt><dd className="mt-1 font-semibold text-foreground">{item.autoIssueEnabled ? ruleLabel : "—"}</dd></div><div><dt className="text-[11px] text-muted-foreground">匹配范围</dt><dd className="mt-1 font-semibold text-foreground">{item.autoIssueEnabled ? ruleRange : "—"}</dd></div><div className="col-span-2 flex items-center justify-between gap-3 border-t border-border/55 pt-3"><dt className="text-[11px] text-muted-foreground">自动发放时间</dt><dd className="font-semibold text-foreground">{item.autoIssueEnabled ? issueDay : "未设置"}</dd></div></dl>
+              </article>
+            })}
+          </div>
         </section>}
       </main>
 
@@ -820,22 +792,46 @@ export function ClassConfigTab() {
         </div><DialogFooter><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => setAddTarget(null)}>取消</Button><Button type="button" className="text-xs" onClick={addIndicator}>新增指标</Button></DialogFooter></DialogContent>
       </Dialog>
 
-      <Dialog open={flagDialog !== null} onOpenChange={(open) => { if (!open) setFlagDialog(null) }}>
-        <DialogContent className="glass-surface sm:max-w-lg"><DialogHeader><DialogTitle>新增{flagDialog === "week" ? "周" : "月"}流动红旗</DialogTitle></DialogHeader><div className="grid gap-4">
-          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">红旗名称<input name="new-flag-name" autoComplete="off" autoFocus value={newFlagName} onChange={(event) => setNewFlagName(event.target.value)} placeholder="例如：阅读推广示范班…" className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none focus:border-primary" /></label>
-          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">奖励积分<input name="new-flag-points" autoComplete="off" type="number" inputMode="numeric" min="1" max="100" step="1" value={newFlagPoints} onChange={(event) => setNewFlagPoints(event.target.value)} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none focus:border-primary" /><span className="font-normal leading-5">颁发该流动红旗时，每位学生获得的积分，支持 1-100 的整数。</span></label>
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/25 p-3"><div><p className="text-xs font-semibold text-foreground">同步到五育指标</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">开启后可选择同步的一级、二级和三级指标。</p></div><ToggleSwitch checked={newFlagSync} onChange={() => setNewFlagSync((current) => !current)} label="新增流动红旗同步到五育指标" /></div>
-          {newFlagSync && <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/[0.035] p-3">
-            <div><p className="text-xs font-semibold text-foreground">同步指标范围</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">一级指标为必选项，二级和三级指标可按需细化。</p></div>
+      <Dialog open={flagDialog !== null} onOpenChange={(open) => { if (!open) { setFlagDialog(null); setEditingFlagId(null) } }}>
+        <DialogContent className="fixed inset-y-0 right-0 left-auto top-0 flex h-full max-h-full w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden overscroll-contain rounded-none rounded-l-[24px] border-l border-[#d5ddf7] bg-white p-0 shadow-[-24px_0_60px_-32px_rgba(48,62,139,0.78)] data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right sm:w-[640px] sm:max-w-none"><DialogHeader className="border-b border-[#dce4fa] px-5 py-4"><DialogTitle>{editingFlagId ? "编辑" : "新增"}{flagDialog === "week" ? "周" : "月"}流动红旗</DialogTitle></DialogHeader><div className="min-h-0 flex-1 overflow-y-auto px-5 py-5"><div className="grid gap-4">
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">红旗名称<input name="flag-name" autoComplete="off" value={newFlagName} onChange={(event) => setNewFlagName(event.target.value)} placeholder="例如：阅读推广示范班…" className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label>
+          <div className="rounded-xl border border-border/60 bg-background/35 p-3"><div className="flex flex-wrap items-center gap-3"><div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/[0.08] text-primary">{newFlagImage ? <img src={newFlagImage} alt="待新增流动红旗图片预览" width={64} height={64} className="size-full object-cover" /> : <Flag aria-hidden="true" className="size-6" />}</div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-foreground">流动红旗图片</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">未上传时使用默认状态图标，支持常见图片格式，单张不超过 2MB。</p></div><div className="flex shrink-0 items-center gap-2">{newFlagImage && <button type="button" onClick={() => { setNewFlagImage(null); setNewFlagImageError("") }} className="h-10 rounded-lg border border-border/70 bg-background/55 px-2.5 text-xs font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">恢复默认</button>}<label className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 text-xs font-semibold text-primary transition hover:bg-primary/10 focus-within:ring-2 focus-within:ring-primary/30"><ImagePlus aria-hidden="true" className="size-3.5" />{newFlagImage ? "更换图片" : "上传图片"}<input name="new-flag-image" type="file" accept="image/*" onChange={handleNewFlagImage} className="sr-only" /></label></div></div>{newFlagImageError && <p role="alert" className="mt-2 text-xs text-destructive">{newFlagImageError}</p>}</div>
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/25 p-3"><div><p className="text-xs font-semibold text-foreground">启用流动红旗</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">关闭后不在评选和发放列表中展示。</p></div><ToggleSwitch checked={newFlagEnabled} onChange={() => setNewFlagEnabled((current) => !current)} label="启用流动红旗" /></div>
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/25 p-3"><div><p className="text-xs font-semibold text-foreground">发放五育积分</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">发放流动红旗后自动为对应班级去全部学生增加五育积分</p></div><ToggleSwitch checked={newFlagSync} onChange={() => setNewFlagSync((current) => !current)} label="新增流动红旗同步到五育指标" /></div>
+          {newFlagSync && <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/[0.035] p-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">奖励积分* <input name="new-flag-points" autoComplete="off" required type="number" inputMode="numeric" min="1" max="100" step="1" value={newFlagPoints} onChange={(event) => setNewFlagPoints(event.target.value)} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /><span className="font-normal leading-5">班级每位学生都获得该积分，支持 1–100 的整数。</span></label>
             <div className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground"><span>一级指标 <span className="text-destructive">*</span></span><Select value={newFlagLevel1} onValueChange={(value) => { setNewFlagLevel1(String(value ?? "")); setNewFlagLevel2(""); setNewFlagLevel3("") }}><SelectTrigger aria-label="选择一级指标" className="w-full font-normal"><SelectValue placeholder="请选择一级指标" /></SelectTrigger><SelectContent>{Object.keys(FIVE_EDUCATION_OPTIONS).map((level1) => <SelectItem key={level1} value={level1}>{level1}</SelectItem>)}</SelectContent></Select></div>
             <div className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground"><span>二级指标 <span className="font-normal text-muted-foreground">（可选）</span></span><Select value={newFlagLevel2} disabled={!newFlagLevel1} onValueChange={(value) => { setNewFlagLevel2(String(value ?? "")); setNewFlagLevel3("") }}><SelectTrigger aria-label="选择二级指标" className="w-full font-normal"><SelectValue placeholder="不指定二级指标" /></SelectTrigger><SelectContent>{newFlagLevel2Options.map((level2) => <SelectItem key={level2} value={level2}>{level2}</SelectItem>)}</SelectContent></Select></div>
             <div className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground"><span>三级指标 <span className="font-normal text-muted-foreground">（可选）</span></span><Select value={newFlagLevel3} disabled={!newFlagLevel2} onValueChange={(value) => setNewFlagLevel3(String(value ?? ""))}><SelectTrigger aria-label="选择三级指标" className="w-full font-normal"><SelectValue placeholder="不指定三级指标" /></SelectTrigger><SelectContent>{newFlagLevel3Options.map((level3) => <SelectItem key={level3} value={level3}>{level3}</SelectItem>)}</SelectContent></Select></div>
           </div>}
-        </div><DialogFooter><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => setFlagDialog(null)}>取消</Button><Button type="button" className="text-xs" onClick={addFlag}>新增红旗</Button></DialogFooter></DialogContent>
+        </div></div><DialogFooter className="mx-0 mb-0 flex-row justify-between gap-2 border-t border-[#dce4fa] bg-white px-5 py-4">{editingFlagId ? <Button type="button" variant="outline" className="border-destructive/30 bg-transparent text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setFlagToDelete(editingFlagId)}><Trash2 aria-hidden="true" className="size-3.5" />删除红旗</Button> : <span /> }<div className="flex gap-2"><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => { setFlagDialog(null); setEditingFlagId(null) }}>取消</Button><Button type="button" className="text-xs" onClick={saveFlag}>{editingFlagId ? "保存修改" : "新增红旗"}</Button></div></DialogFooter></DialogContent>
+      </Dialog>
+
+      <Dialog open={flagToDelete !== null} onOpenChange={(open) => !open && setFlagToDelete(null)}>
+        <DialogContent className="glass-surface sm:max-w-md"><DialogHeader><DialogTitle>确认删除流动红旗</DialogTitle></DialogHeader><p className="text-sm leading-6 text-muted-foreground">删除“{flagConfigs.find((item) => item.id === flagToDelete)?.name}”后，该红旗将不再用于评选和发放。</p><DialogFooter><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => setFlagToDelete(null)}>取消</Button><Button type="button" variant="destructive" className="text-xs" onClick={() => { if (!flagToDelete) return; removeFlagConfig(flagToDelete); setFlagToDelete(null); setFlagDialog(null); setEditingFlagId(null); notify("流动红旗已删除") }}>确认删除</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <DialogContent className="glass-surface sm:max-w-md"><DialogHeader><DialogTitle>确认删除指标</DialogTitle></DialogHeader><p className="text-sm leading-6 text-muted-foreground">删除“{selected?.node.name}”后，其下级指标也会一并移除；历史评价记录不受影响。</p><DialogFooter><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => setConfirmDeleteOpen(false)}>取消</Button><Button type="button" variant="destructive" className="text-xs" onClick={deleteSelected}>确认删除</Button></DialogFooter></DialogContent>
+      </Dialog>
+
+      <Dialog open={appearanceDrawerOpen} onOpenChange={(open) => { if (!open) closeAppearanceDrawer() }}>
+        <DialogContent className="fixed inset-y-0 right-0 left-auto flex h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden overscroll-contain rounded-none border-l border-[#dce4fa] bg-[#fbfcff] p-0 shadow-[-20px_0_48px_rgba(24,52,104,0.16)] sm:w-[50vw]">
+          {appearanceEditor && <>
+            <DialogHeader className="border-b border-[#dce4fa] bg-white px-5 py-5 text-left"><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-brand-pink/15 text-brand-pink"><Palette aria-hidden="true" className="size-5" /></span><div><DialogTitle>{isNewAppearance ? "新增班级评级" : "编辑班级评级"}</DialogTitle><p className="mt-1 text-xs font-normal leading-5 text-muted-foreground">配置评级图片及自动发放规则。</p></div></div></DialogHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground sm:col-span-2">等级名称<input name={`appearance-${appearanceEditor.id}-name`} autoComplete="off" value={appearanceEditor.name} onChange={(event) => updateAppearance({ name: event.target.value })} placeholder="例如：优雅示范…" className="h-10 rounded-lg border border-border/70 bg-white px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label>
+                <div className="flex flex-col gap-2 text-xs font-semibold text-muted-foreground sm:col-span-2"><span>上传评级图片</span><div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border/80 bg-white/80 p-3"><div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/15 bg-primary/[0.06] text-primary"><img src={appearanceEditor.image ?? defaultRatingImage[appearanceEditor.defaultImage]} alt={`${appearanceEditor.name || "班级评级"}图片预览`} width={80} height={80} className="size-full object-cover" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-foreground">{appearanceEditor.image ? "已上传评级图片" : "当前使用默认等级图片"}</p><p className="mt-1 text-[11px] font-normal leading-4 text-muted-foreground">支持常见图片格式，单张不超过 2MB。</p></div><div className="flex items-center gap-2">{appearanceEditor.image && <button type="button" onClick={() => updateAppearance({ image: null })} className="min-h-10 rounded-lg border border-border/70 bg-white px-3 text-xs font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">恢复默认</button>}<label className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border/70 bg-white px-3 text-xs font-semibold text-foreground transition hover:border-primary/45 hover:bg-primary/[0.035] focus-within:ring-2 focus-within:ring-primary/30"><ImagePlus aria-hidden="true" className="size-4 text-primary" />{appearanceEditor.image ? "更换图片" : "上传图片"}<input name={`appearance-${appearanceEditor.id}-image`} type="file" accept="image/*" onChange={handleAppearanceImage} className="sr-only" /></label></div></div></div>
+                <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-white p-3 sm:col-span-2"><div><p className="text-xs font-semibold text-foreground">是否自动发放</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">开启后按所选规则自动匹配班级评级。</p></div><ToggleSwitch checked={appearanceEditor.autoIssueEnabled} onChange={() => updateAppearance({ autoIssueEnabled: !appearanceEditor.autoIssueEnabled })} label={`${appearanceEditor.name || "班级评级"}自动发放`} /></div>
+                {appearanceEditor.autoIssueEnabled && <><fieldset className="rounded-xl border border-border/60 bg-white p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">发放方式</legend><div className="mt-1 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="班级评级自动发放方式">{ratingRuleOptions.map((option) => <button key={option.id} type="button" role="radio" aria-checked={appearanceEditor.ruleType === option.id} onClick={() => updateAppearance({ ruleType: option.id })} className={cn("rounded-lg border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30", appearanceEditor.ruleType === option.id ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><span className="block text-xs font-bold">{option.label}</span><span className="mt-1 block text-[11px] font-normal leading-4">{option.description}</span></button>)}</div></fieldset>
+                {appearanceEditor.ruleType === "score" ? <fieldset className="rounded-xl border border-border/60 bg-white p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">分数区间</legend><div className="mt-1 grid gap-3 sm:grid-cols-2"><label className="flex flex-col gap-1.5 text-xs text-muted-foreground">起始分数<input name={`appearance-${appearanceEditor.id}-score-start`} autoComplete="off" inputMode="decimal" type="number" min="0" step="0.1" value={appearanceEditor.scoreStart} onChange={(event) => updateAppearance({ scoreStart: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label><label className="flex flex-col gap-1.5 text-xs text-muted-foreground">结束分数（包含）<input name={`appearance-${appearanceEditor.id}-score-end`} autoComplete="off" inputMode="decimal" type="number" min="0" step="0.1" value={appearanceEditor.scoreEnd} onChange={(event) => updateAppearance({ scoreEnd: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label></div></fieldset> : <fieldset className="rounded-xl border border-border/60 bg-white p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">年级排名区间</legend><div className="mt-1 grid gap-3 sm:grid-cols-2"><label className="flex flex-col gap-1.5 text-xs text-muted-foreground">开始排名<input name={`appearance-${appearanceEditor.id}-rank-start`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={appearanceEditor.rankStart} onChange={(event) => updateAppearance({ rankStart: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label><label className="flex flex-col gap-1.5 text-xs text-muted-foreground">结束排名（包含）<input name={`appearance-${appearanceEditor.id}-rank-end`} autoComplete="off" inputMode="numeric" type="number" min="1" step="1" value={appearanceEditor.rankEnd} onChange={(event) => updateAppearance({ rankEnd: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label></div></fieldset>}
+                <fieldset className="rounded-xl border border-border/60 bg-white p-3 sm:col-span-2"><legend className="px-1 text-xs font-semibold text-muted-foreground">自动发放时间</legend><div className="mt-1 grid gap-2 sm:grid-cols-3">{autoIssueOptions.map((option) => <label key={option.id} className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition", appearanceEditor.autoIssueDay === option.id ? "border-primary/35 bg-primary/10 text-primary" : "border-border/60 bg-background/45 text-muted-foreground hover:border-primary/25 hover:text-foreground")}><input type="radio" name={`appearance-${appearanceEditor.id}-auto-issue-day`} value={option.id} checked={appearanceEditor.autoIssueDay === option.id} onChange={() => updateAppearance({ autoIssueDay: option.id })} className="size-4 shrink-0 accent-[var(--primary)]" />{option.label}</label>)}</div></fieldset></>}
+              </div>
+            </div>
+            <DialogFooter className="mx-0 mb-0 flex-row justify-between gap-2 border-t border-[#dce4fa] bg-white px-5 py-4">{!isNewAppearance ? <Button type="button" variant="outline" className="border-destructive/30 bg-transparent text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setAppearanceToDelete(appearanceEditor.id)}><Trash2 aria-hidden="true" className="size-3.5" />删除评级</Button> : <span /> }<div className="flex gap-2"><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={closeAppearanceDrawer}>取消</Button><Button type="button" className="text-xs" onClick={saveAppearance}><Save aria-hidden="true" className="size-3.5" />{isNewAppearance ? "保存评级" : "保存修改"}</Button></div></DialogFooter>
+          </>}
+        </DialogContent>
       </Dialog>
 
       <Dialog open={appearanceToDelete !== null} onOpenChange={(open) => !open && setAppearanceToDelete(null)}>

@@ -170,9 +170,9 @@ export function EvaluationDashboard({ standaloneView, initialMainTab }: Evaluati
       </a>
       {/* 固定顶栏：logo + 导航 + 用户信息 */}
       <header className="app-header fixed inset-x-0 top-0 z-50 border-b bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between gap-4 px-4">
+        <div className="mx-auto flex h-14 w-full max-w-[1280px] items-center justify-between gap-4 px-4">
           <div className="flex shrink-0 items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg ring-1 ring-border/40">
+            <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-border/60">
               <Image src="/xszp/images/logo.png" alt="屹力学生综评" width={30} height={30} />
             </span>
             <div className="hidden flex-col leading-tight md:flex">
@@ -191,16 +191,16 @@ export function EvaluationDashboard({ standaloneView, initialMainTab }: Evaluati
                 type="button"
                 onClick={() => handlePrimaryNavigate(key)}
                 className={cn(
-                  "relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium transition",
+                  "relative flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
                   mainTab === key
-                    ? "font-semibold text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "bg-primary/10 font-semibold text-primary"
+                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary",
                 )}
               >
                 <Icon className="size-4" />
                 {label}
                 {mainTab === key && (
-                  <span className="absolute inset-x-4 bottom-1.5 h-0.5 rounded-full bg-gradient-to-r from-primary to-primary-2 shadow-[0_0_10px_-1px] shadow-primary/50" />
+                  <span className="absolute inset-x-3 bottom-1 h-0.5 rounded-full bg-primary" />
                 )}
               </button>
             ))}
@@ -208,7 +208,7 @@ export function EvaluationDashboard({ standaloneView, initialMainTab }: Evaluati
             {(isDirector || isMoralDirector) && !standaloneView && (
               <Link
                 href="/school-command-center"
-                className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+                className="relative flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
               >
                 <ChartNoAxesCombined className="size-4" aria-hidden="true" />
                 数据大屏
@@ -218,7 +218,7 @@ export function EvaluationDashboard({ standaloneView, initialMainTab }: Evaluati
 {isParent && !standaloneView && (
               <Link
                 href="/student-command-center"
-                className="relative flex items-center gap-1.5 px-4 py-4 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+                className="relative flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
               >
                 <ChartNoAxesCombined className="size-4" aria-hidden="true" />
                 成长大屏
@@ -280,7 +280,7 @@ export function EvaluationDashboard({ standaloneView, initialMainTab }: Evaluati
       </header>
 
       <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-5">
-        <main id="main-content" tabIndex={-1} className="app-content glass-panel flex w-full min-w-0 flex-col gap-6 rounded-2xl p-4 sm:p-6">
+        <main id="main-content" tabIndex={-1} className="app-content app-workspace flex w-full min-w-0 flex-col gap-6 p-4 sm:p-6">
           {isParent ? (
             <ParentDashboard />
           ) : mainTab === "home" && isHomeroom ? (

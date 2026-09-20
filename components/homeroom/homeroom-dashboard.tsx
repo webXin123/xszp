@@ -367,7 +367,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
             </div>
             <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
               <div className="flex min-h-[68px] min-w-0 items-center gap-2.5 rounded-2xl border border-[#dbe3fa] bg-white/80 px-3 py-2 shadow-[0_10px_22px_-22px_rgba(55,71,153,0.5)]" aria-label="上周班级评价">
-                <img src={previousClassRating?.image ?? (previousClassRating?.defaultImage === "cry" ? "/xszp/images/rating-cry.svg" : "/xszp/images/rating-smile.svg")} alt="" width="38" height="38" fetchPriority="high" className="size-9 shrink-0 object-contain" />
+                <img src={previousClassRating?.image ?? (previousClassRating?.defaultImage === "cry" ? "/xszp/images/rating-cry-generated.png" : previousClassRating?.defaultImage === "neutral" ? "/xszp/images/rating-neutral-generated.png" : "/xszp/images/rating-smile-generated.png")} alt="" width="38" height="38" fetchPriority="high" className="size-9 shrink-0 object-contain" />
                 <span className="min-w-0"><span className="block text-xs font-semibold text-primary">上周班级评价</span><span title={previousClassRating?.name ?? "暂无评价"} className="block truncate text-sm font-bold text-foreground">{previousClassRating?.name ?? "暂无评价"}</span></span>
               </div>
               <div className="flex min-h-[68px] min-w-0 items-center gap-2.5 rounded-2xl border border-[#f1dfb7] bg-[#fffaf0] px-3 py-2 shadow-[0_10px_22px_-22px_rgba(167,120,33,0.38)]" aria-label="上周流动红旗获得情况">

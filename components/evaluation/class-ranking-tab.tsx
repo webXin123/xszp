@@ -26,6 +26,11 @@ const RANK_MEDAL_IMAGES = {
   2: `${DEFAULT_ICON_PATH}/ranking-medals/silver.png`,
   3: `${DEFAULT_ICON_PATH}/ranking-medals/bronze.png`,
 } as const
+const RATING_IMAGES = {
+  smile: `${DEFAULT_ICON_PATH}/rating-smile-generated.png`,
+  neutral: `${DEFAULT_ICON_PATH}/rating-neutral-generated.png`,
+  cry: `${DEFAULT_ICON_PATH}/rating-cry-generated.png`,
+} as const
 
 function getSemesterStart(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() >= 7 ? 8 : 1, 1)
@@ -126,8 +131,8 @@ export function ClassRankingTab() {
 
   const getRating = (rank: number, score: number) => {
     const config = findClassRating(classRatingConfigs, rank + 1, score)
-    if (config) return { label: config.name, image: config.image ?? (config.defaultImage === "cry" ? `${DEFAULT_ICON_PATH}/rating-cry.svg` : `${DEFAULT_ICON_PATH}/rating-smile.svg`) }
-    return { label: "成长加油", image: `${DEFAULT_ICON_PATH}/rating-cry.svg` }
+    if (config) return { label: config.name, image: config.image ?? RATING_IMAGES[config.defaultImage] }
+    return { label: "成长加油", image: `${DEFAULT_ICON_PATH}/rating-cry-generated.png` }
   }
 
   const isFlagAwarded = (classId: string, configId: string, configIndex: number) => flags.some((item) => item.classId === classId && item.weekKey === periodKey && (item.configId === configId || (!item.configId && period === "week" && configIndex === 0)) && item.awarded)
