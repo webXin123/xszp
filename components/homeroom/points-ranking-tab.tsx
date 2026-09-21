@@ -18,6 +18,8 @@ import {
 import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
 import { formatDate } from "@/lib/scoring-utils"
 import { getSemesterLabel } from "@/lib/pe-scores"
+
+const POINTS_RANKING_REFERENCE_DATE = new Date("2026-09-21T04:00:00.000Z")
 import { useEvaluation } from "@/lib/evaluation-context"
 import { StudentSemesterReportDrawer } from "@/components/parent/student-semester-report-drawer"
 import { getReportAcademicScores, getReportActivities, getReportFitnessMetrics, getReportHonors } from "@/components/report/student-report-data"
@@ -129,7 +131,7 @@ export function PointsRankingTab({ classId, range, search }: PointsRankingTabPro
       {selectedRow && selectedStudent && <StudentSemesterReportDrawer
         open={Boolean(selectedRow)}
         onOpenChange={(open) => !open && setSelectedStudentId(null)}
-        semesterLabel={getSemesterLabel(new Date())}
+                semesterLabel={getSemesterLabel(POINTS_RANKING_REFERENCE_DATE)}
         student={{ name: selectedStudent.name, gender: selectedStudent.gender, studentNo: selectedStudent.studentNo }}
         className={selectedClass?.shortName ?? ""}
         gradeName={selectedGradeName}

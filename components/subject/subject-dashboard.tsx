@@ -477,13 +477,13 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
   return (
     <div
       className={cn(
-        "-m-4 flex flex-col gap-5 p-4 sm:-m-6 sm:gap-6 sm:p-6",
+        "-m-4 flex w-full max-w-none min-w-0 flex-col gap-5 p-4 sm:-m-6 sm:gap-6 sm:p-6",
         styles.workspaceHome,
         styles.subjectHome,
       )}
     >
       <section
-        className="overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]"
+        className="w-full min-w-0 overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]"
         aria-label="任课教师工作台"
       >
         <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] px-4 py-3.5 sm:px-5 sm:py-4">

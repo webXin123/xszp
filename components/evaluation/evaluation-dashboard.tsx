@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   FileDown,
   FileSpreadsheet,
+  FileText,
   HeartPulse,
   House,
   LayoutGrid,
@@ -86,9 +87,14 @@ interface SidebarItem {
   label: string
   icon: typeof LayoutGrid
   key?: MainTab
+  mobileTab?: ParentMobileTab
 }
 
 const WORKBENCH_NAVIGATION_MESSAGE = "xszp:workbench-navigation"
+
+function isParentMobileTab(value: string | null): value is ParentMobileTab {
+  return value === "home" || value === "honors" || value === "activities" || value === "semester-scores" || value === "semester-report"
+}
 
 const STANDALONE_LABELS: Partial<Record<MainTab, string>> = {
   score: "班级评价",
@@ -186,6 +192,11 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   ))
   const [parentMobileTab, setParentMobileTab] = useState<ParentMobileTab>("home")
 
+  useEffect(() => {
+    const queryTab = new URLSearchParams(window.location.search).get("parentTab")
+    if (isParentMobileTab(queryTab)) setParentMobileTab(queryTab)
+  }, [])
+
   const homeKey: MainTab = isParent ? "parent_home" : isHomeroom ? "home" : isSubject ? "subject_home" : "admin_home"
   const roleLabel = isParent ? "学生成长中心" : isHomeroom ? "班主任工作台" : isSubject ? role === "pe_teacher" ? "体育教师工作台" : "任课教师工作台" : isMoralDirector ? "德育主任工作台" : "学校管理工作台"
 
@@ -245,6 +256,10 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
     award_hub: "/xszp/award-cards/?embedded=1&nav=online",
     offline_award_export: "/xszp/offline-award-cards/?embedded=1",
     honor: "/xszp/honor-upload/?embedded=1",
+    score_entry: "/xszp/score-entry/?embedded=1",
+    pe_import: "/xszp/pe-score-import/?embedded=1",
+    comment_entry: "/xszp/comment-entry/?embedded=1",
+    semester_evaluation: "/xszp/semester-evaluation/?embedded=1",
     teaching: "/xszp/teaching-work/?embedded=1",
     operations_management: "/xszp/operations-management/?embedded=1",
     score_management: "/xszp/score-entry-management/?embedded=1",
@@ -259,7 +274,8 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
     const src = iframeSources[mainTab]
     if (!src) return renderMainContent()
     const label = sidebarItems.find((item) => item.key === mainTab)?.label ?? mobileSidebarItems.find((item) => item.key === mainTab)?.label ?? "主体页面"
-    const userAwareSrc = `${src}${src.includes("?") ? "&" : "?"}user=${encodeURIComponent(currentUser.id)}`
+    const parentTabQuery = isParent && mainTab === "parent_home" ? `parentTab=${encodeURIComponent(parentMobileTab)}&` : ""
+    const userAwareSrc = `${src}${src.includes("?") ? "&" : "?"}${parentTabQuery}user=${encodeURIComponent(currentUser.id)}`
     return <iframe ref={iframeRef} id="workbench-content-frame" title={label} src={userAwareSrc} loading="eager" scrolling="auto" className="block h-full min-h-0 w-full flex-1 border-0" />
   }
 
@@ -298,7 +314,9 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
 
   const mobileSidebarItems = useMemo<SidebarItem[]>(() => {
     if (isParent) return [
-      { key: "parent_home", label: "首页", icon: House },
+      { key: "parent_home", label: "首页", icon: House, mobileTab: "home" },
+      { key: "parent_home", label: "学期成绩", icon: BookOpenText, mobileTab: "semester-scores" },
+      { key: "parent_home", label: "学期报告", icon: FileText, mobileTab: "semester-report" },
       { key: "parent_mall", label: "积分商城", icon: ShoppingBag },
       { key: "parent_dashboard", label: "成长大屏", icon: ChartNoAxesCombined },
     ]
@@ -326,7 +344,15 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
       const availableTabs = [...sidebarItems, ...mobileSidebarItems]
         .map((item) => item.key)
         .filter((key): key is MainTab => Boolean(key))
-      if (tab === "dashboard" || availableTabs.includes(tab)) navigate(tab)
+      const roleHomeTargets = isHomeroom
+        ? ["score", "comment_entry", "semester_evaluation", "activity"]
+        : isSubject
+          ? ["score_entry", "pe_import", "comment_entry", "semester_evaluation", "award"]
+          : isDirector || isMoralDirector
+            ? ["score", "ranking", "class_config", "award", "activity", "dashboard"]
+            : []
+      const canNavigateFromHome = tab === "dashboard" || availableTabs.includes(tab) || roleHomeTargets.includes(tab)
+      if (canNavigateFromHome && (tab === "dashboard" || Boolean(iframeSources[tab]))) navigate(tab)
     }
     window.addEventListener("message", handleWorkbenchNavigation)
     return () => window.removeEventListener("message", handleWorkbenchNavigation)
@@ -380,7 +406,7 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
       {renderHostContent()}
     </main>
     <nav className="fixed inset-x-0 bottom-0 z-50 flex min-h-16 items-stretch gap-1 border-t border-[#d9e3f2] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_28px_-24px_rgba(43,72,130,.65)] backdrop-blur-xl lg:hidden" aria-label="移动端功能导航">
-      {mobileSidebarItems.map(({ key, label, icon: Icon }) => { const active = key === mainTab; const itemClass = cn("flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45", active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-primary/5 hover:text-primary"); const content = <><Icon className="size-4" aria-hidden="true" /><span className="max-w-full truncate">{label}</span></>; return <button key={label} type="button" onClick={(event) => { event.preventDefault(); if (key) navigate(key) }} aria-controls="workbench-content-frame" aria-current={active ? "page" : undefined} className={itemClass}>{content}</button> })}
+      {mobileSidebarItems.map(({ key, label, icon: Icon, mobileTab }) => { const active = isParent && mobileTab ? mobileTab === parentMobileTab : key === mainTab; const itemClass = cn("flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45", active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-primary/5 hover:text-primary"); const content = <><Icon className="size-4" aria-hidden="true" /><span className="max-w-full truncate">{label}</span></>; return <button key={label} type="button" onClick={(event) => { event.preventDefault(); if (isParent && mobileTab) setParentMobileTab(mobileTab); if (key) navigate(key) }} aria-controls="workbench-content-frame" aria-current={active ? "page" : undefined} className={itemClass}>{content}</button> })}
     </nav>
   </div>
 }

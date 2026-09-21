@@ -366,7 +366,7 @@ export function AwardCardTab() {
           </div>
 
           {singleModeStudents.length > 0 ? (
-            <div className="data-card-grid-compact gap-2">
+            <div className="award-student-card-grid gap-2">
               {singleModeStudents.map((student) => {
                 const stats = weeklyStatsByStudent.get(student.id) ?? { count: 0, points: 0 }
                 return (
@@ -375,12 +375,12 @@ export function AwardCardTab() {
                     type="button"
                     onClick={() => openSingleStudent(student)}
                     aria-label={`查看 ${student.name} 本周奖卡并发放奖卡`}
-                    className="group flex min-h-20 flex-col justify-between rounded-xl border border-[#dfe4f7] bg-white px-3 py-2.5 text-left shadow-[0_10px_24px_-24px_rgba(53,67,150,0.65)] transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_16px_28px_-22px_rgba(53,67,150,0.72)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+                    className="group flex min-h-20 min-w-0 touch-manipulation flex-col justify-between rounded-xl border border-[#dfe4f7] bg-white px-2.5 py-2.5 text-left shadow-[0_10px_24px_-24px_rgba(53,67,150,0.65)] transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_16px_28px_-22px_rgba(53,67,150,0.72)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 sm:px-3"
                   >
                     <div className="flex min-w-0 items-center justify-between gap-2">
                       <span className="min-w-0 truncate text-xs font-semibold text-muted-foreground">{student.studentNo}</span>
                       <span className="min-w-0 truncate text-sm font-bold text-foreground">{student.name}</span>
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                      <span className="hidden items-center gap-1 text-[10px] font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 sm:flex">
                         详情 <ArrowRight className="size-3" aria-hidden="true" />
                       </span>
                     </div>

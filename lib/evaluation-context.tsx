@@ -69,8 +69,10 @@ const MALL_IMAGES = [
   "/xszp/images/activity-gallery/activity-garden.png",
 ] as const
 
-function seedMallConfig(): MallConfig {
-  const now = new Date()
+const INITIAL_RENDER_DATE = new Date("2026-09-21T04:00:00.000Z")
+
+function seedMallConfig(referenceDate: Date = new Date()): MallConfig {
+  const now = new Date(referenceDate)
   const start = new Date(now)
   start.setDate(start.getDate() - 14)
   start.setHours(8, 0, 0, 0)
@@ -957,10 +959,10 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
   const [submissions, setSubmissions] = useState<ActivitySubmission[]>([])
   const [evaluations, setEvaluations] = useState<ActivityEvaluation[]>([])
   const [mallProducts, setMallProducts] = useState<MallProduct[]>([])
-  const [mallConfig, setMallConfig] = useState<MallConfig>(() => seedMallConfig())
+  const [mallConfig, setMallConfig] = useState<MallConfig>(() => seedMallConfig(INITIAL_RENDER_DATE))
   const [mallCartItems, setMallCartItems] = useState<MallCartItem[]>([])
   const [mallRedemptions, setMallRedemptions] = useState<MallRedemption[]>([])
-  const [selectedDate, setSelectedDate] = useState(() => new Date())
+  const [selectedDate, setSelectedDate] = useState(() => new Date(INITIAL_RENDER_DATE))
   const [peScoreUploads, setPeScoreUploads] = useState<PeScoreUpload[]>([])
   const [hydrated, setHydrated] = useState(false)
 

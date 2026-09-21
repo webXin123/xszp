@@ -6,8 +6,17 @@
   position: relative;
   isolation: isolate;
   width: 100%;
+  max-width: none;
   min-width: 0;
   min-height: 100%;
+}
+
+.workspaceHome > section,
+.workspaceHome > div,
+.workspaceHome > div > section {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
 }
 
 .workspaceHome > section:first-child {
@@ -116,10 +125,18 @@
 .parentHome {
   padding: 4px;
   border-radius: 24px;
-  background:
-    radial-gradient(circle at 2% 12%, rgb(220 234 255 / 70%), transparent 19rem),
-    radial-gradient(circle at 100% 0%, rgb(224 242 237 / 62%), transparent 18rem),
-    #f8fbff;
+  background: transparent;
+}
+
+.parentMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  gap: 6px;
+}
+
+.parentMetricCard {
+  min-width: 0;
 }
 
 .parentHome > section:first-of-type {
@@ -139,9 +156,18 @@
 }
 
 @media (max-width: 640px) {
+  .workspaceHome {
+    width: 100%;
+    max-width: none;
+  }
+
   .parentHome > section,
   .parentHome > div > section { border-radius: 16px; }
   .parentHome { padding: 0; border-radius: 0; }
+  .parentMetricCard { padding: 8px 5px; border-radius: 12px; }
+  .parentMetricCard > p:first-child { font-size: 10px; line-height: 1.25; }
+  .parentMetricCard > p:last-child { font-size: 16px; line-height: 1.2; }
+  .parentMetricCard > p:last-child > span { font-size: 10px; }
   .homeMetaGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 14px; }
   .homeMetaItem { min-width: 0; padding: 9px 8px; border-radius: 12px; }
   .homeMetaValue { font-size: 16px; }
