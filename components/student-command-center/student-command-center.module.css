@@ -87,7 +87,7 @@
 .profileAvatar { position: relative; z-index: 2; width: 230px; height: 270px; object-fit: contain; filter: drop-shadow(0 21px 17px rgb(48 77 130 / 24%)); animation: avatarFloat 5.5s ease-in-out infinite; }
 .profileName { margin: 0; color: #2a405f; font-size: 35px; letter-spacing: 4px; }.profileIdentity .profileName span { margin-left: 9px; color: #6391df; font-size: 13px; font-weight: 600; letter-spacing: 0; vertical-align: middle; }
 .profileClass, .profileStage { justify-content: center; gap: 8px; margin-top: 8px; color: #687893; font-size: 13px; }.profileStage { color: #38a37d; }.profileStage b { color: #1a9670; }
-.profileMetrics { position: relative; z-index: 2; display: grid; width: 82%; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }.profileMetrics .metricCard { min-width: 0; }.profileMetrics .metricCard > div p { white-space: nowrap; }.profileMetrics .metricCard > div strong { font-size: 22px; }
+.profileMetrics { position: relative; z-index: 2; display: grid; width: 82%; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 18px; }.profileMetrics .metricCard { min-width: 0; }.profileMetrics .metricCard > div p { white-space: nowrap; }.profileMetrics .metricCard > div strong { font-size: 22px; }
 
 .scoreList { padding: 0 16px 12px; }.scoreList > span { display: grid; grid-template-columns: 1fr 38px 32px; align-items: center; min-height: 27px; border-bottom: 1px solid #edf1f7; color: #566783; font-size: 12px; }.scoreList > span:last-child { border: 0; }.scoreList strong { color: #3d75d6; text-align: right; }.scoreList em { color: #8c9ab0; font-size: 12px; font-style: normal; text-align: right; }
 .fitnessSummary { justify-content: center; gap: 20px; padding: 1px 16px 0; color: #687995; font-size: 12px; }.fitnessSummary strong { color: #ef961f; font-size: 20px; }.fitnessSummary > div { display: flex; flex-direction: column; align-items: center; gap: 2px; }.fitnessSummary b { color: #465b7d; font-size: 13px; }.fitnessSummary small { color: #98a4b6; font-size: 12px; }
@@ -99,3 +99,17 @@
 @keyframes avatarFloat { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
 @media (prefers-reduced-motion: reduce) { .profileAvatar { animation: none; }.backLink { transition: none; } }
 @media (max-width: 900px) { .dashboard { padding: 22px 30px 16px; }.contentGrid { grid-template-columns: minmax(280px, .92fr) minmax(500px, 1.48fr) minmax(320px, .98fr); }.header { padding: 0 14px; }.headerLeft .headerDivider, .headerLeft .clock { display: none; }.headerStudentMeta { max-width: 245px; }.footer { font-size: 12px; } }
+
+/* 移动端成长大屏作为工作台内的普通内容页展示，不再要求整屏缩放阅读。 */
+@media (max-width: 767px) {
+  .screen, .scaledScreen { width: 100%; height: auto; min-height: 100%; overflow: visible; }
+  .viewport, .scaledViewport { position: relative; top: auto; left: auto; width: 100% !important; height: auto !important; transform: none !important; }
+  .dashboard, .scaledDashboard { width: 100% !important; height: auto !important; min-height: 100%; gap: 12px; padding: 12px; grid-template-rows: auto auto auto; }
+  .header { min-height: 56px; height: auto; display: flex; justify-content: space-between; padding: 10px 12px; border-radius: 16px; }
+  .headerLeft, .headerStudentMeta, .semesterBadge, .brandLockup p { display: none; }
+  .brandLockup { gap: 8px; }.brandMark { width: 32px; height: 32px; border-radius: 11px; }.brandLockup h1 { font-size: 16px; letter-spacing: .5px; }
+  .headerRight { margin-left: auto; gap: 6px; }.singleStudent, .studentSwitcher { height: 32px; min-width: 0; padding: 0 8px; font-size: 12px; }.studentSwitcher select { min-width: 68px; max-width: 90px; }
+  .contentGrid { display: flex; flex-direction: column; gap: 12px; }.leftColumn, .rightColumn, .recordsRow { display: flex; flex-direction: column; gap: 12px; }.profilePanel { order: -1; height: auto; min-height: 494px; }.panel { min-height: 260px; }.chartLarge { min-height: 240px; }.chartSmall, .chartMedium, .chartFitness { min-height: 180px; }
+  .profileKicker { font-size: 10px; letter-spacing: 2px; }.avatarOrbit { width: 230px; height: 218px; }.profileAvatar { width: 184px; height: 218px; }.profileName { font-size: 28px; }.profileMetrics { width: calc(100% - 28px); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px; }.metricCard { height: 62px; }.metricCard > div strong { font-size: 20px; }
+  .footer { display: none; }
+}

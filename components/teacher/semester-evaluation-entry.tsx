@@ -50,7 +50,9 @@ export function SemesterEvaluationEntry() {
   const { currentTeacher, students, classes, grades } = useEvaluation()
   const { scoringClasses } = usePermission()
   const teacher = currentTeacher
-  const targetClasses = scoringClasses.length > 0 ? scoringClasses : classes.filter((item) => item.homeroomTeacher === teacher?.name)
+  const targetClasses = scoringClasses.length > 0
+    ? scoringClasses
+    : classes.filter((item) => teacher?.teachingClassIds?.includes(item.id) || item.homeroomTeacher === teacher?.name)
   const [classId, setClassId] = useState(targetClasses[0]?.id ?? "")
   const [mode, setMode] = useState<EvaluationMode>("student")
   const [indicatorId, setIndicatorId] = useState<(typeof INDICATORS)[number]["id"]>(INDICATORS[0].id)

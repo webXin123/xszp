@@ -365,7 +365,7 @@ function StudentReportDialog({
       </DialogHeader>
 
       <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="data-card-grid-compact gap-3">
           <ReportMetric label="学期积分" value={row.semesterTotal} tone="primary" />
           <ReportMetric label="累计积分" value={row.cumulativeTotal} tone="green" />
           <ReportMetric label="本学期记录" value={entries.length} tone="orange" />
@@ -380,7 +380,7 @@ function StudentReportDialog({
             </div>
             <span className="text-xs text-muted-foreground">单位：分</span>
           </div>
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-5">
+          <div className="data-card-grid-compact mt-3 gap-2.5">
             {AWARD_LEVEL1_LIST.map((name) => (
               <div key={name} className="rounded-xl border border-[#e1e6f7] bg-white px-3 py-3">
                 <p className="text-xs text-muted-foreground">{name}</p>

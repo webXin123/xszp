@@ -26,11 +26,11 @@ function WorkspaceSidebarSkeleton() {
 }
 
 function WorkspaceFrame({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-[#f3f7f7]"><WorkspaceHeaderSkeleton /><div className="flex min-h-[calc(100vh-60px)]"><WorkspaceSidebarSkeleton /><main className="min-w-0 flex-1 p-4 sm:p-5 lg:p-6">{children}</main></div></div>
+  return <div className="min-h-screen bg-[#f3f7f7]"><main className="min-w-0 p-4 sm:p-5 lg:p-6">{children}</main></div>
 }
 
-function StandaloneFrame({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-[#eef3fa] px-4 pb-6 pt-16 sm:px-6"><StandaloneHeaderSkeleton /><main className="mx-auto w-full max-w-[1280px] space-y-5 rounded-[24px]">{children}</main></div>
+function StandaloneFrame({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
+  return <div className="min-h-screen bg-[#eef3fa] px-4 py-6 sm:px-6"><main className={`mx-auto w-full space-y-5 rounded-[24px] ${wide ? "" : "max-w-[1280px]"}`}>{children}</main></div>
 }
 
 function PanelHeading({ action = true }: { action?: boolean }) {
@@ -82,11 +82,11 @@ function ManagementSkeleton() {
 }
 
 function MallFrameSkeleton({ children, heading = true }: { children: React.ReactNode; heading?: boolean }) {
-  return <StandaloneFrame>{heading && <section className="rounded-2xl border border-primary/15 bg-[linear-gradient(112deg,#edf3ff_0%,#f8fbff_55%,#edfbf8_100%)] p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex items-center gap-3"><SkeletonBlock className="size-11 rounded-xl" /><div className="space-y-2"><SkeletonBlock className="h-4 w-28" /><SkeletonBlock className="h-3 w-44" /></div></div><SkeletonBlock className="h-10 w-28 rounded-xl" /></div></section>}{children}</StandaloneFrame>
+  return <StandaloneFrame wide>{heading && <section className="overflow-hidden rounded-2xl border border-primary/15 bg-white/90 shadow-[0_18px_36px_-30px_rgba(48,78,140,.58)]"><div className="bg-[linear-gradient(100deg,#edf3ff_0%,#fbfdff_55%,#edfbf8_100%)] px-4 py-3 sm:px-5"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-2.5"><SkeletonBlock className="size-9 shrink-0 rounded-xl" /><div className="space-y-1.5"><SkeletonBlock className="h-2.5 w-20" /><SkeletonBlock className="h-4 w-28" /></div><div className="hidden border-l border-primary/10 pl-3 sm:block"><SkeletonBlock className="h-3.5 w-20" /><SkeletonBlock className="mt-1.5 h-2.5 w-28" /></div></div><div className="flex items-center gap-2"><SkeletonBlock className="h-9 w-24 rounded-xl" /><SkeletonBlock className="h-8 w-20 rounded-lg" /></div></div><div className="mt-2 flex gap-1.5 border-t border-primary/10 pt-2"><SkeletonBlock className="h-8 w-16 rounded-lg" /><SkeletonBlock className="h-8 w-20 rounded-lg" /></div></div></section>}{children}</StandaloneFrame>
 }
 
 function MallHomeSkeleton() {
-  return <MallFrameSkeleton><section className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-3"><div className="space-y-2"><SkeletonBlock className="h-3 w-16" /><SkeletonBlock className="h-5 w-52" /><SkeletonBlock className="h-3 w-72 max-w-full" /></div><SkeletonBlock className="h-9 w-32 rounded-lg" /></div><div className="mt-4 flex gap-3"><SkeletonBlock className="h-10 min-w-44 flex-1 rounded-xl" /><SkeletonBlock className="h-10 w-48 rounded-xl" /></div></section><section className="mt-5"><div className="mb-3 flex justify-between"><SkeletonBlock className="h-4 w-20" /><SkeletonBlock className="h-3 w-14" /></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{Array.from({ length: 8 }, (_, index) => <article key={index} className="overflow-hidden rounded-2xl border border-slate-200/85 bg-white"><SkeletonBlock className="aspect-[1.16] w-full rounded-none" /><div className="space-y-2.5 p-3"><SkeletonBlock className="h-3.5 w-3/4" /><SkeletonBlock className="h-3 w-full" /><SkeletonBlock className="h-3 w-4/5" /><div className="flex justify-between pt-2"><SkeletonBlock className="h-4 w-12" /><SkeletonBlock className="h-5 w-14 rounded-full" /></div></div></article>)}</div></section></MallFrameSkeleton>
+  return <MallFrameSkeleton><section className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-3"><div className="space-y-2"><SkeletonBlock className="h-3 w-16" /><SkeletonBlock className="h-5 w-52" /><SkeletonBlock className="h-3 w-72 max-w-full" /></div><SkeletonBlock className="h-9 w-32 rounded-lg" /></div><div className="mt-4 flex gap-3"><SkeletonBlock className="h-10 min-w-44 flex-1 rounded-xl" /><SkeletonBlock className="h-10 w-48 rounded-xl" /></div></section><section className="mt-5"><div className="mb-3 flex justify-between"><SkeletonBlock className="h-4 w-20" /><SkeletonBlock className="h-3 w-14" /></div><div className="data-card-grid gap-3">{Array.from({ length: 8 }, (_, index) => <article key={index} className="overflow-hidden rounded-2xl border border-slate-200/85 bg-white"><SkeletonBlock className="aspect-[1.16] w-full rounded-none" /><div className="space-y-2.5 p-3"><SkeletonBlock className="h-3.5 w-3/4" /><SkeletonBlock className="h-3 w-full" /><SkeletonBlock className="h-3 w-4/5" /><div className="flex justify-between pt-2"><SkeletonBlock className="h-4 w-12" /><SkeletonBlock className="h-5 w-14 rounded-full" /></div></div></article>)}</div></section></MallFrameSkeleton>
 }
 
 function MallProductSkeleton() {
@@ -137,9 +137,11 @@ export function PageLoadingOverlay() {
   const pathname = usePathname() ?? "/"
   const [visible, setVisible] = useState(false)
   const [rootWorkspace, setRootWorkspace] = useState(false)
+  const [embedded, setEmbedded] = useState(false)
   const variant = useMemo(() => getSkeletonVariant(pathname, rootWorkspace), [pathname, rootWorkspace])
 
   useEffect(() => {
+    setEmbedded(new URLSearchParams(window.location.search).get("embedded") === "1")
     const rawUser = window.localStorage.getItem("mzlg-current-user-v1")
     if (pathname === "/" && rawUser) {
       try {
@@ -153,7 +155,8 @@ export function PageLoadingOverlay() {
     return () => window.clearTimeout(timer)
   }, [pathname])
 
-  if (!visible) return null
+  // 工作台外壳（侧栏与顶栏）保持可用，骨架只在 iframe 内部页面渲染。
+  if (!visible || (pathname === "/" && !embedded)) return null
 
   return <div className="prototype-page-loading fixed inset-0 z-[100] overflow-auto" role="status" aria-live="polite" aria-label="页面加载中"><PageSkeleton variant={variant} /><span className="sr-only">页面加载中</span></div>
 }

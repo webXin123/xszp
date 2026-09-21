@@ -888,7 +888,7 @@ export function MallManagement({ embedded = false }: { embedded?: boolean }) {
                 </p>
               </div>
             ) : (
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="data-card-grid mt-5 gap-3">
                 {visibleProducts.map((product) => (
                   <article
                     key={product.id}

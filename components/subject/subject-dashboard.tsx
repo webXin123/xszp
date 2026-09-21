@@ -553,7 +553,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
           </span>
         </div>
         <div
-          className="mt-4 grid gap-3 md:grid-cols-3"
+          className="data-card-grid-relaxed mt-4 gap-3"
           aria-label="本学期待办列表"
         >
           <TodoSummary
@@ -858,7 +858,7 @@ function PeUploadProgressCard({
         </div>
       ) : (
         <div
-          className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          className="data-card-grid mt-5 gap-3"
           aria-label="班级体质健康成绩录入情况"
         >
           {items.map((item) => {

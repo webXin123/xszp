@@ -223,7 +223,7 @@ export function TeacherScoreEntry() {
       <div className="flex flex-wrap items-center gap-2"><span className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#f5f8ff] px-3 text-xs font-semibold text-muted-foreground"><UsersRound className="size-3.5 text-primary" aria-hidden="true" />{scoreClasses.length} 个任教班级</span></div>
     </div>
     {feedback && <p className="mt-4 rounded-xl border border-[#bfe6d1] bg-[#f0fbf5] px-3 py-2 text-sm font-medium text-brand-green" role="status" aria-live="polite"><CheckCircle2 className="mr-1.5 inline size-4" aria-hidden="true" />{feedback}</p>}
-    {uploadTargets.length === 0 ? <div className="mt-5 rounded-xl border border-dashed border-[#d8e0f7] bg-[#fbfcff] px-4 py-8 text-center"><p className="text-sm font-semibold text-foreground">暂无待处理的学科成绩任务</p><p className="mt-1 text-xs text-muted-foreground">请由管理员先按年级发布成绩录入任务，并在后台配置任教学科与班级。</p></div> : <div className="mt-5 grid gap-3 md:grid-cols-2">
+    {uploadTargets.length === 0 ? <div className="mt-5 rounded-xl border border-dashed border-[#d8e0f7] bg-[#fbfcff] px-4 py-8 text-center"><p className="text-sm font-semibold text-foreground">暂无待处理的学科成绩任务</p><p className="mt-1 text-xs text-muted-foreground">请由管理员先按年级发布成绩录入任务，并在后台配置任教学科与班级。</p></div> : <div className="data-card-grid mt-5 gap-3">
       {uploadTargets.map((target) => {
         const schoolClass = scoreClasses.find((item) => item.id === target.classId)
         const config = getAcademicSubjectConfig(target.subject)

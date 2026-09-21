@@ -277,8 +277,12 @@ export function AwardCardTab() {
   return (
     <div className="relative w-full min-w-0 bg-transparent p-0 pb-24 lg:pb-0">
       <section id="award-online-panel" aria-labelledby="award-online-title">
+      <section className="hidden mb-3 overflow-hidden rounded-[22px] border border-[#d2e1fa] bg-[linear-gradient(128deg,#edf3ff_0%,#fcfdff_54%,#fff7e8_100%)] p-4 shadow-[0_18px_34px_-30px_rgba(48,77,155,.65)] lg:hidden" aria-label="移动端奖卡发放提示">
+        <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold tracking-[.14em] text-primary">REWARD MOMENT</p><h1 className="mt-1 text-lg font-extrabold text-foreground">把肯定及时送达</h1><p className="mt-1 text-xs leading-5 text-muted-foreground">选择学生、挑选奖卡，一次点击完成鼓励。</p></div><span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/90 text-[#e9951e] shadow-[0_8px_18px_-14px_rgba(190,125,28,.6)]"><Sparkles className="size-5" aria-hidden="true" /></span></div>
+        <div className="mt-3 flex items-center gap-2 text-xs font-semibold"><span className="rounded-full bg-white/85 px-3 py-1.5 text-foreground">1 · 选择对象</span><span className="h-px flex-1 bg-primary/15" /><span className="rounded-full bg-primary/10 px-3 py-1.5 text-primary">2 · 发放奖卡</span></div>
+      </section>
       <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce4fa] bg-[#f8f9ff] p-3.5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="hidden min-w-0 items-center gap-3 lg:flex">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             {issueMode === "batch" ? <Users className="size-5" aria-hidden="true" /> : <User className="size-5" aria-hidden="true" />}
           </span>
@@ -362,7 +366,7 @@ export function AwardCardTab() {
           </div>
 
           {singleModeStudents.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            <div className="data-card-grid-compact gap-2">
               {singleModeStudents.map((student) => {
                 const stats = weeklyStatsByStudent.get(student.id) ?? { count: 0, points: 0 }
                 return (
@@ -400,7 +404,7 @@ export function AwardCardTab() {
       <div id="award-batch-panel" role="tabpanel" aria-labelledby="award-batch-tab" className="flex flex-col items-start gap-4 lg:flex-row">
         {/* ---------------- 左侧：班级 / 学生选择 ---------------- */}
         <aside className={cn("w-full shrink-0 flex-col gap-3 rounded-2xl border border-[#dbe2f8] bg-[#f7f8ff] p-4 shadow-[0_10px_24px_-24px_rgba(53,67,150,0.65)] lg:flex lg:w-80", mobileStep === "selection" ? "flex" : "hidden")}>
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-white/80 px-3 py-2 lg:hidden">
+          <div className="hidden items-center justify-between gap-3 rounded-xl border border-primary/15 bg-white/80 px-3 py-2 lg:hidden">
             <div><p className="text-sm font-bold">选择学生</p><p className="mt-0.5 text-[11px] text-muted-foreground">先选学生，再选择奖卡</p></div>
             <span className="rounded-full bg-brand-green/12 px-2.5 py-1 text-xs font-semibold text-brand-green">已选 {selectedStudentIds.length} 人</span>
           </div>
@@ -560,7 +564,7 @@ export function AwardCardTab() {
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap gap-2" aria-label="奖卡二级指标">
+            <div className="scrollbar-none flex max-w-full gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible lg:pb-0" aria-label="奖卡二级指标">
               {level2Options.map((group) => (
                 <button
                   key={group.level2}
@@ -568,7 +572,7 @@ export function AwardCardTab() {
                   aria-pressed={activeLevel2 === group.level2}
                   onClick={() => setActiveLevel2(group.level2)}
                   className={cn(
-                    "rounded-xl border px-4 py-2 text-sm font-semibold transition-colors",
+                    "shrink-0 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors",
                     activeLevel2 === group.level2
                       ? "border-primary bg-primary text-primary-foreground shadow-[0_8px_18px_-14px_rgba(77,105,225,0.88)]"
                       : "border-[#dfe4f7] bg-white text-muted-foreground hover:border-primary/35 hover:bg-primary/[0.04] hover:text-foreground",
@@ -591,7 +595,7 @@ export function AwardCardTab() {
                   </div>
                   <span className="text-xs font-semibold text-primary">{activeLevel2Group.items.length} 张奖卡</span>
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="data-card-grid gap-3">
                   {activeLevel2Group.items.map((item) => (
                     <div
                       key={item.id}

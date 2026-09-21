@@ -34,8 +34,11 @@ const DEMO_LEVELS: SemesterEvaluationLevel[] = ["优秀", "良好", "达标", "�
 function buildDemoSemesterEvaluationRecords(): SemesterEvaluationRecord[] {
   const semester = getSemesterLabel()
   return TEACHERS
-    .filter((teacher) => teacher.scoringClassIds.length > 0)
-    .flatMap((teacher, teacherIndex) => teacher.scoringClassIds.flatMap((classId, classIndex) => {
+    .filter((teacher) => teacher.scoringClassIds.length > 0 || (teacher.teachingClassIds?.length ?? 0) > 0)
+    .flatMap((teacher, teacherIndex) => Array.from(new Set([
+      ...teacher.scoringClassIds,
+      ...(teacher.teachingClassIds ?? []),
+    ])).flatMap((classId, classIndex) => {
       const roster = STUDENTS.filter((student) => student.classId === classId)
       return roster.slice(0, 7).map((student, studentIndex) => {
         const ratedIndicators = studentIndex < 2
@@ -62,7 +65,8 @@ export function readSemesterEvaluationRecords(): SemesterEvaluationRecord[] {
   try {
     const raw = localStorage.getItem(SEMESTER_EVALUATION_RECORDS_KEY)
     const parsed = raw ? JSON.parse(raw) : null
-    return Array.isArray(parsed) ? parsed as SemesterEvaluationRecord[] : buildDemoSemesterEvaluationRecords()
+    const records = Array.isArray(parsed) ? parsed as SemesterEvaluationRecord[] : []
+    return records.length > 0 ? records : buildDemoSemesterEvaluationRecords()
   } catch {
     return buildDemoSemesterEvaluationRecords()
   }

@@ -287,7 +287,7 @@ export function PeScoreImportPage({ embedded = false }: { embedded?: boolean }) 
                   {templateMessage && <p role="status" aria-live="polite" className="mt-1 text-xs font-medium text-brand-green">{templateMessage}</p>}
                 </div>
 
-                <div className="grid min-w-0 flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3 lg:min-w-[55%]">
+                <div className="data-card-grid-compact min-w-0 flex-1 gap-2.5 lg:min-w-[55%]">
                   <div className="flex min-w-0 flex-col gap-1 rounded-xl border border-[#d6e7de] bg-[#f4fcf7] p-3 shadow-[0_10px_22px_-22px_rgba(38,128,90,0.68)]">
                     <span className="truncate text-xs font-medium text-muted-foreground">已上传成绩条数</span>
                     <span className="text-2xl font-bold tabular-nums text-brand-green">{uploadedRows}</span>
@@ -338,7 +338,7 @@ export function PeScoreImportPage({ embedded = false }: { embedded?: boolean }) 
                           <h3 className="text-sm font-bold text-foreground">{grade}</h3>
                           <span className="text-xs text-muted-foreground">{classes.length} 个班级</span>
                         </div>
-                        <div className="grid gap-2.5 lg:grid-cols-2 2xl:grid-cols-3">
+                        <div className="data-card-grid gap-2.5">
                           {classes.map((cls) => {
                             const maleUploaded = uploadMap.has(`${cls.id}:male`)
                             const femaleUploaded = uploadMap.has(`${cls.id}:female`)

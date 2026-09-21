@@ -306,12 +306,15 @@ function FlagEditor({ period, items, onAdd, onEdit }: FlagEditorProps) {
           </div>
         </div>
         <Button type="button" variant="outline" onClick={onAdd} className="h-9 shrink-0 rounded-lg bg-transparent px-2.5 text-xs">
-          <Plus className="size-3.5" />新增
+          <Plus aria-hidden="true" className="size-3.5" />新增
         </Button>
       </div>
 
-      <div className="mt-4 space-y-3">
-        {items.map((item) => <article key={item.id} className={cn("min-h-[112px] min-w-0 rounded-2xl border p-4 transition", item.enabled ? "border-primary/30 bg-primary/[0.055]" : "border-[#e0e5fa] bg-white")}>
+      <div
+        className="flag-card-grid mt-4 min-w-0 gap-3"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 360px))" }}
+      >
+        {items.map((item) => <article key={item.id} className={cn("min-h-[112px] w-full max-w-[360px] min-w-0 justify-self-start rounded-2xl border p-4 transition", item.enabled ? "border-primary/30 bg-primary/[0.055]" : "border-[#e0e5fa] bg-white")}>
           <div className="flex items-start gap-3">
             <span className={cn("flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl", isWeek ? "bg-brand-yellow/15 text-brand-yellow" : "bg-brand-orange/15 text-brand-orange")}>{item.image ? <img src={item.image} alt={`${item.name}流动红旗图标`} width={44} height={44} className="size-full object-cover" /> : <Flag aria-hidden="true" className="size-5" />}</span>
             <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-foreground">{item.name}</p><p className="mt-1.5 truncate text-xs text-muted-foreground">{item.syncFiveEducation ? [item.syncLevel1, item.syncLevel2, item.syncLevel3].filter(Boolean).join(" / ") : "未关联五育指标"}</p></div>
@@ -724,7 +727,7 @@ export function ClassConfigTab() {
           </div>
         )}
 
-        {page === "flag" && <div className="grid gap-4 xl:grid-cols-2"><FlagEditor period="week" items={weeklyFlags} onAdd={() => openFlagDialog("week")} onEdit={(item) => openFlagDialog(item.period, item)} /><FlagEditor period="month" items={monthlyFlags} onAdd={() => openFlagDialog("month")} onEdit={(item) => openFlagDialog(item.period, item)} /></div>}
+        {page === "flag" && <div className="grid min-w-0 gap-4"><FlagEditor period="week" items={weeklyFlags} onAdd={() => openFlagDialog("week")} onEdit={(item) => openFlagDialog(item.period, item)} /><FlagEditor period="month" items={monthlyFlags} onAdd={() => openFlagDialog("month")} onEdit={(item) => openFlagDialog(item.period, item)} /></div>}
 
         {page === "appearance" && appearanceEditor && false && <section className="grid gap-4 xl:grid-cols-[minmax(280px,.72fr)_minmax(0,1.28fr)]">
           <aside className="config-subpanel min-w-0 rounded-2xl p-4">
@@ -757,11 +760,10 @@ export function ClassConfigTab() {
         </section>}
 
         {page === "appearance" && <section className="space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div><p className="text-xs font-semibold text-primary">班级评价 / 评级管理</p><h2 className="mt-1 text-lg font-bold tracking-tight text-foreground">班级评级配置</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">维护评级图片及自动发放规则，评级会同步用于班级排行榜展示。</p></div>
+          <div className="flex justify-end">
             <Button type="button" onClick={() => openAppearanceDrawer()} className="h-10 rounded-lg px-3 text-xs"><Plus aria-hidden="true" className="size-3.5" />新增班级评级</Button>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="data-card-grid-relaxed gap-4">
             {appearances.map((item) => {
               const ruleLabel = item.ruleType === "score" ? "分数区间" : "年级排名"
               const ruleRange = item.ruleType === "score" ? `${item.scoreStart || "—"}–${item.scoreEnd || "—"} 分` : `${item.rankStart || "—"}–${item.rankEnd || "—"} 名`

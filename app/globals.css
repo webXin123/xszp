@@ -204,6 +204,70 @@
 }
 
 @layer components {
+  /* 数据卡片统一采用按可用宽度自适应的网格，避免 PC 端固定列数造成空洞或拥挤。 */
+  .data-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 280px));
+    justify-content: start;
+  }
+
+  .data-card-grid > * {
+    width: 100%;
+    max-width: 280px;
+    justify-self: start;
+  }
+
+  .data-card-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 220px));
+    justify-content: start;
+  }
+
+  .data-card-grid-compact > * {
+    width: 100%;
+    max-width: 220px;
+    justify-self: start;
+  }
+
+  /* 业务信息卡使用更宽的可读列宽，容器不足时自动换行。 */
+  .data-card-grid-relaxed {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 420px));
+    justify-content: start;
+  }
+
+  .data-card-grid-relaxed > * {
+    width: 100%;
+    max-width: 420px;
+    justify-self: start;
+  }
+
+  /* 评价学生选择区在桌面端至少保留双列，避免学生卡片退化为单列。 */
+  .student-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (min-width: 1024px) {
+    .student-card-grid {
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    }
+  }
+
+  /* 指标卡片根据右侧面板可用宽度自动换列。 */
+  .indicator-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+
+  /* 流动红旗最多五列，卡片保持固定可读宽度并从左向右排列。 */
+  .flag-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 360px));
+    max-width: calc(5 * 240px + 4 * 0.75rem);
+    justify-content: start;
+  }
+
   .glass-panel {
     @apply border border-white/80 bg-white/70 shadow-[0_18px_48px_-34px_rgba(43,72,130,0.62)] backdrop-blur-xl;
     background-image: linear-gradient(180deg, rgb(255 255 255 / 78%) 0%, rgb(248 251 255 / 66%) 100%);
@@ -472,5 +536,23 @@ h2.text-2xl {
   }
   .text-sm {
     font-size: 12px;
+  }
+
+  /* 移动端优先呈现可操作内容，收起卡片标题下的辅助说明，降低首屏高度。 */
+  .app-content p.text-xs.leading-5.text-muted-foreground,
+  .app-content p.text-xs.mt-1.text-muted-foreground,
+  .app-content p.mt-1.text-xs.text-muted-foreground,
+  .app-content p.truncate.text-xs.text-muted-foreground,
+  .app-standalone-content p.text-xs.leading-5.text-muted-foreground,
+  .app-standalone-content p.text-xs.mt-1.text-muted-foreground,
+  .app-standalone-content p.mt-1.text-xs.text-muted-foreground,
+  .app-standalone-content p.truncate.text-xs.text-muted-foreground,
+  .app-content [data-mobile-secondary="true"],
+  .app-standalone-content [data-mobile-secondary="true"] {
+    display: none;
+  }
+
+  .data-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 280px));
   }
 }

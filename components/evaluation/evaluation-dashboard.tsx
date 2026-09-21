@@ -1,8 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import Image from "next/image"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   Award,
@@ -73,6 +71,8 @@ export type MainTab =
   | "mall_management"
   | "pe_import"
   | "offline_award_export"
+  | "parent_mall"
+  | "parent_dashboard"
 
 type StandaloneView = "evaluation" | "ranking" | "config"
 
@@ -186,8 +186,8 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   ))
   const [parentMobileTab, setParentMobileTab] = useState<ParentMobileTab>("home")
 
-  const homeKey: MainTab = isHomeroom ? "home" : isSubject ? "subject_home" : "admin_home"
-  const roleLabel = isHomeroom ? "班主任工作台" : isSubject ? role === "pe_teacher" ? "体育教师工作台" : "任课教师工作台" : isMoralDirector ? "德育主任工作台" : "学校管理工作台"
+  const homeKey: MainTab = isParent ? "parent_home" : isHomeroom ? "home" : isSubject ? "subject_home" : "admin_home"
+  const roleLabel = isParent ? "学生成长中心" : isHomeroom ? "班主任工作台" : isSubject ? role === "pe_teacher" ? "体育教师工作台" : "任课教师工作台" : isMoralDirector ? "德育主任工作台" : "学校管理工作台"
 
   const navigate = (tab: MainTab) => {
     if (isEmbedded && typeof window !== "undefined" && window.parent !== window) {
@@ -231,6 +231,9 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
                                   : <AwardCardTab />
 
   const iframeSources: Partial<Record<MainTab, string>> = {
+    parent_home: "/xszp/?embedded=1",
+    parent_mall: "/xszp/points-mall/?embedded=1",
+    parent_dashboard: "/xszp/student-command-center/?embedded=1",
     home: "/xszp/workbench/?embedded=1",
     subject_home: "/xszp/workbench/?embedded=1",
     admin_home: "/xszp/workbench/?embedded=1",
@@ -252,7 +255,7 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   }
 
   const renderHostContent = () => {
-    if (isEmbedded || standaloneView || initialMainTab || isParent) return standaloneView ? renderEmbeddedStandaloneContent() : renderMainContent()
+    if (isEmbedded || standaloneView || initialMainTab) return standaloneView ? renderEmbeddedStandaloneContent() : renderMainContent()
     const src = iframeSources[mainTab]
     if (!src) return renderMainContent()
     const label = sidebarItems.find((item) => item.key === mainTab)?.label ?? mobileSidebarItems.find((item) => item.key === mainTab)?.label ?? "主体页面"
@@ -261,7 +264,11 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   }
 
   const sidebarItems = useMemo<SidebarItem[]>(() => {
-    if (isParent) return []
+    if (isParent) return [
+      { key: "parent_home", label: "首页", icon: House },
+      { key: "parent_mall", label: "积分商城", icon: ShoppingBag },
+      { key: "parent_dashboard", label: "成长大屏", icon: ChartNoAxesCombined },
+    ]
     const items: SidebarItem[] = [{ key: homeKey, label: "工作台", icon: House }]
     if (canOpenEvaluation) {
       items.push({ key: "score", label: "班级评价", icon: ClipboardCheck })
@@ -290,7 +297,11 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   }, [canManageActivities, canOpenEvaluation, canUploadHonor, homeKey, isDirector, isHomeroom, isMoralDirector, isParent, isSubject, role])
 
   const mobileSidebarItems = useMemo<SidebarItem[]>(() => {
-    if (isParent) return []
+    if (isParent) return [
+      { key: "parent_home", label: "首页", icon: House },
+      { key: "parent_mall", label: "积分商城", icon: ShoppingBag },
+      { key: "parent_dashboard", label: "成长大屏", icon: ChartNoAxesCombined },
+    ]
     const items: SidebarItem[] = [{ key: homeKey, label: "工作台", icon: House }]
     if (isDirector || isMoralDirector) {
       if (canOpenEvaluation) items.push({ key: "score", label: "班级评价", icon: ClipboardCheck })
@@ -306,7 +317,7 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   }, [canOpenEvaluation, homeKey, isDirector, isHomeroom, isMoralDirector, isParent, isSubject])
 
   useEffect(() => {
-    if (isEmbedded || isParent) return
+    if (isEmbedded) return
     const handleWorkbenchNavigation = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== iframeRef.current?.contentWindow) return
       const data = event.data as { type?: unknown; tab?: unknown } | null
@@ -323,10 +334,6 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
 
   useEffect(() => {
     if (standaloneView || initialMainTab) return
-    if (isParent) {
-      if (mainTab !== "parent_home") setMainTab("parent_home")
-      return
-    }
     const available = [...sidebarItems, ...mobileSidebarItems].map((item) => item.key).filter((key): key is MainTab => Boolean(key))
     if (available.length > 0 && !available.includes(mainTab)) setMainTab(homeKey)
   }, [homeKey, initialMainTab, isParent, mainTab, mobileSidebarItems, sidebarItems, standaloneView])
@@ -360,24 +367,8 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
     </aside>
   )
 
-  if (isParent) {
-    const parentNavItems: { key: ParentMobileTab; label: string; icon: typeof House }[] = [
-      { key: "home", label: "首页", icon: House },
-      { key: "honors", label: "荣誉记录", icon: Medal },
-      { key: "activities", label: "活动列表", icon: CalendarRange },
-    ]
-    return <div className="app-page-shell flex min-h-screen flex-col px-4 pb-24 pt-16 sm:px-6 sm:pb-4">
-      <a href="#main-content" className="sr-only z-[60] rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:ring-2 focus-visible:ring-primary/50">跳转到主要内容</a>
-      <header className="app-header fixed inset-x-0 top-0 z-50 border-b bg-background/90 backdrop-blur-xl"><div className="mx-auto flex h-14 w-full max-w-[1280px] items-center justify-between gap-4 px-4"><div className="flex shrink-0 items-center gap-2.5"><span className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-border/60"><Image src="/xszp/images/logo.png" alt="屹力学生综评" width={30} height={30} /></span><div className="hidden flex-col leading-tight md:flex"><span className="text-sm font-bold text-foreground">屹力学生综评</span><span className="text-xs text-muted-foreground">家长成长看板</span></div></div><div className="flex items-center gap-2">{!standaloneView && <Link href="/student-command-center" className="hidden min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary sm:inline-flex"><ChartNoAxesCombined className="size-4" aria-hidden="true" />成长大屏</Link>}<TeacherSwitcher /></div></div></header>
-      <main id="main-content" tabIndex={-1} className="app-content app-workspace mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 p-4 sm:p-6"><ParentDashboard mobileTab={parentMobileTab} /></main>
-      <nav className="fixed inset-x-0 bottom-0 z-50 flex min-h-16 items-stretch gap-1 border-t border-[#d9e3f2] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_28px_-24px_rgba(43,72,130,.65)] backdrop-blur-xl lg:hidden" aria-label="学生端功能导航">
-        {parentNavItems.map(({ key, label, icon: Icon }) => <button key={key} type="button" onClick={() => setParentMobileTab(key)} aria-current={parentMobileTab === key ? "page" : undefined} className={cn("flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45", parentMobileTab === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-primary/5 hover:text-primary")}><Icon className="size-4" aria-hidden="true" /><span className="max-w-full truncate">{label}</span></button>)}
-        <Link href={`/points-mall?student=${encodeURIComponent(currentUser.kind === "parent" ? currentUser.children[0]?.studentId ?? "" : "")}`} className="flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45"><ShoppingBag className="size-4" aria-hidden="true" /><span className="max-w-full truncate">积分商城</span></Link>
-      </nav>
-    </div>
-  }
-
   if (isEmbedded) {
+    if (isParent) return <main id="main-content" tabIndex={-1} className="app-content app-workspace flex min-h-screen w-full min-w-0 flex-col gap-6 p-4 sm:p-6 lg:p-7"><ParentDashboard mobileTab={parentMobileTab} /></main>
     return <main id="main-content" tabIndex={-1} className="app-content app-workspace flex min-h-screen w-full min-w-0 flex-col gap-6 p-4 sm:p-6 lg:p-7">{renderMainContent()}</main>
   }
 

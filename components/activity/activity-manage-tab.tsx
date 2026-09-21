@@ -115,7 +115,7 @@ export function ActivityManageTab() {
   return (
     <div className="flex flex-col gap-4">
       {/* 概览统计 */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="data-card-grid gap-3">
         <StatCard label="活动总数" value={stats.total} icon={CalendarRange} tone="blue" />
         <StatCard label="报名中" value={stats.recruiting} icon={Sparkles} tone="green" />
         <StatCard label="进行中" value={stats.ongoing} icon={FolderOpen} tone="blue" />
@@ -172,7 +172,7 @@ export function ActivityManageTab() {
           {semesterFilter === "all" ? "暂无活动" : `${semesterOptions.find((semester) => semester.key === semesterFilter)?.label ?? "当前学期"} 暂无活动`}
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="data-card-grid-relaxed gap-4">
           {filtered.map((activity) => {
             const meta = ACTIVITY_STATUS_META[activity.status]
             const progress = getActivityProgress(activity, enrollments)

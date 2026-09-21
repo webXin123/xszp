@@ -237,14 +237,21 @@ export function ClassEvaluationWorkspace() {
 
   return (
     <div className="relative flex flex-col gap-4 pb-24 lg:pb-0">
+      <section className="hidden overflow-hidden rounded-[22px] border border-[#cfdcf8] bg-[linear-gradient(128deg,#edf3ff_0%,#fbfdff_55%,#e9faf2_100%)] p-4 shadow-[0_18px_34px_-30px_rgba(48,77,155,.7)] lg:hidden" aria-label="移动端课堂评价提示">
+        <div className="flex items-start justify-between gap-3">
+          <div><p className="text-xs font-bold tracking-[.14em] text-primary">IN-CLASS FEEDBACK</p><h1 className="mt-1 text-lg font-extrabold text-foreground">课堂即时评价</h1><p className="mt-1 text-xs leading-5 text-muted-foreground">先圈选对象，再用一个指标完成本次鼓励或提醒。</p></div>
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/85 text-primary shadow-[0_8px_18px_-14px_rgba(52,101,212,.8)]"><Check className="size-5" aria-hidden="true" /></span>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2" aria-label="当前评价进度"><div className="rounded-xl bg-white/80 px-2.5 py-2"><p className="text-[10px] text-muted-foreground">对象</p><p className="mt-0.5 text-xs font-bold">{selectionLabel}</p></div><div className="rounded-xl bg-white/80 px-2.5 py-2"><p className="text-[10px] text-muted-foreground">已选择</p><p className="mt-0.5 text-xs font-bold text-brand-green">{selectionCount} 个</p></div><div className="rounded-xl bg-white/80 px-2.5 py-2"><p className="text-[10px] text-muted-foreground">下一步</p><p className="mt-0.5 text-xs font-bold">选指标</p></div></div>
+      </section>
       <div className="flex min-w-0 items-center gap-3 overflow-x-auto rounded-2xl border border-[#d7def8] bg-white/95 p-2 shadow-[0_14px_30px_-25px_rgba(52,68,145,0.78)]" role="tablist" aria-label="班级评价页面">
         <div className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-[#eef1ff] p-1" aria-label="评价对象">
           {(["class", "student"] as TargetMode[]).map((item) => <button key={item} type="button" role="tab" aria-selected={mode === item} onClick={() => setMode(item)} className={cn("min-h-10 touch-manipulation rounded-lg px-3.5 py-1.5 text-[12px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 md:px-4 md:text-[14px]", mode === item ? "bg-primary text-primary-foreground shadow-[0_6px_14px_-8px_rgba(63,81,188,0.9)]" : "text-muted-foreground hover:bg-white hover:text-foreground")}>{item === "class" ? "评价班级" : "评价学生"}</button>)}
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <label className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-[#e0e5f8] bg-[#f8f9ff] px-2.5">
+          <label className="flex h-10 min-w-[180px] shrink-0 items-center gap-2 rounded-lg border border-[#e0e5f8] bg-[#f8f9ff] px-3">
             <CalendarDays className="size-4 text-brand-blue" aria-hidden="true" />
-            <input aria-label="评价日期" type="date" max={today} value={date} onChange={(event) => setDate(event.target.value)} className="w-28 bg-transparent text-xs font-semibold outline-none" />
+            <input aria-label="评价日期" type="date" max={today} value={date} onChange={(event) => setDate(event.target.value)} className="w-36 bg-transparent text-xs font-semibold outline-none" />
           </label>
           <Button variant="outline" className="size-10 shrink-0 rounded-lg border-[#e0e5f8] bg-[#f8f9ff] p-0 hover:border-primary/35 hover:bg-primary/5" onClick={() => setHistoryOpen(true)} aria-label="查看历史扣分记录" title="历史记录"><History className="size-4" /></Button>
         </div>
@@ -252,32 +259,29 @@ export function ClassEvaluationWorkspace() {
 
       <div ref={workspaceRef} style={panelStyle} className="flex min-h-[520px] flex-col overflow-hidden rounded-[24px] border border-[#cfd7f6] bg-white shadow-[0_22px_48px_-32px_rgba(48,62,139,0.7)] lg:flex-row">
         <aside className={cn("min-h-0 w-full shrink-0 bg-[#f7f8ff] p-3 lg:w-[var(--split-width)]", mobileStep === "selection" ? "flex" : "hidden", "lg:flex")}>
-          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-white/80 px-3 py-2 lg:hidden">
+          <div className="mb-3 hidden items-center justify-between gap-3 rounded-xl border border-primary/15 bg-white/80 px-3 py-2 lg:hidden">
             <div><p className="text-sm font-bold">选择{selectionLabel}</p><p className="mt-0.5 text-[11px] text-muted-foreground">选好后进入评价面板</p></div>
             <span className="rounded-full bg-brand-green/12 px-2.5 py-1 text-xs font-semibold text-brand-green">已选 {selectionCount} {selectionLabel}</span>
           </div>
           {mode === "student" ? (
-            <div className="flex flex-col">
+            <div className="flex w-full min-w-0 flex-1 flex-col">
               <div className="mb-3 flex items-center gap-2">
                 <Select value={currentClass?.name ?? ""} onValueChange={(value) => selectClass(availableClasses.find((item) => item.name === value)?.id ?? "")}><SelectTrigger aria-label="选择班级" className="h-9 min-w-0 flex-1 rounded-lg bg-white px-2.5 text-sm font-semibold"><SelectValue placeholder="请选择班级" /></SelectTrigger><SelectContent>{availableClasses.map((item) => <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>)}</SelectContent></Select>
               </div>
-              <div
-                className="grid content-start gap-1.5 pr-1"
-                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(108px, 1fr))" }}
-              >
+              <div className="student-card-grid min-w-0 content-start gap-1.5 pr-1">
                 {classStudents.map((student) => {
                   const selected = selectedStudentIds.includes(student.id)
                   const score = todayScores.get(student.id) ?? { add: 0, deduct: 0 }
-                  return <button key={student.id} type="button" aria-pressed={selected} onClick={() => toggleStudent(student.id)} className={cn("group relative flex h-[60px] items-center justify-between rounded-xl border px-2.5 text-left transition-colors", selected ? "border-primary/55 bg-primary/[0.10] shadow-[0_7px_16px_-13px_rgba(69,83,183,0.85)]" : "border-[#e0e5f7] bg-white hover:border-primary/45 hover:bg-primary/[0.035]")}>
+                  return <button key={student.id} type="button" aria-pressed={selected} onClick={() => toggleStudent(student.id)} className={cn("group relative flex h-[60px] w-full min-w-0 touch-manipulation items-center justify-between rounded-xl border px-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", selected ? "border-primary/55 bg-primary/[0.10] shadow-[0_7px_16px_-13px_rgba(69,83,183,0.85)]" : "border-[#e0e5f7] bg-white hover:border-primary/45 hover:bg-primary/[0.035]")}>
                     <span className="flex min-w-0 flex-col"><span className="text-[10px] font-bold leading-3 text-[#6f8a82]">{student.studentNo}</span><span className="mt-0.5 truncate text-xs font-bold leading-4 tracking-tight text-foreground">{student.name}</span></span>
                     <span className="ml-1 flex shrink-0 flex-col gap-0.5 text-right text-[11px] font-bold leading-3.5"><span className="text-[#12824C]">+ {score.add || 0}</span><span className="text-[#C54B46]">− {score.deduct || 0}</span></span>
-                    {selected && <span className="absolute left-2 top-2 flex size-4 items-center justify-center rounded-full bg-[#1685F8] text-primary-foreground"><Check className="size-2.5" /></span>}
+                    {selected && <span className="absolute left-2 top-2 flex size-4 items-center justify-center rounded-full bg-[#1685F8] text-primary-foreground"><Check aria-hidden="true" className="size-2.5" /></span>}
                   </button>
                 })}
               </div>
             </div>
           ) : (
-            <div className="flex flex-col">
+            <div className="flex w-full min-w-0 flex-1 flex-col">
               <div className="mb-2 flex items-center px-1"><span className="text-sm font-bold">班级</span></div>
               <div className="pr-1">
                 {availableGrades.map((grade) => {
@@ -326,11 +330,11 @@ export function ClassEvaluationWorkspace() {
 
           <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
             {LEVEL1_LIST.map((item) => <button key={item} type="button" onClick={() => setLevel1(item)} className={cn("min-h-10 shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors", item === level1 ? "border-primary bg-primary text-primary-foreground shadow-[0_6px_14px_-10px_rgba(63,81,188,0.9)]" : "border-[#e2e6f8] bg-[#f8f9ff] text-muted-foreground hover:border-primary/35 hover:bg-primary/[0.04] hover:text-foreground")}>{item}</button>)}
-            <label className="ml-auto flex h-10 w-36 shrink-0 items-center gap-1.5 rounded-lg border border-[#e2e6f8] bg-[#f8f9ff] px-2"><Search className="size-3.5 text-muted-foreground" /><input aria-label="搜索指标" value={indicatorSearch} onChange={(event) => setIndicatorSearch(event.target.value)} placeholder="搜索指标" className="min-w-0 flex-1 bg-transparent text-xs outline-none" /></label>
+            <label className="ml-auto flex h-10 w-36 shrink-0 items-center gap-1.5 rounded-lg border border-[#e2e6f8] bg-[#f8f9ff] px-2"><Search aria-hidden="true" className="size-3.5 text-muted-foreground" /><input aria-label="搜索指标" value={indicatorSearch} onChange={(event) => setIndicatorSearch(event.target.value)} placeholder="搜索指标" className="min-w-0 flex-1 bg-transparent text-xs outline-none" /></label>
           </div>
 
           <div className="mt-4 flex min-h-[360px] flex-col gap-2 pr-1">
-            {visibleGroups.map((group) => <div key={`${group.level1}-${group.level2}`} className="rounded-xl border border-[#e1e6f8] bg-[#fafbff] p-2.5"><div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted-foreground"><span className="size-1.5 rounded-full bg-primary" />{group.level2}</div><div className="grid gap-1.5 sm:grid-cols-2">{group.items.map((item) => { const active = item.id === indicatorId; const isAdd = item.penalty > 0; return <button key={item.id} type="button" onClick={() => setIndicatorId(item.id)} className={cn("flex min-h-12 items-center justify-between gap-2 rounded-lg border px-2.5 text-left text-xs transition-colors", active ? "border-primary bg-primary/10 text-primary" : "border-[#e4e8f8] bg-white text-foreground hover:border-primary/40 hover:bg-primary/[0.03]")}><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{item.name}</span><span className={cn("mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold", isAdd ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>{isAdd ? "加分" : "扣分"} · {isAdd ? "+" : "−"}{Math.abs(item.penalty)} 分</span></span>{active && <Check className="size-3.5 shrink-0" />}</button> })}</div></div>)}
+            {visibleGroups.map((group) => <div key={`${group.level1}-${group.level2}`} className="rounded-xl border border-[#e1e6f8] bg-[#fafbff] p-2.5"><div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted-foreground"><span className="size-1.5 rounded-full bg-primary" />{group.level2}</div><div className="indicator-card-grid gap-1.5">{group.items.map((item) => { const active = item.id === indicatorId; const isAdd = item.penalty > 0; return <button key={item.id} type="button" onClick={() => setIndicatorId(item.id)} className={cn("flex min-h-12 min-w-0 touch-manipulation items-center justify-between gap-2 rounded-lg border px-2.5 text-left text-xs transition-colors", active ? "border-primary bg-primary/10 text-primary" : "border-[#e4e8f8] bg-white text-foreground hover:border-primary/40 hover:bg-primary/[0.03]")}><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{item.name}</span><span className={cn("mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold", isAdd ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>{isAdd ? "加分" : "扣分"} · {isAdd ? "+" : "−"}{Math.abs(item.penalty)} 分</span></span>{active && <Check aria-hidden="true" className="size-3.5 shrink-0" />}</button> })}</div></div>)}
           </div>
 
           <div className="mt-5 rounded-2xl border border-primary/25 bg-[#f1f3ff] p-3 shadow-[0_12px_24px_-24px_rgba(57,72,170,0.9)]">

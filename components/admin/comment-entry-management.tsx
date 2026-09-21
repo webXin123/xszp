@@ -368,7 +368,7 @@ export function CommentEntryManagement({
       </div>
 
       {/* 任务卡片 */}
-      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+      <div className="data-card-grid-relaxed mt-4 gap-3">
         {tasks.map((task) => {
           const status = taskStatus(task)
           const done = submittedCount(task)
@@ -623,7 +623,7 @@ export function CommentEntryManagement({
 
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                 <div className="flex flex-col gap-5 p-5 sm:p-6">
-                  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[#dce4fa] bg-[#fbfcff] p-3 text-center sm:grid-cols-4">
+                  <div className="data-card-grid-compact gap-2 rounded-2xl border border-[#dce4fa] bg-[#fbfcff] p-3 text-center">
                     {(() => {
                       const homeroomCount = detailTask.progress.filter((p) => p.role === "homeroom").length
                       const subjectCount = detailTask.progress.filter((p) => p.role === "subject").length
