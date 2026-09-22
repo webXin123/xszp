@@ -207,7 +207,7 @@
   /* 数据卡片统一采用按可用宽度自适应的网格，避免 PC 端固定列数造成空洞或拥挤。 */
   .data-card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 280px));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 196px), 280px));
     justify-content: start;
   }
 
@@ -219,7 +219,7 @@
 
   .data-card-grid-compact {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 220px));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 144px), 220px));
     justify-content: start;
   }
 
@@ -250,7 +250,7 @@
   /* 业务信息卡使用更宽的可读列宽，容器不足时自动换行。 */
   .data-card-grid-relaxed {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 420px));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 420px));
     justify-content: start;
   }
 
@@ -594,6 +594,6 @@ h2.text-2xl {
   }
 
   .data-card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 280px));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 196px), 280px));
   }
 }

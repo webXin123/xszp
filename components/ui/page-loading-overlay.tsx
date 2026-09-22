@@ -22,7 +22,7 @@ function StandaloneHeaderSkeleton() {
 }
 
 function WorkspaceSidebarSkeleton() {
-  return <aside className="hidden w-[240px] shrink-0 border-r border-slate-200/80 bg-white/94 px-3 py-4 lg:block"><div className="mb-4 px-2"><AppBrandSkeleton compact /></div><div className="space-y-1.5">{Array.from({ length: 10 }, (_, index) => <div key={index} className={`flex h-10 items-center gap-3 rounded-xl px-3 ${index === 0 ? "bg-primary/[0.08]" : ""}`}><SkeletonBlock className="size-4 shrink-0 rounded-md" /><SkeletonBlock className={`h-3 ${index % 3 === 0 ? "w-20" : "w-14"}`} /></div>)}</div></aside>
+  return <aside className="hidden w-[216px] shrink-0 border-r border-slate-200/80 bg-white/94 px-3 py-4 lg:block"><div className="mb-4 px-2"><AppBrandSkeleton compact /></div><div className="space-y-1.5">{Array.from({ length: 10 }, (_, index) => <div key={index} className={`flex h-10 items-center gap-3 rounded-xl px-3 ${index === 0 ? "bg-primary/[0.08]" : ""}`}><SkeletonBlock className="size-4 shrink-0 rounded-md" /><SkeletonBlock className={`h-3 ${index % 3 === 0 ? "w-20" : "w-14"}`} /></div>)}</div></aside>
 }
 
 function WorkspaceFrame({ children }: { children: React.ReactNode }) {

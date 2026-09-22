@@ -477,7 +477,7 @@ export function SubjectDashboard({ onNavigate }: SubjectDashboardProps) {
   return (
     <div
       className={cn(
-        "-m-4 flex w-full max-w-none min-w-0 flex-col gap-5 p-4 sm:-m-6 sm:gap-6 sm:p-6",
+        "flex w-full max-w-none min-w-0 flex-col gap-5 sm:gap-6",
         styles.workspaceHome,
         styles.subjectHome,
       )}

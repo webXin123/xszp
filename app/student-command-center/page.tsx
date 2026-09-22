@@ -3,7 +3,7 @@ import { StudentCommandCenter } from "@/components/student-command-center/studen
 import { EvaluationProvider } from "@/lib/evaluation-context"
 
 export const metadata: Metadata = {
-  title: "学生成长大屏",
+  title: "学生成长画像",
   description: "家长查看学生成长画像、成绩与成长记录。",
 }
 

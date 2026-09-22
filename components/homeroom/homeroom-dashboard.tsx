@@ -49,6 +49,7 @@ import { readSemesterEvaluationRecords } from "@/lib/semester-evaluation-utils";
 import { PointsRankingTab } from "./points-ranking-tab";
 import { HonorUploadTab } from "../evaluation/honor-upload-tab";
 import { ParentHonorReview } from "./parent-honor-review";
+import { useDraggableFab } from "../ui/use-draggable-fab";
 import type { MainTab } from "../evaluation/evaluation-dashboard";
 import styles from "../role-home.module.css";
 
@@ -181,10 +182,23 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
     "messages",
   );
   const [honorDrawerOpen, setHonorDrawerOpen] = useState(false);
+  const {
+    offset: honorFabOffset,
+    dragging: isHonorFabDragging,
+    consumeClick: consumeHonorFabClick,
+    onPointerDown: startHonorFabDrag,
+    onPointerMove: moveHonorFab,
+    onPointerUp: endHonorFabDrag,
+  } = useDraggableFab({ size: 52, mobileBottom: 88 });
   const [commentProgress, setCommentProgress] = useState<CommentProgressItem[]>(
     FALLBACK_COMMENT_PROGRESS,
   );
   const [pendingEvaluationCount, setPendingEvaluationCount] = useState(0);
+
+  const handleHonorFabClick = () => {
+    if (consumeHonorFabClick()) return;
+    setHonorDrawerOpen(true);
+  };
 
   const currentClass =
     classes.find((item) => item.id === classId) ?? scoringClasses[0];
@@ -837,7 +851,7 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <section
           className="flex h-[320px] min-h-0 flex-col rounded-2xl border border-[#cbd6f7] border-t-2 border-t-brand-orange bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6"
           aria-labelledby="week-deductions-title"
@@ -1476,10 +1490,15 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
 
       <button
         type="button"
-        onClick={() => setHonorDrawerOpen(true)}
+        onClick={handleHonorFabClick}
+        onPointerDown={startHonorFabDrag}
+        onPointerMove={moveHonorFab}
+        onPointerUp={endHonorFabDrag}
+        onPointerCancel={endHonorFabDrag}
         aria-label="打开荣誉录入"
         title="荣誉录入"
-        className="absolute right-4 top-[54%] z-40 flex size-[52px] items-center justify-center rounded-2xl border border-white/70 bg-primary text-primary-foreground shadow-[0_14px_28px_-12px_rgba(77,105,225,0.78)] transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:right-5"
+        style={{ transform: `translate3d(${honorFabOffset.x}px, ${honorFabOffset.y}px, 0)` }}
+        className={cn("fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 flex size-[52px] touch-none select-none items-center justify-center rounded-2xl border border-white/70 bg-primary text-primary-foreground shadow-[0_14px_28px_-12px_rgba(77,105,225,0.78)] transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:right-5 lg:absolute lg:bottom-auto lg:right-4 lg:top-[54%]", isHonorFabDragging ? "cursor-grabbing" : "cursor-grab")}
       >
         <Medal className="size-6" aria-hidden="true" />
       </button>

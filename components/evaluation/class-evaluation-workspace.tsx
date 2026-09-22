@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
 import { INDICATOR_GROUPS, LEVEL1_LIST, formatDate } from "@/lib/scoring-utils"
+import { useDraggableFab } from "@/components/ui/use-draggable-fab"
 
 type TargetMode = "class" | "student"
 type MobileEvaluationStep = "selection" | "evaluation"
@@ -50,11 +51,15 @@ export function ClassEvaluationWorkspace() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [splitWidth, setSplitWidth] = useState(44)
   const [isResizing, setIsResizing] = useState(false)
-  const [toolOffset, setToolOffset] = useState({ x: 0, y: 0 })
-  const [isToolDragging, setIsToolDragging] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
-  const toolDragRef = useRef({ startX: 0, startY: 0, offsetX: 0, offsetY: 0 })
-  const toolMovedRef = useRef(false)
+  const {
+    offset: toolOffset,
+    dragging: isToolDragging,
+    consumeClick: consumeToolDragClick,
+    onPointerDown: startToolDrag,
+    onPointerMove: moveTool,
+    onPointerUp: endToolDrag,
+  } = useDraggableFab({ size: 52, mobileBottom: 88 })
   const [toast, setToast] = useState("")
 
   const currentClass = availableClasses.find((item) => item.id === selectedClassId) ?? availableClasses[0]
@@ -207,31 +212,8 @@ export function ClassEvaluationWorkspace() {
 
   const panelStyle = { "--split-width": `${splitWidth}%` } as CSSProperties
 
-  const startToolDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId)
-    toolMovedRef.current = false
-    toolDragRef.current = { startX: event.clientX, startY: event.clientY, offsetX: toolOffset.x, offsetY: toolOffset.y }
-    setIsToolDragging(true)
-  }
-
-  const moveTool = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (!isToolDragging) return
-    if (Math.abs(event.clientX - toolDragRef.current.startX) > 4 || Math.abs(event.clientY - toolDragRef.current.startY) > 4) {
-      toolMovedRef.current = true
-    }
-    setToolOffset({
-      x: toolDragRef.current.offsetX + event.clientX - toolDragRef.current.startX,
-      y: toolDragRef.current.offsetY + event.clientY - toolDragRef.current.startY,
-    })
-  }
-
-  const endToolDrag = () => setIsToolDragging(false)
-
   const toggleToolMenu = () => {
-    if (toolMovedRef.current) {
-      toolMovedRef.current = false
-      return
-    }
+    if (consumeToolDragClick()) return
     setToolsOpen((current) => !current)
   }
 
@@ -355,7 +337,7 @@ export function ClassEvaluationWorkspace() {
         role="group"
         aria-label="评价辅助工具"
         style={{ transform: `translate3d(${toolOffset.x}px, ${toolOffset.y}px, 0)` }}
-        className={cn("absolute bottom-12 right-4 z-40 flex flex-col items-end gap-2 sm:bottom-14 sm:right-5", isToolDragging && "cursor-grabbing")}
+        className={cn("fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 flex flex-col items-end gap-2 sm:right-5 lg:absolute lg:bottom-12 lg:right-4", isToolDragging && "cursor-grabbing")}
       >
         {toolsOpen && <div className="w-52 rounded-2xl border border-[#d8dff8] bg-white p-2.5 shadow-[0_20px_40px_-24px_rgba(52,68,152,0.58)]">
           <div className="mb-2 flex items-center justify-between px-1"><span className="text-xs font-bold text-foreground">快捷评价</span><span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">选择方式</span></div>

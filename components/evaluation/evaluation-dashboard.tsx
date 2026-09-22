@@ -17,12 +17,14 @@ import {
   LayoutGrid,
   Menu,
   Medal,
+  PanelLeftClose,
   PanelLeftOpen,
   Settings2,
   ShoppingBag,
   Trophy,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { usePermission } from "@/lib/use-permission"
 import { TeacherSwitcher } from "./teacher-switcher"
 import { ClassEvaluationTab } from "./class-evaluation-tab"
@@ -46,6 +48,7 @@ import { PeScoreImportPage } from "@/app/pe-score-import/page"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { StandalonePageShell } from "./standalone-page-shell"
 import { OfflineAwardCardsPage } from "@/app/offline-award-cards/page"
+import roleHomeStyles from "../role-home.module.css"
 
 export type MainTab =
   | "home"
@@ -88,6 +91,7 @@ interface SidebarItem {
   icon: typeof LayoutGrid
   key?: MainTab
   mobileTab?: ParentMobileTab
+  group?: string
 }
 
 const WORKBENCH_NAVIGATION_MESSAGE = "xszp:workbench-navigation"
@@ -174,10 +178,12 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   const { grades, classes, currentUser } = useEvaluation()
   const { canEvaluate, canManageActivities, canManageFlags, isParent, role } = usePermission()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [embedOptions, setEmbedOptions] = useState({ embedded: false, hub: false })
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setEmbedOptions({ embedded: params.get("embedded") === "1", hub: params.get("hub") === "1" })
+    setIsSidebarCollapsed(window.localStorage.getItem("xszp-sidebar-collapsed") === "1")
   }, [])
   const isEmbedded = embedded || embedOptions.embedded
   const isHomeroom = role === "homeroom"
@@ -198,6 +204,7 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   }, [])
 
   const homeKey: MainTab = isParent ? "parent_home" : isHomeroom ? "home" : isSubject ? "subject_home" : "admin_home"
+  const homeBackgroundClass = mainTab === homeKey ? roleHomeStyles.roleHomeContent : undefined
   const roleLabel = isParent ? "学生成长中心" : isHomeroom ? "班主任工作台" : isSubject ? role === "pe_teacher" ? "体育教师工作台" : "任课教师工作台" : isMoralDirector ? "德育主任工作台" : "学校管理工作台"
 
   const navigate = (tab: MainTab) => {
@@ -281,33 +288,37 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
 
   const sidebarItems = useMemo<SidebarItem[]>(() => {
     if (isParent) return [
-      { key: "parent_home", label: "首页", icon: House },
-      { key: "parent_mall", label: "积分商城", icon: ShoppingBag },
-      { key: "parent_dashboard", label: "成长大屏", icon: ChartNoAxesCombined },
+      { key: "parent_home", label: "首页", icon: House, group: "成长服务" },
+      { key: "parent_mall", label: "积分商城", icon: ShoppingBag, group: "成长服务" },
+      { key: "parent_dashboard", label: "成长大屏", icon: ChartNoAxesCombined, group: "成长服务" },
     ]
-    const items: SidebarItem[] = [{ key: homeKey, label: "工作台", icon: House }]
+    const items: SidebarItem[] = [{ key: homeKey, label: "工作台", icon: House, group: "工作台" }]
     if (canOpenEvaluation) {
-      items.push({ key: "score", label: "班级评价", icon: ClipboardCheck })
-      items.push({ key: "ranking", label: "班级排行", icon: Trophy })
-      if (isDirector || isMoralDirector) items.push({ key: "class_config", label: "评价配置", icon: Settings2 })
+      items.push({ key: "score", label: "班级评价", icon: ClipboardCheck, group: "评价管理" })
+      items.push({ key: "ranking", label: "班级排行", icon: Trophy, group: "评价管理" })
+      if (isDirector || isMoralDirector) items.push({ key: "class_config", label: "评价配置", icon: Settings2, group: "评价管理" })
     }
-    items.push({ key: "award", label: "奖卡发放", icon: Award })
-    if (isDirector) items.push({ key: "offline_award_export", label: "线下奖卡导出", icon: FileDown })
-    if (canUploadHonor) items.push({ key: "honor", label: "荣誉录入", icon: Medal })
-
     if (isSubject) {
-      items.push({ key: "teaching", label: "教学工作", icon: role === "pe_teacher" ? HeartPulse : BookOpenText })
+      items.push({ key: "teaching", label: "教学工作", icon: role === "pe_teacher" ? HeartPulse : BookOpenText, group: "教学与学业" })
     }
+
     if (isDirector) {
-      items.push({ key: "score_management", label: "成绩管理", icon: FileSpreadsheet })
-      items.push({ key: "semester_management", label: "学期评价管理", icon: CalendarCheck2 })
-      items.push({ key: "activity", label: "活动管理", icon: CalendarRange })
-      items.push({ key: "mall_management", label: "商城管理", icon: ShoppingBag })
+      items.push({ key: "score_management", label: "成绩管理", icon: FileSpreadsheet, group: "教学与学业" })
+      items.push({ key: "semester_management", label: "学期评价管理", icon: CalendarCheck2, group: "教学与学业" })
+    }
+
+    items.push({ key: "award", label: "奖卡发放", icon: Award, group: "激励与荣誉" })
+    if (isDirector) items.push({ key: "offline_award_export", label: "线下奖卡导出", icon: FileDown, group: "激励与荣誉" })
+    if (canUploadHonor) items.push({ key: "honor", label: "荣誉录入", icon: Medal, group: "激励与荣誉" })
+
+    if (isDirector) {
+      items.push({ key: "activity", label: "活动管理", icon: CalendarRange, group: "活动与运营" })
+      items.push({ key: "mall_management", label: "商城管理", icon: ShoppingBag, group: "活动与运营" })
     } else if (isMoralDirector) {
-      items.push({ key: "activity", label: "活动管理", icon: CalendarRange })
+      items.push({ key: "activity", label: "活动管理", icon: CalendarRange, group: "活动与运营" })
     }
     if (isDirector || isMoralDirector) {
-      items.push({ key: "dashboard", label: "学校数据大屏", icon: ChartNoAxesCombined })
+      items.push({ key: "dashboard", label: "学校数据大屏", icon: ChartNoAxesCombined, group: "数据分析" })
     }
     return items
   }, [canManageActivities, canOpenEvaluation, canUploadHonor, homeKey, isDirector, isHomeroom, isMoralDirector, isParent, isSubject, role])
@@ -374,35 +385,61 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   }
 
   const sidebar = () => (
-    <aside aria-label="工作台侧边导航" className="flex h-full w-[240px] flex-col border-r border-[#d9e3f2] bg-white/95 shadow-[8px_0_24px_-24px_rgba(43,72,130,0.42)] backdrop-blur-xl">
-      <div className="flex h-[60px] items-center gap-2.5 border-b border-[#eaf0f8] px-4">
+    <aside id="workbench-sidebar" aria-label="工作台侧边导航" className="flex h-full w-full flex-col border-r border-[#d9e3f2] bg-white/95 shadow-[8px_0_24px_-24px_rgba(43,72,130,0.42)] backdrop-blur-xl">
+      <div className={cn("flex h-[60px] items-center border-b border-[#eaf0f8]", isSidebarCollapsed ? "justify-center px-2" : "gap-2.5 px-4")}>
         <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-black text-white shadow-[0_7px_14px_-9px_rgba(53,101,212,0.8)]">综</span>
-        <div className="min-w-0 leading-tight"><p className="truncate text-sm font-extrabold tracking-tight text-[#20324f]">屹力小学</p><p className="mt-0.5 truncate text-[10px] font-medium text-muted-foreground">综合素质评价</p></div>
+        {!isSidebarCollapsed && <div className="min-w-0 leading-tight"><p className="truncate text-sm font-extrabold tracking-tight text-[#20324f]">屹力小学</p><p className="mt-0.5 truncate text-[10px] font-medium text-muted-foreground">综合素质评价</p></div>}
       </div>
-      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3.5 py-5" aria-label="角色功能导航">
-        <div className="space-y-1.5">
-          {sidebarItems.map(({ key, label, icon: Icon }) => {
-            const active = key === mainTab
-            const itemClass = cn("group flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 text-left text-[15px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", active ? "bg-primary text-primary-foreground shadow-[0_7px_14px_-10px_rgba(53,101,212,0.9)]" : "text-muted-foreground hover:bg-primary/10 hover:text-primary")
-            const itemContent = <><Icon className="size-[18px] shrink-0" aria-hidden="true" /><span className="min-w-0 truncate">{label}</span></>
-            return <button key={label} type="button" onClick={(event) => { event.preventDefault(); if (key) navigate(key) }} aria-controls="workbench-content-frame" aria-current={active ? "page" : undefined} className={itemClass}>{itemContent}</button>
-          })}
-        </div>
-      </nav>
-      <div className="border-t border-[#eaf0f8] px-5 py-4 text-xs leading-5 text-muted-foreground">当前角色的可用功能</div>
+      <TooltipProvider delay={180} closeDelay={80}>
+        <nav className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain py-5", isSidebarCollapsed ? "px-2" : "px-3")} aria-label="角色功能导航">
+          <div className={cn(isSidebarCollapsed ? "space-y-3" : "space-y-5")}>
+            {sidebarItems.reduce<Array<{ label: string; items: SidebarItem[] }>>((groups, item) => {
+              const label = item.group ?? "其他功能"
+              const group = groups.find((entry) => entry.label === label)
+              if (group) group.items.push(item)
+              else groups.push({ label, items: [item] })
+              return groups
+            }, []).map(({ label: groupLabel, items }) => <div key={groupLabel} role="group" aria-label={groupLabel}>
+              {!isSidebarCollapsed && <p className="mb-2 px-3 text-[10px] font-bold tracking-[0.14em] text-[#8b9ab2]">{groupLabel}</p>}
+              <div className="space-y-1.5">
+            {items.map(({ key, label, icon: Icon }) => {
+              const active = key === mainTab
+              const itemClass = cn("flex min-h-11 w-full items-center rounded-xl text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45", isSidebarCollapsed ? "justify-center px-0" : "gap-3 px-3", active ? "bg-primary text-primary-foreground shadow-[0_7px_14px_-10px_rgba(53,101,212,0.9)]" : "text-muted-foreground hover:bg-primary/10 hover:text-primary")
+              return <Tooltip key={label} disabled={!isSidebarCollapsed}>
+                <TooltipTrigger render={<button type="button" onClick={(event) => { event.preventDefault(); if (key) navigate(key) }} aria-label={label} aria-controls="workbench-content-frame" aria-current={active ? "page" : undefined} className={itemClass} />}>
+                  <Icon className="size-[18px] shrink-0" aria-hidden="true" />
+                  {!isSidebarCollapsed && <span className="min-w-0 truncate">{label}</span>}
+                </TooltipTrigger>
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
+            })}
+              </div>
+            </div>)}
+          </div>
+        </nav>
+      </TooltipProvider>
+      {!isSidebarCollapsed && <div className="border-t border-[#eaf0f8] px-4 py-3 text-xs leading-5 text-muted-foreground">当前角色的可用功能</div>}
     </aside>
   )
 
   if (isEmbedded) {
-    if (isParent) return <main id="main-content" tabIndex={-1} className="app-content app-workspace flex min-h-screen w-full min-w-0 flex-col gap-6 p-4 sm:p-6 lg:p-7"><ParentDashboard mobileTab={parentMobileTab} /></main>
-    return <main id="main-content" tabIndex={-1} className="app-content app-workspace flex min-h-screen w-full min-w-0 flex-col gap-6 p-4 sm:p-6 lg:p-7">{renderMainContent()}</main>
+    if (isParent) return <main id="main-content" tabIndex={-1} className={cn("app-content app-workspace flex min-h-screen w-full min-w-0 flex-col gap-6 p-4 sm:p-6 lg:p-7", homeBackgroundClass)}><ParentDashboard mobileTab={parentMobileTab} /></main>
+    return <main id="main-content" tabIndex={-1} className={cn("app-content app-workspace flex min-h-screen w-full min-w-0 flex-col gap-6 p-4 sm:p-6 lg:p-7", homeBackgroundClass)}>{renderMainContent()}</main>
   }
 
-  return <div className="app-page-shell flex h-dvh min-h-0 flex-col overflow-hidden lg:pl-[240px]">
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((current) => {
+      const next = !current
+      window.localStorage.setItem("xszp-sidebar-collapsed", next ? "1" : "0")
+      return next
+    })
+  }
+
+  return <div className={cn("app-page-shell flex h-dvh min-h-0 flex-col overflow-hidden", isSidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[216px]")}>
     <a href="#main-content" className="sr-only z-[80] rounded-md bg-white px-3 py-2 text-sm font-semibold text-[#1f3845] focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:ring-2 focus-visible:ring-[#28bd73]/50">跳转到主要内容</a>
-    <div className="fixed inset-y-0 left-0 z-50 hidden lg:block">{sidebar()}</div>
-    <header className="app-header sticky top-0 z-40 h-[60px] border-b border-border bg-background/90 backdrop-blur-xl"><div className="flex h-full w-full items-center justify-between gap-4 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-3"><Menu className="size-5 shrink-0 text-primary lg:hidden" aria-hidden="true" /><PanelLeftOpen className="hidden size-5 shrink-0 text-primary lg:block" aria-hidden="true" /><div className="min-w-0"><h1 className="truncate text-base font-extrabold tracking-tight text-foreground">{roleLabel}</h1><p className="hidden text-xs font-medium text-muted-foreground sm:block">综合素质评价 · 工作台</p></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-xl bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground xl:inline-flex">2025-2026学年 第二学期</span><TeacherSwitcher /></div></div></header>
-    <main id="main-content" tabIndex={-1} className="app-content flex h-[calc(100dvh-124px-env(safe-area-inset-bottom))] min-h-0 w-full min-w-0 flex-col gap-0 overflow-hidden p-0 lg:h-[calc(100dvh-60px)]">
+    <div className={cn("fixed inset-y-0 left-0 z-50 hidden lg:block", isSidebarCollapsed ? "w-[72px]" : "w-[216px]")}>{sidebar()}</div>
+    <header className="app-header sticky top-0 z-40 h-[60px] border-b border-border bg-background/90 backdrop-blur-xl"><div className="flex h-full w-full items-center justify-between gap-4 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-3"><Menu className="size-5 shrink-0 text-primary lg:hidden" aria-hidden="true" /><button type="button" onClick={toggleSidebar} aria-controls="workbench-sidebar" aria-expanded={!isSidebarCollapsed} aria-label={isSidebarCollapsed ? "展开左侧导航" : "收起左侧导航"} title={isSidebarCollapsed ? "展开左侧导航" : "收起左侧导航"} className="hidden size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 lg:flex">{isSidebarCollapsed ? <PanelLeftOpen className="size-5" aria-hidden="true" /> : <PanelLeftClose className="size-5" aria-hidden="true" />}</button><div className="min-w-0"><h1 className="truncate text-base font-extrabold tracking-tight text-foreground">{roleLabel}</h1><p className="hidden text-xs font-medium text-muted-foreground sm:block">综合素质评价 · 工作台</p></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-xl bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground xl:inline-flex">2025-2026学年 第二学期</span><TeacherSwitcher /></div></div></header>
+    <main id="main-content" tabIndex={-1} className={cn("app-content flex h-[calc(100dvh-124px-env(safe-area-inset-bottom))] min-h-0 w-full min-w-0 flex-col gap-0 overflow-hidden p-0 lg:h-[calc(100dvh-60px)]", homeBackgroundClass)}>
       {renderHostContent()}
     </main>
     <nav className="fixed inset-x-0 bottom-0 z-50 flex min-h-16 items-stretch gap-1 border-t border-[#d9e3f2] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_28px_-24px_rgba(43,72,130,.65)] backdrop-blur-xl lg:hidden" aria-label="移动端功能导航">

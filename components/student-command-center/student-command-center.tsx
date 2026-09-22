@@ -151,9 +151,9 @@ export function StudentCommandCenter() {
     series: [{ type: "line", smooth: true, data: fitnessHistory.slice().reverse().map((item) => item.metrics.score), symbol: "circle", symbolSize: 5, lineStyle: { color: "#f4a62c", width: 2 }, itemStyle: { color: "#fff", borderColor: "#f4a62c", borderWidth: 2 }, areaStyle: { color: "rgba(255, 181, 66, .18)" } }],
   }), [fitnessHistory])
 
-  if (!parent || !child || !student) return <main className={styles.guard}><div><UserRound size={28} aria-hidden="true" /><h1>学生成长大屏仅向家长开放</h1><Link href="/">返回首页</Link></div></main>
+  if (!parent || !child || !student) return <main className={styles.guard}><div><UserRound size={28} aria-hidden="true" /><h1>学生成长画像仅向家长开放</h1><Link href="/">返回首页</Link></div></main>
 
-  return <main className={`${styles.screen} ${scaled ? styles.scaledScreen : ""}`} aria-label="学生成长大屏">
+  return <main className={`${styles.screen} ${scaled ? styles.scaledScreen : ""}`} aria-label="学生成长画像">
     <a className={styles.skipLink} href="#student-command-main">跳到主要内容</a>
     <div className={styles.aurora} aria-hidden="true" />
     <div className={styles.gridTexture} aria-hidden="true" />
@@ -168,7 +168,7 @@ export function StudentCommandCenter() {
             <span className={styles.headerDivider} aria-hidden="true" />
             <DigitalClock />
           </div>
-          <div className={styles.brandLockup}><span className={styles.brandMark} aria-hidden="true"><Sparkles size={21} /></span><div><p>屹力学生综评 · 家庭成长视图</p><h1>学生成长大屏</h1></div></div>
+          <div className={styles.brandLockup}><span className={styles.brandMark} aria-hidden="true"><Sparkles size={21} /></span><div><p>屹力学生综评 · 家庭成长视图</p><h1>学生成长画像</h1></div></div>
           <div className={styles.headerRight}>
             <span className={styles.headerStudentMeta}>学号 {student.studentNo} · 班主任 {schoolClass?.homeroomTeacher ?? "待分配"}</span>
             <span className={styles.semesterBadge}>{semesterLabel}</span>

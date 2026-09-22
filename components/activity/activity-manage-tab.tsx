@@ -4,12 +4,11 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import {
   CalendarRange,
+  ChevronRight,
   ClipboardCheck,
   FolderOpen,
-  MapPin,
   Pencil,
   Plus,
-  ShieldCheck,
   Sparkles,
   Users,
 } from "lucide-react"
@@ -22,7 +21,6 @@ import {
   getActivityProgress,
   formatActivityDateRange,
   requiresActivityEnrollment,
-  requiresActivityPointsExchange,
 } from "@/lib/activity-utils"
 import { cn } from "@/lib/utils"
 import type { Activity, ActivityStatus, Teacher } from "@/lib/types"
@@ -53,7 +51,7 @@ function getSemesterOption(value: Date | string): SemesterOption {
 }
 
 export function ActivityManageTab() {
-  const { activities, enrollments, updateActivity, currentUser, grades, classes } = useEvaluation()
+  const { activities, enrollments, currentUser } = useEvaluation()
   const { visibleGrades } = usePermission()
   const [filter, setFilter] = useState<Filter>("all")
   const [semesterFilter, setSemesterFilter] = useState<SemesterFilter>(() => getSemesterOption(new Date()).key)
@@ -177,97 +175,46 @@ export function ActivityManageTab() {
             const meta = ACTIVITY_STATUS_META[activity.status]
             const progress = getActivityProgress(activity, enrollments)
             const needsEnrollment = requiresActivityEnrollment(activity)
-            const needsPointsExchange = requiresActivityPointsExchange(activity)
-            const ratio = needsEnrollment && progress.capacity > 0 ? Math.min(progress.approved / progress.capacity, 1) : 0
-            const targetGrade = grades.find((grade) => grade.id === activity.gradeIds[0])?.name ?? "指定年级"
-            const targetClasses = activity.classIds
-              .map((classId) => classes.find((item) => item.id === classId)?.name)
-              .filter((name): name is string => !!name)
-            const targetLabel = targetClasses.length <= 1
-              ? `${targetGrade} · ${targetClasses[0] ?? "指定班级"}`
-              : `${targetGrade} · ${targetClasses[0]} 等 ${targetClasses.length} 班`
-            const activityTypeLabels = activity.activityTypes?.length ? activity.activityTypes : ["综合实践"]
-            const requirementLabel = (activity.pointRequirements ?? [])
-              .map((item) => `${item.level1} ≥ ${item.minimumPoints}分`)
-              .join(" · ")
             return (
               <article
                 key={activity.id}
-                className="relative flex flex-col gap-3 rounded-2xl border border-[#dbe2f8] bg-white p-4 shadow-[0_12px_26px_-24px_rgba(53,67,150,0.7)] transition hover:border-primary/35 hover:shadow-[0_16px_30px_-24px_rgba(53,67,150,0.78)]"
+                className="relative rounded-2xl border border-[#dbe2f8] bg-white p-4 shadow-[0_12px_26px_-24px_rgba(53,67,150,0.7)] transition hover:border-primary/35 hover:shadow-[0_16px_30px_-24px_rgba(53,67,150,0.78)]"
               >
-                <Link href={`/activities/manage-detail?id=${encodeURIComponent(activity.id)}`} className="flex flex-col gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" aria-label={`查看活动详情：${activity.title}`}>
-                <div className="flex items-start gap-3 pr-16">
-                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <CalendarRange className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="min-w-0 truncate text-base font-semibold text-foreground">{activity.title}</span>
-                      <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", meta.className)}>
-                        <span className={cn("size-1.5 rounded-full", meta.dot)} />
-                        {meta.label}
+                <Link href={`/activities/manage-detail?id=${encodeURIComponent(activity.id)}`} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" aria-label={`查看活动详情：${activity.title}`}>
+                  <div className="flex items-start gap-3 pr-16">
+                    <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <CalendarRange className="size-4" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="min-w-0 truncate text-base font-semibold text-foreground">{activity.title}</span>
+                        <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", meta.className)}>
+                          <span className={cn("size-1.5 rounded-full", meta.dot)} />
+                          {meta.label}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">活动时间与规则请查看详情</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarRange className="size-3.5 text-primary" aria-hidden="true" />
+                      {formatActivityDateRange(activity.startDate, activity.endDate)}
+                    </span>
+                    {needsEnrollment ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Users className="size-3.5 text-primary" aria-hidden="true" />
+                        报名 {progress.approved}{progress.capacity > 0 ? ` / ${progress.capacity}` : ""}
+                        {progress.pending > 0 ? ` · 待审 ${progress.pending}` : ""}
                       </span>
-                    </div>
-                    {activity.level1 && <p className="mt-0.5 text-xs text-muted-foreground">关联指标 · {activity.level1}</p>}
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {activityTypeLabels.map((type) => <span key={type} className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-xs font-medium text-brand-blue">{type}</span>)}
-                    </div>
+                    ) : <span>无需报名</span>}
                   </div>
-                </div>
 
-                <p className="line-clamp-1 text-sm leading-5 text-muted-foreground">{activity.description}</p>
-
-                <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                  <span className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/55 px-3 py-2 text-muted-foreground"><MapPin className="size-3.5 shrink-0 text-primary" aria-hidden="true" /><span className="truncate">{activity.location || "未设活动地点"}</span></span>
-                  <span className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/55 px-3 py-2 text-muted-foreground"><Users className="size-3.5 shrink-0 text-primary" aria-hidden="true" /><span className="truncate">{targetLabel}</span></span>
-                </div>
-
-                <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs leading-5 text-muted-foreground">
-                  {needsEnrollment && <span>报名：{formatActivityDateRange(activity.enrollStart, activity.enrollEnd)}</span>}
-                  <span>活动：{formatActivityDateRange(activity.startDate, activity.endDate)}</span>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5 text-xs">
-                  {needsEnrollment ? <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary"><ShieldCheck className="mr-1 inline size-3" aria-hidden="true" />需要报名</span> : <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground">无需报名</span>}
-                  {needsPointsExchange && activity.pointsCost > 0 && (
-                    <span className="rounded-full bg-brand-orange/15 px-2 py-0.5 font-medium text-brand-orange">
-                      消耗 {activity.pointsCost} 积分
-                    </span>
-                  )}
-                  {activity.participationPointsEnabled && (activity.participationPoints ?? 0) > 0 && (
-                    <span className="rounded-full bg-brand-green/15 px-2 py-0.5 font-medium text-brand-green">
-                      参与奖励 +{activity.participationPoints} 分
-                    </span>
-                  )}
-                  {needsEnrollment && activity.capacity > 0 && (
-                    <span className="rounded-full bg-brand-blue/15 px-2 py-0.5 font-medium text-brand-blue">
-                      名额 {activity.capacity}
-                    </span>
-                  )}
-                  {needsPointsExchange && (activity.pointRequirements?.length ?? 0) > 0 && <span title={requirementLabel} className="max-w-full truncate rounded-full bg-[#f0edff] px-2 py-0.5 font-medium text-primary">条件：{requirementLabel}</span>}
-                </div>
-
-                {/* 报名进度 */}
-                {needsEnrollment && <div className="rounded-xl border border-[#e4e8f8] bg-[#f8f9ff] p-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1 font-medium text-foreground">
-                      <Users className="size-3.5 text-muted-foreground" />
-                      报名进度
-                    </span>
-                    <span className="text-muted-foreground">
-                      通过 {progress.approved}
-                      {progress.capacity > 0 ? ` / ${progress.capacity}` : ""} · 待审 {progress.pending} · 驳回 {progress.rejected}
-                    </span>
+                  <div className="mt-3 flex items-center justify-between border-t border-[#edf0fa] pt-3 text-xs font-medium text-primary">
+                    <span>查看活动详情</span>
+                    <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </div>
-                  {progress.capacity > 0 && (
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-background/60">
-                      <div
-                        className="h-full rounded-full bg-primary transition-[width]"
-                        style={{ width: `${ratio * 100}%` }}
-                      />
-                    </div>
-                  )}
-                </div>}
                 </Link>
                 <Button
                   type="button"

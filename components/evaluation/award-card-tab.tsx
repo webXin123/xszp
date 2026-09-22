@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ArrowRight, ChevronDown, ChevronRight, Info, Mic, Search, Sparkles, User, Users } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
+import { useDraggableFab } from "@/components/ui/use-draggable-fab"
 import { AWARD_GROUPS } from "@/lib/award-utils"
 import { formatDate, getISOWeekKey } from "@/lib/scoring-utils"
 import type { AwardCardRecord, AwardIndicatorLevel3, SchoolClass, Student } from "@/lib/types"
@@ -47,10 +48,14 @@ export function AwardCardTab() {
   const [zoomImage, setZoomImage] = useState<{ src: string; title: string } | null>(null)
   const [weeklyDetailStudent, setWeeklyDetailStudent] = useState<Student | null>(null)
   const [hint, setHint] = useState<string | null>(null)
-  const [voiceFabOffset, setVoiceFabOffset] = useState({ x: 0, y: 0 })
-  const [isVoiceFabDragging, setIsVoiceFabDragging] = useState(false)
-  const voiceFabDragRef = useRef({ startX: 0, startY: 0, offsetX: 0, offsetY: 0 })
-  const voiceFabMovedRef = useRef(false)
+  const {
+    offset: voiceFabOffset,
+    dragging: isVoiceFabDragging,
+    consumeClick: consumeVoiceFabClick,
+    onPointerDown: startVoiceFabDrag,
+    onPointerMove: moveVoiceFab,
+    onPointerUp: endVoiceFabDrag,
+  } = useDraggableFab({ size: 52, mobileBottom: 88 })
 
   const studentsByClass = useMemo(() => {
     const map = new Map<string, Student[]>()
@@ -158,36 +163,8 @@ export function AwardCardTab() {
     window.setTimeout(() => setHint(null), 2000)
   }
 
-  const startVoiceFabDrag = (event: PointerEvent<HTMLButtonElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId)
-    voiceFabMovedRef.current = false
-    voiceFabDragRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      offsetX: voiceFabOffset.x,
-      offsetY: voiceFabOffset.y,
-    }
-    setIsVoiceFabDragging(true)
-  }
-
-  const moveVoiceFab = (event: PointerEvent<HTMLButtonElement>) => {
-    if (!isVoiceFabDragging) return
-    const deltaX = event.clientX - voiceFabDragRef.current.startX
-    const deltaY = event.clientY - voiceFabDragRef.current.startY
-    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) voiceFabMovedRef.current = true
-    setVoiceFabOffset({
-      x: voiceFabDragRef.current.offsetX + deltaX,
-      y: voiceFabDragRef.current.offsetY + deltaY,
-    })
-  }
-
-  const endVoiceFabDrag = () => setIsVoiceFabDragging(false)
-
   const handleVoiceAward = () => {
-    if (voiceFabMovedRef.current) {
-      voiceFabMovedRef.current = false
-      return
-    }
+    if (consumeVoiceFabClick()) return
     if (selectedStudentIds.length === 0) {
       showHint("请先在左侧勾选要发放的学生")
       return
@@ -685,7 +662,7 @@ export function AwardCardTab() {
         aria-label="语音发放奖卡"
         style={{ transform: `translate3d(${voiceFabOffset.x}px, ${voiceFabOffset.y}px, 0)` }}
         className={cn(
-          "absolute right-4 top-[54%] z-40 sm:right-5",
+          "fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 sm:right-5 lg:absolute lg:bottom-auto lg:right-4 lg:top-[54%]",
           isVoiceFabDragging && "cursor-grabbing",
         )}
       >
@@ -701,7 +678,7 @@ export function AwardCardTab() {
           title="语音发放奖卡（可拖动）"
           className="size-13 cursor-grab touch-none select-none rounded-2xl border border-white/70 bg-primary p-0 text-primary-foreground shadow-[0_14px_28px_-12px_rgba(77,105,225,0.78)] transition hover:bg-primary/90 active:cursor-grabbing"
         >
-          <Mic className="size-6" strokeWidth={2.4} />
+          <Mic className="size-6" strokeWidth={2.4} aria-hidden="true" />
         </Button>
       </div>
 
