@@ -19,6 +19,7 @@ import {
   Users,
   WalletCards,
 } from "lucide-react"
+import { ACADEMIC_GRADES, getAcademicGradeIndex } from "@/lib/academic-scores"
 import { EChart } from "@/components/command-center/echart"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
@@ -135,8 +136,8 @@ export function StudentCommandCenter() {
   const academicOption = useMemo<EChartsOption>(() => ({
     grid: { left: 26, right: 8, top: 18, bottom: 26, containLabel: true },
     xAxis: { type: "category", data: academicScores.map((item) => item.subject), axisTick: { show: false }, axisLine: { lineStyle: { color: gridLine } }, axisLabel: { color: muted, fontSize: 12, interval: 0 } },
-    yAxis: { type: "value", min: 60, max: 100, splitNumber: 4, axisLabel: { color: muted, fontSize: 12 }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: gridLine, type: "dashed" } } },
-    series: [{ type: "bar", data: academicScores.map((item, index) => ({ value: item.score, itemStyle: { color: FIVE_EDUCATION_COLORS[index % FIVE_EDUCATION_COLORS.length], borderRadius: [7, 7, 0, 0] } })), barWidth: "42%", label: { show: true, position: "top", color: "#44536f", fontSize: 12 } }],
+    yAxis: { type: "category", data: ["C", "C+", "B-", "B", "B+", "A-", "A", "A+"], axisLabel: { color: muted, fontSize: 11 }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: gridLine, type: "dashed" } } },
+    series: [{ type: "bar", data: academicScores.map((item, index) => ({ value: ACADEMIC_GRADES.length - getAcademicGradeIndex(item.grade), itemStyle: { color: FIVE_EDUCATION_COLORS[index % FIVE_EDUCATION_COLORS.length], borderRadius: [7, 7, 0, 0] }, label: { show: true, position: "top", formatter: item.grade, color: "#44536f", fontSize: 12 } })), barWidth: "42%" }],
   }), [academicScores])
   const growthOption = useMemo<EChartsOption>(() => ({
     grid: { left: 20, right: 12, top: 18, bottom: 24, containLabel: true },
@@ -195,7 +196,7 @@ export function StudentCommandCenter() {
           </section>
 
           <div className={styles.rightColumn}>
-            <Panel id="academic-score" title="学科成绩" subtitle="最新学期科目表现" icon={BookOpenCheck} action={<span className={styles.scoreBadge}>均分 {academicScores.length ? Math.round(academicScores.reduce((sum, item) => sum + item.score, 0) / academicScores.length) : 0}</span>}><EChart className={styles.chartMedium} option={academicOption} ariaLabel={`${child.name}本学期学科成绩柱状图`} /><div className={styles.scoreList}>{academicScores.slice(0, 4).map((item) => <span key={item.subject}><b>{item.subject}</b><strong>{item.score}</strong><em>{item.level}</em></span>)}</div></Panel>
+            <Panel id="academic-score" title="学科等第" subtitle="最新学期科目表现" icon={BookOpenCheck} action={<span className={styles.scoreBadge}>等第制</span>}><EChart className={styles.chartMedium} option={academicOption} ariaLabel={`${child.name}本学期学科等第分布图`} /><div className={styles.scoreList}>{academicScores.slice(0, 4).map((item) => <span key={item.subject}><b>{item.subject}</b><strong>{item.grade}</strong><em>总评</em></span>)}</div></Panel>
             <Panel id="fitness-score" title="体质健康" subtitle="历学期综合评分走势" icon={HeartPulse} action={<span className={styles.fitnessBadge}>{fitness.level}</span>}><div className={styles.fitnessSummary}><strong>{fitness.score}</strong><span>综合评分</span><div><b>{fitness.vision}</b><small>视力</small></div><div><b>{fitness.rope}</b><small>跳绳 / 分</small></div><div><b>{fitness.run}s</b><small>50 米跑</small></div></div><EChart className={styles.chartFitness} option={fitnessOption} ariaLabel={`${child.name}历学期体质健康综合评分走势`} /></Panel>
           </div>
 

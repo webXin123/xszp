@@ -28,9 +28,8 @@ interface TeacherScorePreviewRow {
   studentNo: string
   name: string
   className: string
-  scores: Array<string | number>
-  total: string | number
-  level: string
+  grades: Array<string | number>
+  overallGrade: string | number
 }
 
 interface TeacherScoreTask {
@@ -61,9 +60,8 @@ function buildDemoPreviewRows(students: Student[], schoolClass: SchoolClass, sub
       studentNo: student.studentNo,
       name: student.name,
       className: schoolClass.name,
-      scores: score.items.map((item) => item.score),
-      total: score.score,
-      level: score.level,
+      grades: score.items.map((item) => item.grade),
+      overallGrade: score.grade,
     }
   })
 }
@@ -81,9 +79,8 @@ async function readPreviewRows(file: File, schoolClass: SchoolClass, subject: st
       studentNo: String(row[0] ?? ""),
       name: String(row[1] ?? ""),
       className: String(row[2] || schoolClass.name),
-      scores: config.assessmentItems.map((_, index) => row[index + 3] ?? ""),
-      total: row[config.assessmentItems.length + 3] ?? "",
-      level: String(row[config.assessmentItems.length + 4] ?? ""),
+      grades: config.assessmentItems.map((_, index) => row[index + 3] ?? ""),
+      overallGrade: row[config.assessmentItems.length + 3] ?? "",
     }))
     return parsed.length > 0 ? parsed : fallback
   } catch {
@@ -249,8 +246,8 @@ export function TeacherScoreEntry() {
             <div className="overflow-x-auto rounded-xl border border-[#d8e0f7]">
               <table className="w-full min-w-[680px] text-left text-xs">
                 <caption className="sr-only">{preview.progress.fileName ?? "成绩 Excel"}内容预览</caption>
-                <thead><tr className="bg-[#eff3ff] text-foreground"><th scope="col" className="px-3 py-2">学号</th><th scope="col" className="px-3 py-2">姓名</th><th scope="col" className="px-3 py-2">班级</th>{config?.assessmentItems.map((item) => <th key={item} scope="col" className="px-3 py-2 text-right">{item}</th>)}<th scope="col" className="px-3 py-2 text-right">总评</th><th scope="col" className="px-3 py-2 text-right">等级</th></tr></thead>
-                <tbody>{preview.rows.map((row) => <tr key={`${row.studentNo}-${row.name}`} className="border-t border-[#e7ebf7]"><td className="px-3 py-2 tabular-nums">{row.studentNo}</td><th scope="row" className="px-3 py-2 font-semibold">{row.name}</th><td className="px-3 py-2">{row.className}</td>{row.scores.map((score, index) => <td key={`${row.studentNo}-score-${index}`} className="px-3 py-2 text-right tabular-nums">{score}</td>)}<td className="px-3 py-2 text-right font-bold tabular-nums">{row.total}</td><td className="px-3 py-2 text-right font-semibold text-primary">{row.level}</td></tr>)}</tbody>
+              <thead><tr className="bg-[#eff3ff] text-foreground"><th scope="col" className="px-3 py-2">学号</th><th scope="col" className="px-3 py-2">姓名</th><th scope="col" className="px-3 py-2">班级</th>{config?.assessmentItems.map((item) => <th key={item} scope="col" className="px-3 py-2 text-right">{item}等第</th>)}<th scope="col" className="px-3 py-2 text-right">总评等第</th></tr></thead>
+                <tbody>{preview.rows.map((row) => <tr key={`${row.studentNo}-${row.name}`} className="border-t border-[#e7ebf7]"><td className="px-3 py-2 tabular-nums">{row.studentNo}</td><th scope="row" className="px-3 py-2 font-semibold">{row.name}</th><td className="px-3 py-2">{row.className}</td>{row.grades.map((grade, index) => <td key={`${row.studentNo}-grade-${index}`} className="px-3 py-2 text-right font-semibold text-primary">{grade}</td>)}<td className="px-3 py-2 text-right font-bold text-primary">{row.overallGrade}</td></tr>)}</tbody>
               </table>
             </div>
           </>

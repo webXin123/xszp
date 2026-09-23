@@ -17,15 +17,17 @@ export const ACADEMIC_SUBJECT_CONFIGS = [
 export type AcademicSubject = (typeof ACADEMIC_SUBJECT_CONFIGS)[number]["name"]
 export const ACADEMIC_SUBJECTS = ACADEMIC_SUBJECT_CONFIGS.map((item) => item.name) as AcademicSubject[]
 
+export const ACADEMIC_GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C"] as const
+export type AcademicGrade = (typeof ACADEMIC_GRADES)[number]
+
 export interface AcademicScoreItem {
   name: string
-  score: number
+  grade: AcademicGrade
 }
 
 export interface AcademicScore {
   subject: AcademicSubject
-  score: number
-  level: "优秀" | "良好" | "合格"
+  grade: AcademicGrade
   items: AcademicScoreItem[]
 }
 
@@ -43,19 +45,26 @@ export function getAcademicSubjectsForGradeOrder(gradeOrder: number) {
   return ACADEMIC_SUBJECT_CONFIGS.filter((item) => (item.gradeOrders as readonly number[]).includes(gradeOrder))
 }
 
+export function getAcademicGradeIndex(grade: AcademicGrade) {
+  return ACADEMIC_GRADES.indexOf(grade)
+}
+
+export function shiftAcademicGrade(grade: AcademicGrade, offset: number): AcademicGrade {
+  const index = Math.max(0, Math.min(ACADEMIC_GRADES.length - 1, getAcademicGradeIndex(grade) + offset))
+  return ACADEMIC_GRADES[index]
+}
+
 export function getAcademicScores(student: Student, subjects: readonly AcademicSubject[] = ACADEMIC_SUBJECTS): AcademicScore[] {
-  return subjects.map((subject, index) => {
+  return subjects.map((subject) => {
     const config = getAcademicSubjectConfig(subject)
     const items = (config?.assessmentItems ?? ["成绩"]).map((name, itemIndex) => ({
       name,
-      score: 76 + ((hash(`${student.id}:${subject}:${name}`) + itemIndex * 5) % 22),
+      grade: ACADEMIC_GRADES[hash(`${student.id}:${subject}:${name}:${itemIndex}`) % 6] as AcademicGrade,
     }))
-    const score = Math.round(items.reduce((sum, item) => sum + item.score, 0) / items.length)
-    const level: AcademicScore["level"] = score >= 90 ? "优秀" : score >= 80 ? "良好" : "合格"
+    const gradeIndex = Math.round(items.reduce((sum, item) => sum + getAcademicGradeIndex(item.grade), 0) / items.length)
     return {
       subject,
-      score,
-      level,
+      grade: ACADEMIC_GRADES[gradeIndex],
       items,
     }
   })

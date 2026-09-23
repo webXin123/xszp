@@ -1,6 +1,7 @@
 import {
   ACADEMIC_SUBJECTS,
   getAcademicScores,
+  shiftAcademicGrade,
   type AcademicScore,
 } from "./academic-scores"
 
@@ -80,15 +81,13 @@ export function getStudentAcademicHistory(
     if (semesterIndex === 0) return { ...semester, scores: latest }
     const scores = latest.map((item) => {
       const items = item.items.map((detail, itemIndex) => {
-        const delta = (hash(`${student.id}:${semester.key}:${item.subject}:${itemIndex}`) % 9) - 4
-        return { ...detail, score: Math.max(60, Math.min(99, detail.score + delta)) }
+        const offset = (hash(`${student.id}:${semester.key}:${item.subject}:${itemIndex}`) % 3) - 1
+        return { ...detail, grade: shiftAcademicGrade(detail.grade, offset) }
       })
-      const score = Math.round(items.reduce((sum, detail) => sum + detail.score, 0) / items.length)
-      const level: AcademicScore["level"] = score >= 90 ? "优秀" : score >= 80 ? "良好" : "合格"
+      const offset = (hash(`${student.id}:${semester.key}:${item.subject}`) % 3) - 1
       return {
         ...item,
-        score,
-        level,
+        grade: shiftAcademicGrade(item.grade, offset),
         items,
       }
     })

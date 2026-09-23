@@ -61,7 +61,7 @@ export function StudentHistoryDrawer({
                 <details key={semester.key} open={index === 0} className="group overflow-hidden rounded-2xl border border-[#dce3f8] bg-white shadow-[0_12px_28px_-28px_rgba(55,71,153,.7)]">
                   <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45 [&::-webkit-details-marker]:hidden">
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">{index === 0 ? "新" : "往"}</span>
-                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-foreground">{semester.label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{semester.scores.length} 门学科 · 平均 {averageScore(semester.scores)} 分</span></span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-foreground">{semester.label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{semester.scores.length} 门学科 · 等第制</span></span>
                     {index === 0 && <span className="rounded-full bg-brand-green/12 px-2 py-1 text-[11px] font-semibold text-brand-green">最新</span>}
                     <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
                   </summary>
@@ -69,8 +69,8 @@ export function StudentHistoryDrawer({
                     <div className="overflow-hidden rounded-xl border border-[#e3e8f8]">
                       <table className="w-full text-sm">
                         <caption className="sr-only">{studentName}{semester.label}各科成绩</caption>
-                        <thead className="bg-primary/[0.06] text-xs text-muted-foreground"><tr><th className="px-3 py-2 text-left font-semibold">科目</th><th className="px-3 py-2 text-right font-semibold">成绩</th><th className="px-3 py-2 text-right font-semibold">等级</th></tr></thead>
-                        <tbody>{semester.scores.map((score) => <tr key={score.subject} className="border-t border-[#edf0fb]"><th className="px-3 py-3 text-left font-medium text-foreground">{score.subject}<span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{score.items.map((item) => `${item.name} ${item.score}`).join(" · ")}</span></th><td className="px-3 py-3 text-right font-bold tabular-nums text-foreground">{score.score}</td><td className="px-3 py-3 text-right text-xs font-semibold text-primary">{score.level}</td></tr>)}</tbody>
+                        <thead className="bg-primary/[0.06] text-xs text-muted-foreground"><tr><th className="px-3 py-2 text-left font-semibold">科目</th><th className="px-3 py-2 text-right font-semibold">总评等第</th></tr></thead>
+                        <tbody>{semester.scores.map((score) => <tr key={score.subject} className="border-t border-[#edf0fb]"><th className="px-3 py-3 text-left font-medium text-foreground">{score.subject}<span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{score.items.map((item) => `${item.name} ${item.grade}`).join(" · ")}</span></th><td className="px-3 py-3 text-right text-sm font-bold text-primary">{score.grade}</td></tr>)}</tbody>
                       </table>
                     </div>
                   </div>
@@ -107,11 +107,6 @@ export function StudentHistoryDrawer({
       </DialogContent>
     </Dialog>
   )
-}
-
-function averageScore(scores: AcademicScore[]) {
-  if (scores.length === 0) return 0
-  return Math.round(scores.reduce((total, score) => total + score.score, 0) / scores.length)
 }
 
 function FitnessMetric({ label, value, tone = "blue" }: { label: string; value: string; tone?: "blue" | "green" }) {

@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { buildPePreviewRows, PE_CLASSES, PE_CLASS_IDS, getSemesterLabel, type PeScoreUpload } from "@/lib/pe-scores"
 import { useEvaluation } from "@/lib/evaluation-context"
-import { getAcademicSubjectsForGradeOrder } from "@/lib/academic-scores"
+import { ACADEMIC_GRADES, getAcademicSubjectsForGradeOrder } from "@/lib/academic-scores"
 import { CLASSES, TEACHERS } from "@/lib/mock-data"
 import type { Grade } from "@/lib/types"
 
@@ -370,7 +370,7 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
       </Dialog>
 
       <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="rounded-[22px] border border-[#cbd5f5] bg-white sm:max-w-2xl"><DialogHeader><DialogTitle className="flex items-center gap-2"><FileSpreadsheet className="size-4 text-primary" aria-hidden="true" />{preview?.fileName ?? "成绩 Excel"}</DialogTitle><DialogDescription>{preview?.teacher} · {preview?.subject} · {preview?.rows ?? 0} 条成绩</DialogDescription></DialogHeader><div className="overflow-x-auto rounded-xl border border-[#d8e0f7]"><table className="w-full min-w-[500px] text-left text-xs"><thead><tr className="bg-[#eff3ff] text-foreground"><th className="px-3 py-2">学号</th><th className="px-3 py-2">姓名</th><th className="px-3 py-2">班级</th><th className="px-3 py-2">成绩</th></tr></thead><tbody>{[1, 2, 3, 4].map((item) => <tr key={item} className="border-t border-[#e7ebf7]"><td className="px-3 py-2">{String(item).padStart(2, "0")}</td><td className="px-3 py-2">学生{item}</td><td className="px-3 py-2">{preview?.gradeName}01班</td><td className="px-3 py-2">{92 - item * 3}</td></tr>)}</tbody></table></div></DialogContent>
+        <DialogContent className="rounded-[22px] border border-[#cbd5f5] bg-white sm:max-w-2xl"><DialogHeader><DialogTitle className="flex items-center gap-2"><FileSpreadsheet className="size-4 text-primary" aria-hidden="true" />{preview?.fileName ?? "成绩 Excel"}</DialogTitle><DialogDescription>{preview?.teacher} · {preview?.subject} · {preview?.rows ?? 0} 条成绩</DialogDescription></DialogHeader><div className="overflow-x-auto rounded-xl border border-[#d8e0f7]"><table className="w-full min-w-[500px] text-left text-xs"><thead><tr className="bg-[#eff3ff] text-foreground"><th className="px-3 py-2">学号</th><th className="px-3 py-2">姓名</th><th className="px-3 py-2">班级</th><th className="px-3 py-2">等第</th></tr></thead><tbody>{[1, 2, 3, 4].map((item) => <tr key={item} className="border-t border-[#e7ebf7]"><td className="px-3 py-2">{String(item).padStart(2, "0")}</td><td className="px-3 py-2">学生{item}</td><td className="px-3 py-2">{preview?.gradeName}01班</td><td className="px-3 py-2 font-semibold text-primary">{ACADEMIC_GRADES[item]}</td></tr>)}</tbody></table></div></DialogContent>
       </Dialog>
       </> : <PeScoreEntryManagement />}
     </section>
