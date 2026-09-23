@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CalendarDays, Flag, Sparkles } from "lucide-react"
+import { CalendarDays, Flag, Sparkles, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -73,7 +73,7 @@ function periodScoreLabel(period: RankingPeriod, kind: ScoreDetailKind) {
 }
 
 export function ClassRankingTab() {
-  const { classes, grades, records, flags, flagConfigs, classRatingConfigs, setFlag, issueFlagReward } = useEvaluation()
+  const { classes, grades, records, flags, flagConfigs, classRatingConfigs, setFlag, issueFlagReward, removeRecord } = useEvaluation()
   const { visibleGrades, canManageFlags, role, scoringClasses } = usePermission()
   const [period, setPeriod] = useState<RankingPeriod>("day")
   const weekOptions = useMemo(() => getSemesterWeekKeys(new Date()), [])
@@ -239,7 +239,7 @@ export function ClassRankingTab() {
       </Dialog>
 
       <Dialog open={!!detailClassId} onOpenChange={(open) => !open && setDetailClassId(null)}>
-        <DialogContent className="glass-surface max-h-[80vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{detailClass?.cls.name} · {PERIOD_LABEL[period]}评价记录</DialogTitle></DialogHeader><div className="rounded-lg border border-border/60">{(detailClass?.periodRecords.length ?? 0) === 0 ? <p className="p-8 text-center text-sm text-muted-foreground">暂无评价记录</p> : detailClass?.periodRecords.map((record) => <div key={record.id} className="flex flex-wrap items-center gap-3 border-b border-border/50 px-4 py-3 last:border-0"><span className="w-24 text-xs text-muted-foreground">{record.date}</span><span className="flex-1 text-sm">{record.level1} / {record.level2}</span><span className={cn("font-semibold", record.totalDeduction > 0 ? "text-emerald-700" : "text-rose-700")}>{record.totalDeduction > 0 ? "+" : ""}{record.totalDeduction}</span></div>)}</div></DialogContent>
+        <DialogContent className="glass-surface max-h-[80vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{detailClass?.cls.name} · {PERIOD_LABEL[period]}评价记录</DialogTitle></DialogHeader><div className="rounded-lg border border-border/60">{(detailClass?.periodRecords.length ?? 0) === 0 ? <p className="p-8 text-center text-sm text-muted-foreground">暂无评价记录</p> : detailClass?.periodRecords.map((record) => <div key={record.id} className="flex flex-wrap items-center gap-3 border-b border-border/50 px-4 py-3 last:border-0"><span className="w-24 text-xs text-muted-foreground">{record.date}</span><span className="flex-1 text-sm">{record.level1} / {record.level2}</span><span className={cn("font-semibold", record.totalDeduction > 0 ? "text-emerald-700" : "text-rose-700")}>{record.totalDeduction > 0 ? "+" : ""}{record.totalDeduction}</span><button type="button" onClick={() => removeRecord(record.id)} className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50" aria-label={`删除 ${record.level1} ${record.level2} 评价记录`}><Trash2 className="size-4" aria-hidden="true" /></button></div>)}</div></DialogContent>
       </Dialog>
 
       <Dialog open={!!flagDialog} onOpenChange={(open) => !open && setFlagDialog(null)}>

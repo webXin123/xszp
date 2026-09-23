@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowRight, ChevronDown, ChevronRight, Info, Mic, Search, Sparkles, User, Users } from "lucide-react"
+import { ArrowRight, ChevronDown, ChevronRight, Info, Mic, Search, Sparkles, Trash2, User, Users } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,7 @@ type ConfirmAwardIndicator = {
 type IssueMode = "batch" | "single"
 type MobileAwardStep = "selection" | "issue"
 export function AwardCardTab() {
-  const { grades, students, awardCards, addAwardCards } = useEvaluation()
+  const { grades, students, awardCards, addAwardCards, removeAwardCard } = useEvaluation()
   const { awardClasses } = usePermission()
   const weekKey = getISOWeekKey(new Date())
   const today = formatDate(new Date())
@@ -596,20 +596,7 @@ export function AwardCardTab() {
                         </span>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (item.image) {
-                            setZoomImage({
-                              src: item.image,
-                              title: `${item.level3} - ${activeLevel2Group.level1}`,
-                            })
-                          }
-                        }}
-                        className="overflow-hidden rounded-xl border border-[#dfe4f7] bg-white"
-                        aria-label={`放大查看 ${item.level3} 奖卡正面`}
-                      >
+                      <button type="button" onClick={() => handleCardClick(activeLevel2Group.level1, activeLevel2Group.level2, item)} className="group/image relative min-h-24 overflow-hidden rounded-xl border border-[#dfe4f7] bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" aria-label={`点击图片发放 ${item.level3} 奖卡`}>
                         {item.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -617,7 +604,7 @@ export function AwardCardTab() {
                             alt={`${item.level3} - ${activeLevel2Group.level1} 奖卡正面`}
                             width={320}
                             height={240}
-                            className="aspect-[4/3] w-full bg-white object-contain transition-transform duration-200 group-hover:scale-[1.03]"
+                            className="aspect-[4/3] w-full bg-white object-contain transition-transform duration-200 group-hover/image:scale-[1.03]"
                           />
                         ) : (
                           <span className="flex aspect-[4/3] w-full items-center justify-center bg-[#f7f8ff] text-xs text-muted-foreground">
@@ -736,8 +723,8 @@ export function AwardCardTab() {
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {activeLevel2Group?.items.map((item) => (
                     <div key={item.id} className={cn("flex min-h-19 gap-2 rounded-xl border p-2 transition-colors", singleIndicator?.indicator.id === item.id ? "border-primary bg-primary/[0.08]" : "border-[#dfe4f7] bg-[#fbfcff] hover:border-primary/35 hover:bg-primary/[0.04]")}>
-                      <button type="button" onClick={() => item.image && setZoomImage({ src: item.image, title: `${activeLevel2Group.level1} · ${item.level3}` })} aria-label={`放大查看 ${item.level3} 奖卡`} className="shrink-0 overflow-hidden rounded-lg border border-[#dfe4f7] bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
-                        {item.image ? <img src={item.image} alt={`${item.level3} 奖卡缩略图`} width={54} height={54} className="size-[54px] object-cover" /> : <span className="flex size-[54px] items-center justify-center text-xs font-bold text-primary">奖卡</span>}
+                      <button type="button" onClick={() => handleSingleCardSelect(item)} aria-pressed={singleIndicator?.indicator.id === item.id} aria-label={`点击图片选择并发放 ${item.level3} 奖卡`} className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#dfe4f7] bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                        {item.image ? <img src={item.image} alt={`${item.level3} 奖卡缩略图`} width={80} height={80} className="size-20 object-cover" /> : <span className="flex size-20 items-center justify-center text-xs font-bold text-primary">奖卡</span>}
                       </button>
                       <button type="button" aria-pressed={singleIndicator?.indicator.id === item.id} onClick={() => handleSingleCardSelect(item)} className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                         <span className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{item.level3}</span><span className="mt-0.5 block line-clamp-2 text-[11px] text-muted-foreground">{item.description}</span></span>
@@ -755,12 +742,12 @@ export function AwardCardTab() {
                 </div>
                 <div className="mt-3 flex max-h-40 flex-col gap-2 overflow-y-auto pr-1">
                   {singleStudentCards.length > 0 ? singleStudentCards.map((card) => (
-                    <div key={card.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#e4e8f7] bg-white px-3 py-2">
+                      <div key={card.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#e4e8f7] bg-white px-3 py-2">
                       <div className="min-w-0">
                         <p className="truncate text-xs font-semibold text-foreground">{card.level1} · {card.level2} · {card.level3 ?? "奖卡"}</p>
                         <p className="mt-0.5 text-[11px] text-muted-foreground">{card.date} · 发放人：{card.operatorName}</p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-brand-green/12 px-2 py-1 text-xs font-bold text-brand-green">+{card.points} 分</span>
+                      <div className="flex shrink-0 items-center gap-2"><span className="rounded-full bg-brand-green/12 px-2 py-1 text-xs font-bold text-brand-green">+{card.points} 分</span><button type="button" onClick={() => removeAwardCard(card.id)} className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50" aria-label={`删除 ${card.level3 ?? "奖卡"} 记录`}><Trash2 className="size-4" aria-hidden="true" /></button></div>
                     </div>
                   )) : (
                     <p className="rounded-xl border border-dashed border-[#dbe3f8] px-3 py-5 text-center text-xs text-muted-foreground">本周还没有奖卡记录</p>
@@ -856,9 +843,7 @@ export function AwardCardTab() {
                   <span className="font-semibold text-foreground">
                     {card.level1} · {card.level2}{card.level3 ? ` · ${card.level3}` : ""}
                   </span>
-                  <span className="rounded-full bg-brand-green/15 px-2 py-0.5 text-xs font-semibold text-brand-green">
-                    +{card.points} 分
-                  </span>
+                  <div className="flex items-center gap-2"><span className="rounded-full bg-brand-green/15 px-2 py-0.5 text-xs font-semibold text-brand-green">+{card.points} 分</span><button type="button" onClick={() => removeAwardCard(card.id)} className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50" aria-label={`删除 ${card.level3 ?? "奖卡"} 记录`}><Trash2 className="size-4" aria-hidden="true" /></button></div>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {card.date} · 发放人：{card.operatorName}

@@ -871,6 +871,7 @@ interface EvaluationContextValue {
   students: typeof STUDENTS
   records: ScoreRecord[]
   addRecord: (record: Omit<ScoreRecord, "id" | "createdAt" | "operatorId" | "operatorName">) => void
+  removeRecord: (id: string) => void
   flags: WeeklyFlag[]
   flagConfigs: FlagConfig[]
   updateFlagConfig: (id: string, patch: Partial<FlagConfig>) => void
@@ -887,6 +888,7 @@ interface EvaluationContextValue {
   addAwardCards: (
     cards: Omit<AwardCardRecord, "id" | "createdAt" | "operatorId" | "operatorName" | "source">[],
   ) => void
+  removeAwardCard: (id: string) => void
   honors: HonorRecord[]
   addHonor: (
     honor: Omit<HonorRecord, "id" | "createdAt" | "operatorId" | "operatorName">,
@@ -1322,6 +1324,11 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     setRecords((prev) => [...prev, newRecord])
   }
 
+  const removeRecord: EvaluationContextValue["removeRecord"] = (id) => {
+    if (!currentTeacher) return
+    setRecords((prev) => prev.filter((record) => record.id !== id))
+  }
+
   const addAwardCards: EvaluationContextValue["addAwardCards"] = (cards) => {
     if (!currentTeacher) return
     const stamped = cards.map((card) => {
@@ -1340,6 +1347,11 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       }
     })
     setAwardCards((prev) => [...prev, ...stamped])
+  }
+
+  const removeAwardCard: EvaluationContextValue["removeAwardCard"] = (id) => {
+    if (!currentTeacher) return
+    setAwardCards((prev) => prev.filter((card) => card.id !== id))
   }
 
   const addHonor: EvaluationContextValue["addHonor"] = (honor) => {
@@ -1625,6 +1637,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     students: STUDENTS,
     records,
     addRecord,
+    removeRecord,
     flags,
     flagConfigs,
     updateFlagConfig,
@@ -1638,6 +1651,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     issueFlagReward,
     awardCards,
     addAwardCards,
+    removeAwardCard,
     honors,
     addHonor,
     submitParentHonor,
