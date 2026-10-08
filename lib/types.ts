@@ -51,6 +51,19 @@ export interface Teacher {
   teachingClassIds?: string[]
 }
 
+/** 成绩上传任务发布后发送给对应任课教师的站内消息。 */
+export interface ScoreTaskNotification {
+  id: string
+  taskId: string
+  teacherId: string
+  title: string
+  summary: string
+  scoreName: string
+  gradeIds: string[]
+  subjectIds: string[]
+  createdAt: string
+}
+
 export interface Grade {
   id: string
   name: string
@@ -210,6 +223,8 @@ export interface AwardCardRecord {
   date: string
   /** 来源：线上发放 / 线下扫码 / 流动红旗奖励 */
   source: AwardSource
+  /** 关联活动积分发放记录；历史奖卡为空。 */
+  activityId?: string
   operatorId: string
   operatorName: string
   createdAt: string
@@ -382,6 +397,31 @@ export interface Activity {
   publisherId: string
   publisherName: string
   createdAt: string
+}
+
+/** 活动详情中的参与学生快照；发放积分后保留发放信息并锁定。 */
+export interface ActivityParticipant {
+  id: string
+  activityId: string
+  studentId: string
+  studentName: string
+  classId: string
+  addedAt: string
+  addedBy?: string
+  issuedAt?: string
+  issuedBy?: string
+  issuedPoints?: number
+  issuedLevel1?: string
+  issuedLevel2?: string
+  issuedLevel3?: string
+}
+
+export interface ActivityPointAwardConfig {
+  indicatorId: string
+  level1: string
+  level2: string
+  level3: string
+  points: number
 }
 
 export interface Enrollment {

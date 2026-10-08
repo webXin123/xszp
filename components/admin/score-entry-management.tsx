@@ -78,12 +78,14 @@ interface ScoreEntryTask {
   semester: string
   scoreName: string
   gradeIds: string[]
+  subjectIds?: string[]
   startAt: string
   endAt: string
   method: EntryMethod
   calculationStatus?: CalculationStatus
   valueType?: ScoreValueType
   gradeRules: ConversionRule[]
+  scoreConversionRules?: ConversionRule[]
   calculationItems: CalculationItem[]
   convertResult: boolean
   conversionMode?: ConversionMode
@@ -164,8 +166,32 @@ function taskStatus(task: ScoreEntryTask) {
   return { label: "未开始", className: "bg-[#eef2ff] text-primary" }
 }
 
-function buildProgress(taskId: string, scoreName: string, selectedGrades: Grade[]) {
-  return selectedGrades.flatMap((grade) => getAcademicSubjectsForGradeOrder(grade.order).map((subject, subjectIndex) => {
+function getSubjectOptions(grades: Grade[], selectedGradeIds: string[]) {
+  const subjectMap = new Map<string, { id: string; name: string }>()
+  grades.filter((grade) => selectedGradeIds.includes(grade.id)).forEach((grade) => {
+    getAcademicSubjectsForGradeOrder(grade.order).forEach((subject) => subjectMap.set(subject.id, { id: subject.id, name: subject.name }))
+  })
+  return [...subjectMap.values()]
+}
+
+function isValidRangeRules(rules: ConversionRule[], maxValue: number) {
+  if (rules.length === 0) return false
+  const normalized = rules.map((rule) => ({
+    start: Number(rule.rangeStart),
+    end: Number(rule.rangeEnd),
+    label: rule.label.trim(),
+    startText: rule.rangeStart?.trim() ?? "",
+    endText: rule.rangeEnd?.trim() ?? "",
+  }))
+  if (normalized.some((rule) => !rule.label || !rule.startText || !rule.endText || !Number.isFinite(rule.start) || !Number.isFinite(rule.end) || rule.start < 0 || rule.end > maxValue || rule.start > rule.end)) return false
+  const sorted = [...normalized].sort((a, b) => a.start - b.start)
+  return sorted.every((rule, index) => index === 0 || rule.start > sorted[index - 1].end)
+}
+
+function buildProgress(taskId: string, scoreName: string, selectedGrades: Grade[], selectedSubjectIds?: string[]) {
+  return selectedGrades.flatMap((grade) => getAcademicSubjectsForGradeOrder(grade.order)
+    .filter((subject) => !selectedSubjectIds || selectedSubjectIds.includes(subject.id))
+    .map((subject, subjectIndex) => {
     const index = grade.order * 10 + subjectIndex
     const submitted = index === 0 || index === 3
     const editing = !submitted && index % 3 === 1
@@ -182,7 +208,7 @@ function buildProgress(taskId: string, scoreName: string, selectedGrades: Grade[
       uploadedAt: submitted ? "2026-09-08 15:30" : undefined,
       rows: submitted ? 86 + index : undefined,
     } satisfies TeacherEntryProgress
-  }))
+    }))
 }
 
 function createSeedTask(grades: Grade[]): ScoreEntryTask {
@@ -192,19 +218,22 @@ function createSeedTask(grades: Grade[]): ScoreEntryTask {
     semester: getSemesterLabel(),
     scoreName: "学期成绩",
     gradeIds: targetGrades.map((item) => item.id),
+    subjectIds: getSubjectOptions(grades, targetGrades.map((item) => item.id)).map((item) => item.id),
     startAt: localDateTime(-2, 8),
     endAt: localDateTime(5, 18),
     method: "teacher",
     valueType: "number",
     gradeRules: [],
+    scoreConversionRules: DEFAULT_SCORE_CONVERSION,
     calculationItems: [],
     convertResult: false,
     conversionRules: [],
-    progress: buildProgress("score-task-seed", "学期成绩", targetGrades),
+    progress: buildProgress("score-task-seed", "学期成绩", targetGrades, getSubjectOptions(grades, targetGrades.map((item) => item.id)).map((item) => item.id)),
   }
 }
 
 export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
+  const { addScoreTaskNotifications } = useEvaluation()
   const [activeTab, setActiveTab] = useState<ScoreEntryTab>("subject")
   const [tasks, setTasks] = useState<ScoreEntryTask[]>(() => [createSeedTask(grades)])
   const [hydrated, setHydrated] = useState(false)
@@ -214,16 +243,24 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
   const [scoreName, setScoreName] = useState<ScoreName>("daily")
   const [otherScoreName, setOtherScoreName] = useState("")
   const [selectedGradeIds, setSelectedGradeIds] = useState<string[]>(grades.slice(-2).map((item) => item.id))
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>(() => getSubjectOptions(grades, grades.slice(-2).map((item) => item.id)).map((item) => item.id))
   const [startAt, setStartAt] = useState(localDateTime(0, 8))
   const [endAt, setEndAt] = useState(localDateTime(7, 18))
   const [method, setMethod] = useState<EntryMethod>("teacher")
   const [valueType, setValueType] = useState<ScoreValueType>("number")
   const [gradeRules, setGradeRules] = useState<ConversionRule[]>(DEFAULT_GRADE_RULES)
+  const [scoreConversionRules, setScoreConversionRules] = useState<ConversionRule[]>(DEFAULT_SCORE_CONVERSION)
   const [calculationItems, setCalculationItems] = useState<CalculationItem[]>([{ sourceId: "score-task-seed", weight: "100" }])
   const [convertResult, setConvertResult] = useState(false)
   const [conversionMode, setConversionMode] = useState<ConversionMode>("score")
   const [conversionRules, setConversionRules] = useState<ConversionRule[]>(DEFAULT_SCORE_CONVERSION)
   const [error, setError] = useState("")
+
+  const subjectOptions = useMemo(() => getSubjectOptions(grades, selectedGradeIds), [grades, selectedGradeIds])
+
+  useEffect(() => {
+    setSelectedSubjectIds((current) => current.filter((subjectId) => subjectOptions.some((subject) => subject.id === subjectId)))
+  }, [subjectOptions])
 
   useEffect(() => {
     if (window.location.hash === "#pe") setActiveTab("pe")
@@ -262,11 +299,13 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
     setScoreName("daily")
     setOtherScoreName("")
     setSelectedGradeIds(grades.slice(-2).map((item) => item.id))
+    setSelectedSubjectIds(getSubjectOptions(grades, grades.slice(-2).map((item) => item.id)).map((item) => item.id))
     setStartAt(localDateTime(0, 8))
     setEndAt(localDateTime(7, 18))
     setMethod("teacher")
     setValueType("number")
     setGradeRules(DEFAULT_GRADE_RULES)
+    setScoreConversionRules(DEFAULT_SCORE_CONVERSION)
     setCalculationItems(sourceTasks.length > 0 ? [{ sourceId: sourceTasks[0].id, weight: "100" }] : [])
     setConvertResult(false)
     setConversionMode("score")
@@ -282,12 +321,14 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
     const finalScoreName = scoreName === "other" ? otherScoreName.trim() : SCORE_NAME_OPTIONS.find((item) => item.code === scoreName)?.value ?? "成绩"
     if (!finalScoreName) return setError("请填写成绩名称")
     if (selectedGradeIds.length === 0) return setError("请选择至少一个录入年级")
+    if (selectedSubjectIds.length === 0) return setError("请选择至少一个录入学科")
     if (!startAt || !endAt || startAt >= endAt) return setError("请正确设置开始与截止时间")
     if (method === "automatic") {
       if (calculationItems.length === 0 || calculationItems.some((item) => !item.sourceId || Number(item.weight) <= 0)) return setError("请添加需要计算的成绩及权重")
       if (calculationItems.reduce((total, item) => total + Number(item.weight || 0), 0) !== 100) return setError("自动计算的权重合计需为 100%")
     }
     if (method === "teacher" && valueType === "grade" && gradeRules.some((rule) => !rule.label.trim() || !rule.threshold?.trim() || Number(rule.threshold) < 0)) return setError("请补全等第换算规则")
+    if (method === "teacher" && valueType === "number" && !isValidRangeRules(scoreConversionRules, 100)) return setError("请补全 0–100 分数区间的等第换算规则，且区间不可重叠")
     if (method === "automatic" && convertResult && conversionRules.some((rule) => { const start = Number(rule.rangeStart); const end = Number(rule.rangeEnd); return !rule.label.trim() || !rule.rangeStart?.trim() || !rule.rangeEnd?.trim() || start < 0 || end < 0 || start > end || (conversionMode === "rank" && (start > 100 || end > 100)) })) return setError(conversionMode === "rank" ? "请补全 0–100% 内的等第换算区间" : "请补全结果等第换算区间")
 
     const selectedGrades = grades.filter((grade) => selectedGradeIds.includes(grade.id))
@@ -297,19 +338,27 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
       semester: getSemesterLabel(),
       scoreName: finalScoreName,
       gradeIds: selectedGradeIds,
+      subjectIds: selectedSubjectIds,
       startAt,
       endAt,
       method,
       calculationStatus: method === "automatic" ? "计算中" : undefined,
       valueType: method === "teacher" ? valueType : undefined,
       gradeRules: method === "teacher" && valueType === "grade" ? gradeRules : [],
+      scoreConversionRules: method === "teacher" && valueType === "number" ? scoreConversionRules : [],
       calculationItems: method === "automatic" ? calculationItems : [],
       convertResult: method === "automatic" && convertResult,
       conversionMode: method === "automatic" && convertResult ? conversionMode : undefined,
       conversionRules: method === "automatic" && convertResult ? conversionRules : [],
-      progress: buildProgress(id, finalScoreName, selectedGrades).map((item) => ({ ...item, status: "未开始", fileName: undefined, uploadedAt: undefined, rows: undefined })),
+      progress: buildProgress(id, finalScoreName, selectedGrades, selectedSubjectIds).map((item) => ({ ...item, status: "未开始", fileName: undefined, uploadedAt: undefined, rows: undefined })),
     }
     setTasks((current) => [next, ...current])
+    if (method === "teacher") {
+      const selectedSubjectNames = subjectOptions.filter((subject) => selectedSubjectIds.includes(subject.id)).map((subject) => subject.name)
+      const selectedGradeNames = selectedGrades.map((grade) => grade.name)
+      const targetTeachers = TEACHERS.filter((teacher) => teacher.teachingSubjects?.some((subject) => selectedSubjectNames.includes(subject)) && teacher.teachingClassIds?.some((classId) => CLASSES.some((schoolClass) => selectedGradeIds.includes(schoolClass.gradeId) && schoolClass.id === classId)))
+      addScoreTaskNotifications(targetTeachers.map((teacher) => ({ taskId: id, teacherId: teacher.id, title: `新的成绩录入任务：${finalScoreName}`, summary: `请在 ${startAt.replace("T", " ")} 至 ${endAt.replace("T", " ")} 完成 ${selectedGradeNames.join("、")} · ${selectedSubjectNames.join("、")} 成绩上传。`, scoreName: finalScoreName, gradeIds: selectedGradeIds, subjectIds: selectedSubjectIds })))
+    }
     setPublishOpen(false)
     resetForm()
   }
@@ -338,12 +387,13 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
           const done = submittedCount(task)
           const total = task.progress.length
           const gradeNames = task.gradeIds.map((id) => grades.find((grade) => grade.id === id)?.name).filter(Boolean)
+          const subjectNames = (task.subjectIds ?? getSubjectOptions(grades, task.gradeIds).map((subject) => subject.id)).map((id) => getSubjectOptions(grades, task.gradeIds).find((subject) => subject.id === id)?.name).filter(Boolean)
           return <button key={task.id} type="button" onClick={() => setDetailTask(task)} className="group flex flex-col gap-3 rounded-2xl border border-[#dbe2f8] bg-white p-4 text-left shadow-[0_12px_26px_-24px_rgba(53,67,150,0.68)] transition-colors hover:border-primary/40 hover:bg-[#fcfdff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="truncate text-base font-bold text-foreground">{task.scoreName}</span><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", status.className)}>{status.label}</span></div><p className="mt-1 text-xs text-muted-foreground">{task.semester} · {task.method === "teacher" ? "教师录入" : "自动计算"}</p></div>
               <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </div>
-            <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-lg bg-[#f0f3ff] px-2 py-1 text-primary">{gradeNames.join("、")}</span><span className="rounded-lg bg-[#f6f7fb] px-2 py-1 text-muted-foreground">按年级匹配后台学科分项</span>{task.method === "teacher" && <span className="rounded-lg bg-[#fff5e9] px-2 py-1 text-brand-orange">{task.valueType === "grade" ? "等第录入" : "数值录入"}</span>}</div>
+            <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-lg bg-[#f0f3ff] px-2 py-1 text-primary">年级：{gradeNames.join("、")}</span><span className="rounded-lg bg-[#f6f7fb] px-2 py-1 text-muted-foreground">学科：{subjectNames.join("、")}</span>{task.method === "teacher" && <span className="rounded-lg bg-[#fff5e9] px-2 py-1 text-brand-orange">{task.valueType === "grade" ? "等第录入" : "数值录入"}</span>}</div>
             {task.method === "automatic" ? <div className="border-t border-[#edf0fa] pt-3" aria-live="polite"><div className="flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">计算状态</span><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", (task.calculationStatus ?? "计算完成") === "计算中" ? "bg-[#fff4e5] text-brand-orange" : "bg-[#effbf4] text-brand-green")}>{task.calculationStatus ?? "计算完成"}</span></div><p className="mt-2 text-xs text-muted-foreground">{(task.calculationStatus ?? "计算完成") === "计算中" ? "正在根据来源成绩与权重生成结果…" : "自动计算已完成，可打开查看任务详情。"}</p></div> : <div className="border-t border-[#edf0fa] pt-3"><div className="flex items-center justify-between text-xs"><span className="text-muted-foreground">任课教师录入进度</span><span className="font-bold text-foreground">{done} / {total}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e5e9f7]"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: total ? `${(done / total) * 100}%` : "0%" }} /></div></div>}
             <p className="text-xs text-muted-foreground">录入：{task.startAt.replace("T", " ")} ~ {task.endAt.replace("T", " ")}</p>
           </button>
@@ -354,10 +404,10 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
         <DialogContent className="max-h-[88vh] overflow-x-hidden overflow-y-auto overscroll-contain rounded-[26px] border border-[#c8d4f7] bg-white p-0 shadow-[0_32px_80px_-34px_rgba(41,61,148,0.68)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:max-w-4xl">
           <DialogHeader className="border-b border-[#dce4fa] bg-[linear-gradient(110deg,#edf2ff,#ffffff_60%,#f7f4ff)] px-5 py-5 sm:px-7"><DialogTitle className="flex items-center gap-2 text-xl"><span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="size-4" aria-hidden="true" /></span>发布成绩录入任务</DialogTitle><DialogDescription>按学期发布成绩录入任务，任务发布后将通知对应任课教师。</DialogDescription></DialogHeader>
           <div className="bg-[#fbfcff] px-5 py-5 sm:px-7"><div className="grid gap-4 lg:grid-cols-2">
-            <FormSection icon={FileSpreadsheet} title="任务范围" description="选择录入成绩和年级，系统将按后台配置匹配该年级全部学科及分项。"><div className="flex flex-col gap-1.5"><Label>成绩名称 <span className="text-destructive">*</span></Label><Select value={SCORE_NAME_OPTIONS.find((item) => item.code === scoreName)?.value ?? ""} onValueChange={(value) => setScoreName(SCORE_NAME_OPTIONS.find((item) => item.value === value)?.code ?? "daily")}><SelectTrigger aria-label="选择成绩名称" className="w-full"><SelectValue placeholder="请选择成绩名称" /></SelectTrigger><SelectContent>{SCORE_NAME_OPTIONS.map((item) => <SelectItem key={item.code} value={item.value}>{item.value}</SelectItem>)}</SelectContent></Select>{scoreName === "other" && <Input name="other-score-name" autoComplete="off" value={otherScoreName} onChange={(event) => setOtherScoreName(event.target.value)} placeholder="请输入成绩名称" className={fieldClass} />}</div><div className="mt-3"><MultiSelectDropdown label="录入年级" description="发布后，该年级任课教师按自己的学科下载对应分项模板。" items={grades.map((grade) => ({ id: grade.id, name: grade.name }))} selectedIds={selectedGradeIds} onToggle={(gradeId) => toggleSelection(gradeId, selectedGradeIds, setSelectedGradeIds)} /></div></FormSection>
+            <FormSection icon={FileSpreadsheet} title="任务范围" description="学校需要同时勾选成绩任务覆盖的年级与学科，发布后通知对应任课教师。"><div className="flex flex-col gap-1.5"><Label>成绩名称 <span className="text-destructive">*</span></Label><Select value={SCORE_NAME_OPTIONS.find((item) => item.code === scoreName)?.value ?? ""} onValueChange={(value) => setScoreName(SCORE_NAME_OPTIONS.find((item) => item.value === value)?.code ?? "daily")}><SelectTrigger aria-label="选择成绩名称" className="w-full"><SelectValue placeholder="请选择成绩名称" /></SelectTrigger><SelectContent>{SCORE_NAME_OPTIONS.map((item) => <SelectItem key={item.code} value={item.value}>{item.value}</SelectItem>)}</SelectContent></Select>{scoreName === "other" && <Input name="other-score-name" autoComplete="off" value={otherScoreName} onChange={(event) => setOtherScoreName(event.target.value)} placeholder="请输入成绩名称" className={fieldClass} />}</div><div className="mt-3 grid gap-3 sm:grid-cols-2"><MultiSelectDropdown label="录入年级" description="必选：通知该年级内匹配学科的任课教师。" items={grades.map((grade) => ({ id: grade.id, name: grade.name }))} selectedIds={selectedGradeIds} onToggle={(gradeId) => toggleSelection(gradeId, selectedGradeIds, setSelectedGradeIds)} /><MultiSelectDropdown label="录入学科" description="必选：只生成已勾选学科的上传任务。" items={subjectOptions} selectedIds={selectedSubjectIds} onToggle={(subjectId) => toggleSelection(subjectId, selectedSubjectIds, setSelectedSubjectIds)} /></div></FormSection>
             <FormSection icon={CalendarClock} title="录入时间" description="在时间窗口内，任课教师可以提交或更新成绩。"><div className="grid gap-3 sm:grid-cols-2"><div className="flex flex-col gap-1.5"><Label htmlFor="score-start">开始录入时间 <span className="text-destructive">*</span></Label><Input id="score-start" name="score-start" autoComplete="off" type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} className={fieldClass} /></div><div className="flex flex-col gap-1.5"><Label htmlFor="score-end">截止录入时间 <span className="text-destructive">*</span></Label><Input id="score-end" name="score-end" autoComplete="off" type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} className={fieldClass} /></div></div></FormSection>
           </div>
-          <div className="mt-4"><FormSection icon={WandSparkles} title="成绩录入方式" description="教师直接填写成绩，或基于本学期已发布成绩自动计算。"><div className="grid gap-2 sm:grid-cols-2"><ChoiceButton active={method === "teacher"} onClick={() => setMethod("teacher")} description="任课教师在任务内填写并上传成绩 Excel。">教师录入</ChoiceButton><ChoiceButton active={method === "automatic"} onClick={() => setMethod("automatic")} description="按已发布成绩及权重自动生成本次成绩。">自动计算</ChoiceButton></div>{method === "teacher" ? <div className="mt-3 rounded-xl border border-[#dce4fa] bg-white p-3"><p className="text-xs font-semibold text-foreground">成绩类型 <span className="text-destructive">*</span></p><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={valueType === "number"} onClick={() => setValueType("number")}>数值</ChoiceButton><ChoiceButton active={valueType === "grade"} onClick={() => setValueType("grade")}>等第</ChoiceButton></div>{valueType === "grade" && <RuleEditor className="mt-3" rules={gradeRules} setRules={setGradeRules} thresholdLabel="对应分数" placeholder="如 A" />}</div> : <AutomaticSettings tasks={sourceTasks} items={calculationItems} setItems={setCalculationItems} convertResult={convertResult} setConvertResult={setConvertResult} conversionMode={conversionMode} setConversionMode={(mode) => { setConversionMode(mode); setConversionRules(mode === "score" ? DEFAULT_SCORE_CONVERSION : DEFAULT_RANK_CONVERSION) }} rules={conversionRules} setRules={setConversionRules} />}</FormSection></div>
+          <div className="mt-4"><FormSection icon={WandSparkles} title="成绩录入方式" description="教师直接填写成绩，或基于本学期已发布成绩自动计算。"><div className="grid gap-2 sm:grid-cols-2"><ChoiceButton active={method === "teacher"} onClick={() => setMethod("teacher")} description="任课教师在任务内填写并上传成绩 Excel。">教师录入</ChoiceButton><ChoiceButton active={method === "automatic"} onClick={() => setMethod("automatic")} description="按已发布成绩及权重自动生成本次成绩。">自动计算</ChoiceButton></div>{method === "teacher" ? <div className="mt-3 rounded-xl border border-[#dce4fa] bg-white p-3"><p className="text-xs font-semibold text-foreground">成绩类型 <span className="text-destructive">*</span></p><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={valueType === "number"} onClick={() => setValueType("number")}>数值</ChoiceButton><ChoiceButton active={valueType === "grade"} onClick={() => setValueType("grade")}>等第</ChoiceButton></div>{valueType === "number" ? <RuleEditor className="mt-3" rules={scoreConversionRules} setRules={setScoreConversionRules} thresholdLabel="分数区间" placeholder="如 优秀" mode="range" /> : <RuleEditor className="mt-3" rules={gradeRules} setRules={setGradeRules} thresholdLabel="对应分数" placeholder="如 A" />}</div> : <AutomaticSettings tasks={sourceTasks} items={calculationItems} setItems={setCalculationItems} convertResult={convertResult} setConvertResult={setConvertResult} conversionMode={conversionMode} setConversionMode={(mode) => { setConversionMode(mode); setConversionRules(mode === "score" ? DEFAULT_SCORE_CONVERSION : DEFAULT_RANK_CONVERSION) }} rules={conversionRules} setRules={setConversionRules} />}</FormSection></div>
           {error && <p role="alert" className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm font-medium text-destructive">{error}</p>}</div>
           <DialogFooter className="mx-0 mb-0 border-t border-[#dce4fa] bg-white px-5 py-4 sm:px-7"><Button type="button" variant="outline" className="border-[#d8e0f7] bg-[#fbfcff]" onClick={() => setPublishOpen(false)}>取消</Button><Button type="button" onClick={publishTask} className="shadow-[0_9px_18px_-12px_rgba(63,81,188,0.88)]"><CheckCircle2 className="size-4" />发布任务</Button></DialogFooter>
         </DialogContent>
@@ -365,7 +415,7 @@ export function ScoreEntryManagement({ grades }: { grades: Grade[] }) {
 
       <Dialog open={!!detailTask} onOpenChange={(open) => !open && setDetailTask(null)}>
         <DialogContent className="max-h-[84vh] overflow-x-hidden overflow-y-auto overscroll-contain rounded-[24px] border border-[#cbd5f5] bg-white p-0 shadow-[0_28px_70px_-36px_rgba(48,62,139,0.72)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:max-w-3xl">
-          {detailTask && <><DialogHeader className="border-b border-[#dce3f8] bg-[#f6f8ff] px-5 py-4"><DialogTitle className="flex items-center gap-2"><span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary"><UsersRound className="size-4" aria-hidden="true" /></span>{detailTask.scoreName} · 录入进度</DialogTitle><DialogDescription>{detailTask.semester} · 已按发布年级匹配学科分项 · 截止 {detailTask.endAt.replace("T", " ")}</DialogDescription></DialogHeader><div className="px-5 py-4"><div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-[#dce4fa] bg-[#fbfcff] p-3 text-center"><Metric label="任课教师" value={detailTask.progress.length} /><Metric label="已提交" value={submittedCount(detailTask)} tone="text-brand-green" /><Metric label="待处理" value={detailTask.progress.length - submittedCount(detailTask)} tone="text-brand-orange" /></div><div className="flex flex-col gap-2">{detailTask.progress.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e0e5f7] bg-[#fbfcff] px-3 py-2.5"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", item.status === "已提交" ? "bg-[#effbf4] text-brand-green" : item.status === "录入中" ? "bg-[#eef2ff] text-primary" : "bg-[#fff5e9] text-brand-orange")}>{item.status}</span><div className="min-w-[110px] flex-1"><p className="text-sm font-semibold text-foreground">{item.teacher} · {item.subject}</p><p className="mt-0.5 text-xs text-muted-foreground">{item.gradeName} · {item.classNames}</p></div>{item.fileName ? <button type="button" onClick={() => setPreview(item)} className="inline-flex items-center gap-1 rounded-lg border border-[#d3defa] bg-white px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"><FileSpreadsheet className="size-3.5" aria-hidden="true" />{item.fileName}</button> : <span className="text-xs text-muted-foreground">暂未上传 Excel</span>}</div>)}</div></div></>}
+          {detailTask && <><DialogHeader className="border-b border-[#dce3f8] bg-[#f6f8ff] px-5 py-4"><DialogTitle className="flex items-center gap-2"><span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary"><UsersRound className="size-4" aria-hidden="true" /></span>{detailTask.scoreName} · 录入进度</DialogTitle><DialogDescription>{detailTask.semester} · 已按发布年级与学科匹配任课教师 · 截止 {detailTask.endAt.replace("T", " ")}</DialogDescription></DialogHeader><div className="px-5 py-4"><div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-[#dce4fa] bg-[#fbfcff] p-3 text-center"><Metric label="任课教师" value={detailTask.progress.length} /><Metric label="已提交" value={submittedCount(detailTask)} tone="text-brand-green" /><Metric label="待处理" value={detailTask.progress.length - submittedCount(detailTask)} tone="text-brand-orange" /></div><div className="flex flex-col gap-2">{detailTask.progress.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e0e5f7] bg-[#fbfcff] px-3 py-2.5"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", item.status === "已提交" ? "bg-[#effbf4] text-brand-green" : item.status === "录入中" ? "bg-[#eef2ff] text-primary" : "bg-[#fff5e9] text-brand-orange")}>{item.status}</span><div className="min-w-[110px] flex-1"><p className="text-sm font-semibold text-foreground">{item.teacher} · {item.subject}</p><p className="mt-0.5 text-xs text-muted-foreground">{item.gradeName} · {item.classNames}</p></div>{item.fileName ? <button type="button" onClick={() => setPreview(item)} className="inline-flex items-center gap-1 rounded-lg border border-[#d3defa] bg-white px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"><FileSpreadsheet className="size-3.5" aria-hidden="true" />{item.fileName}</button> : <span className="text-xs text-muted-foreground">暂未上传 Excel</span>}</div>)}</div></div></>}
         </DialogContent>
       </Dialog>
 
@@ -472,7 +522,7 @@ function ChoiceButton({ active, onClick, children, description }: { active: bool
 function RuleEditor({ className, rules, setRules, thresholdLabel, placeholder, mode = "point" }: { className?: string; rules: ConversionRule[]; setRules: (rules: ConversionRule[]) => void; thresholdLabel: string; placeholder: string; mode?: "point" | "range" }) {
   const update = (index: number, key: keyof ConversionRule, value: string) => setRules(rules.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, [key]: value } : rule))
   const addRule = () => setRules([...rules, mode === "range" ? { label: "", rangeStart: "", rangeEnd: "" } : { label: "", threshold: "" }])
-  return <div className={cn("rounded-xl border border-[#d8e0f7] bg-[#fbfcff] p-2.5", className)}><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold text-foreground">等第换算规则</p>{mode === "range" && <p className="mt-0.5 text-xs text-muted-foreground">每个等第对应一个连续区间，起始值不得大于结束值。</p>}</div><Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-primary" onClick={addRule}><Plus className="size-3" aria-hidden="true" />添加</Button></div><div className="mt-2 flex flex-col gap-1.5">{rules.map((rule, index) => mode === "range" ? <div key={index} className="grid grid-cols-[minmax(0,1fr)_78px_78px_32px] gap-1.5"><Input aria-label="等第名称" name={`conversion-label-${index}`} autoComplete="off" value={rule.label} onChange={(event) => update(index, "label", event.target.value)} placeholder={placeholder} className="h-8 rounded-lg border-[#d8e0f7] bg-white text-xs" /><Input aria-label={`${thresholdLabel}起始值`} name={`conversion-range-start-${index}`} autoComplete="off" type="number" inputMode="decimal" min={0} max={thresholdLabel === "百分比" ? 100 : undefined} value={rule.rangeStart ?? ""} onChange={(event) => update(index, "rangeStart", event.target.value)} placeholder="起始" className="h-8 rounded-lg border-[#d8e0f7] bg-white px-2 text-xs" /><Input aria-label={`${thresholdLabel}结束值`} name={`conversion-range-end-${index}`} autoComplete="off" type="number" inputMode="decimal" min={0} max={thresholdLabel === "百分比" ? 100 : undefined} value={rule.rangeEnd ?? ""} onChange={(event) => update(index, "rangeEnd", event.target.value)} placeholder="结束" className="h-8 rounded-lg border-[#d8e0f7] bg-white px-2 text-xs" /><Button type="button" variant="ghost" size="icon-sm" aria-label="删除换算规则" disabled={rules.length === 1} onClick={() => setRules(rules.filter((_, ruleIndex) => ruleIndex !== index))}><Trash2 className="size-3.5" /></Button></div> : <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_32px] gap-1.5"><Input aria-label="等第名称" name={`conversion-label-${index}`} autoComplete="off" value={rule.label} onChange={(event) => update(index, "label", event.target.value)} placeholder={placeholder} className="h-8 rounded-lg border-[#d8e0f7] bg-white text-xs" /><Input aria-label={thresholdLabel} name={`conversion-threshold-${index}`} autoComplete="off" type="number" inputMode="decimal" value={rule.threshold ?? ""} onChange={(event) => update(index, "threshold", event.target.value)} placeholder={thresholdLabel} className="h-8 rounded-lg border-[#d8e0f7] bg-white text-xs" /><Button type="button" variant="ghost" size="icon-sm" aria-label="删除换算规则" disabled={rules.length === 1} onClick={() => setRules(rules.filter((_, ruleIndex) => ruleIndex !== index))}><Trash2 className="size-3.5" /></Button></div>)}</div></div>
+  return <div className={cn("rounded-xl border border-[#d8e0f7] bg-[#fbfcff] p-2.5", className)}><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold text-foreground">等第换算规则</p>{mode === "range" && <p className="mt-0.5 text-xs text-muted-foreground">每个等第对应一个分数区间，起始值不得大于结束值，区间不可重叠。</p>}</div><Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-primary" onClick={addRule}><Plus className="size-3" aria-hidden="true" />添加</Button></div>{mode === "range" && <div className="mt-2 grid grid-cols-[minmax(0,1fr)_78px_78px_32px] gap-1.5 px-1 text-[11px] text-muted-foreground"><span>等第名称</span><span>{thresholdLabel}起始</span><span>{thresholdLabel}结束</span><span /></div>}<div className="mt-2 flex flex-col gap-1.5">{rules.map((rule, index) => mode === "range" ? <div key={index} className="grid grid-cols-[minmax(0,1fr)_78px_78px_32px] gap-1.5"><Input aria-label="等第名称" name={`conversion-label-${index}`} autoComplete="off" value={rule.label} onChange={(event) => update(index, "label", event.target.value)} placeholder={placeholder} className="h-8 rounded-lg border-[#d8e0f7] bg-white text-xs" /><Input aria-label={`${thresholdLabel}起始值`} name={`conversion-range-start-${index}`} autoComplete="off" type="number" inputMode="decimal" min={0} max={thresholdLabel === "百分比" || thresholdLabel === "分数区间" ? 100 : undefined} value={rule.rangeStart ?? ""} onChange={(event) => update(index, "rangeStart", event.target.value)} placeholder="起始" className="h-8 rounded-lg border-[#d8e0f7] bg-white px-2 text-xs" /><Input aria-label={`${thresholdLabel}结束值`} name={`conversion-range-end-${index}`} autoComplete="off" type="number" inputMode="decimal" min={0} max={thresholdLabel === "百分比" || thresholdLabel === "分数区间" ? 100 : undefined} value={rule.rangeEnd ?? ""} onChange={(event) => update(index, "rangeEnd", event.target.value)} placeholder="结束" className="h-8 rounded-lg border-[#d8e0f7] bg-white px-2 text-xs" /><Button type="button" variant="ghost" size="icon-sm" aria-label="删除换算规则" disabled={rules.length === 1} onClick={() => setRules(rules.filter((_, ruleIndex) => ruleIndex !== index))}><Trash2 className="size-3.5" /></Button></div> : <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_32px] gap-1.5"><Input aria-label="等第名称" name={`conversion-label-${index}`} autoComplete="off" value={rule.label} onChange={(event) => update(index, "label", event.target.value)} placeholder={placeholder} className="h-8 rounded-lg border-[#d8e0f7] bg-white text-xs" /><Input aria-label={thresholdLabel} name={`conversion-threshold-${index}`} autoComplete="off" type="number" inputMode="decimal" value={rule.threshold ?? ""} onChange={(event) => update(index, "threshold", event.target.value)} placeholder={thresholdLabel} className="h-8 rounded-lg border-[#d8e0f7] bg-white text-xs" /><Button type="button" variant="ghost" size="icon-sm" aria-label="删除换算规则" disabled={rules.length === 1} onClick={() => setRules(rules.filter((_, ruleIndex) => ruleIndex !== index))}><Trash2 className="size-3.5" /></Button></div>)}</div></div>
 }
 
 function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {

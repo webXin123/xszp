@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { Award, CheckCircle2, ChevronRight, FileText, NotebookPen, Save, Search, Star, UsersRound } from "lucide-react"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
-import { ACADEMIC_SUBJECTS, getAcademicScores, type AcademicSubject } from "@/lib/academic-scores"
+import { ACADEMIC_SUBJECTS, getAcademicScores, getAcademicSubjectsForGradeOrder, type AcademicSubject } from "@/lib/academic-scores"
 import { AWARD_LEVEL1_LIST } from "@/lib/award-utils"
 import { commentRoleForTeacher, readCommentRecords, writeCommentRecords, type StudentCommentRecord } from "@/lib/comment-utils"
 import { getSemesterLabel } from "@/lib/pe-scores"
+import { buildPointEntries, getSemesterRange, inRange } from "@/lib/points-utils"
 import { cn } from "@/lib/utils"
+import { PointsRadarChart, type RadarSeries } from "../parent/points-radar-chart"
 
 function commentStatus(completed: number, total: number) {
   if (completed >= total && total > 0) return { label: "已提交", className: "bg-[#eaf8f1] text-brand-green" }
@@ -17,7 +19,7 @@ function commentStatus(completed: number, total: number) {
 }
 
 export function TeacherCommentEntry() {
-  const { currentTeacher, students, classes, awardCards, honors } = useEvaluation()
+  const { currentTeacher, students, classes, grades, awardCards, honors } = useEvaluation()
   const { role, scoringClasses, awardClasses } = usePermission()
   const teacher = currentTeacher
   const commentRole = commentRoleForTeacher(role ?? "subject")
@@ -64,14 +66,27 @@ export function TeacherCommentEntry() {
   }), [records, students, targetClasses, teacher?.id])
 
   const academicSubjects = useMemo<readonly AcademicSubject[]>(() => {
-    if (role === "homeroom") return ACADEMIC_SUBJECTS
+    if (role === "homeroom") {
+      const grade = grades.find((item) => item.id === classes.find((schoolClass) => schoolClass.id === selectedStudent?.classId)?.gradeId)
+      return grade ? getAcademicSubjectsForGradeOrder(grade.order).map((item) => item.name) : ACADEMIC_SUBJECTS
+    }
     if (role === "pe_teacher") return ["体育与健身"]
     if (teacher?.name === "张哲") return ["数学"]
     return ["语文"]
-  }, [role, teacher?.name])
+  }, [classes, grades, role, selectedStudent?.classId, teacher?.name])
   const academicScores = selectedStudent ? getAcademicScores(selectedStudent, academicSubjects) : []
-  const pointsByLevel = selectedStudent ? AWARD_LEVEL1_LIST.map((level1) => ({ level1, points: awardCards.filter((card) => card.studentId === selectedStudent.id && card.level1 === level1).reduce((sum, card) => sum + card.points, 0) + honors.filter((honor) => honor.studentId === selectedStudent.id && honor.level1 === level1).reduce((sum, honor) => sum + honor.points, 0) })) : []
+  const semesterRange = useMemo(() => getSemesterRange(), [])
+  const semesterPointEntries = useMemo(() => buildPointEntries(awardCards, honors).filter((entry) => inRange(entry.date, semesterRange.start, semesterRange.end)), [awardCards, honors, semesterRange])
+  const pointsByLevel = useMemo(() => selectedStudent ? AWARD_LEVEL1_LIST.map((level1) => ({ level1, points: semesterPointEntries.filter((entry) => entry.studentId === selectedStudent.id && entry.level1 === level1).reduce((sum, entry) => sum + entry.points, 0) })) : [], [selectedStudent, semesterPointEntries])
   const totalPoints = pointsByLevel.reduce((sum, item) => sum + item.points, 0)
+  const classAverageByLevel = useMemo(() => AWARD_LEVEL1_LIST.map((level1) => {
+    const total = semesterPointEntries.filter((entry) => entry.classId === classId && entry.level1 === level1).reduce((sum, entry) => sum + entry.points, 0)
+    return Math.round((total / Math.max(classStudents.length, 1)) * 100) / 100
+  }), [classId, classStudents.length, semesterPointEntries])
+  const radarSeries = useMemo<RadarSeries[]>(() => selectedStudent && role === "homeroom" ? [
+    { key: "student", label: "学生本人", values: pointsByLevel.map((item) => item.points), color: "var(--color-brand-orange)", fillOpacity: 0.24 },
+    { key: "class", label: "班级均分", values: classAverageByLevel, color: "var(--color-brand-blue)", fillOpacity: 0.08, dashed: true },
+  ] : [], [classAverageByLevel, pointsByLevel, role, selectedStudent])
 
   const selectStudent = (studentId: string) => {
     setSelectedStudentId(studentId)
@@ -120,7 +135,7 @@ export function TeacherCommentEntry() {
 
       <section className="flex min-h-0 flex-col rounded-2xl border border-[#cbd6f7] bg-white p-4 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-5" aria-labelledby="student-comment-detail-title">
         {!selectedStudent ? <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">暂无匹配学生</div> : <><div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e7ebf7] pb-4"><div className="flex items-center gap-3"><span className="flex size-12 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground">{selectedStudent.name.slice(0, 1)}</span><div><h2 id="student-comment-detail-title" className="text-lg font-bold text-foreground">{selectedStudent.name}</h2><p className="mt-1 text-xs text-muted-foreground">{currentClass?.name} · 学号 {selectedStudent.studentNo} · {selectedStudent.gender}</p></div></div><span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", selectedRecord ? "bg-[#eaf8f1] text-brand-green" : "bg-[#fff4e5] text-brand-orange")}>{selectedRecord ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <FileText className="size-3.5" aria-hidden="true" />}{selectedRecord ? "已评价" : "待评价"}</span></div>
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(220px,0.8fr)]"><div className="rounded-xl border border-[#e3e8f5] bg-[#fbfcff] p-4"><div className="flex items-center justify-between gap-2"><h3 className="text-sm font-bold text-foreground">本学期所教科目等第</h3><span className="text-xs text-muted-foreground">{getSemesterLabel()}</span></div><div className="mt-3 overflow-hidden rounded-lg border border-[#e5e9f5] bg-white"><table className="w-full text-sm"><caption className="sr-only">{selectedStudent.name}本学期科目等第</caption><thead className="bg-[#f5f7ff] text-xs text-muted-foreground"><tr><th scope="col" className="px-3 py-2 text-left font-semibold">科目</th><th scope="col" className="px-3 py-2 text-right font-semibold">总评等第</th></tr></thead><tbody>{academicScores.map((score) => <tr key={score.subject} className="border-t border-[#edf0f8]"><th scope="row" className="px-3 py-2.5 text-left font-medium text-foreground">{score.subject}</th><td className="px-3 py-2.5 text-right text-sm font-bold text-primary">{score.grade}</td></tr>)}</tbody></table></div></div>{role === "homeroom" && <div className="rounded-xl border border-[#e3e8f5] bg-[#fbfcff] p-4"><div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Award className="size-4 text-brand-orange" aria-hidden="true" />本学期五育积分</h3><span className="text-base font-bold tabular-nums text-brand-orange">{totalPoints} 分</span></div><div className="mt-3 space-y-2.5">{pointsByLevel.map((item) => <div key={item.level1} className="flex items-center gap-2 text-xs"><span className="w-10 shrink-0 text-muted-foreground">{item.level1}</span><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#e7ebf8]"><div className="h-full rounded-full bg-brand-orange" style={{ width: `${Math.min(item.points * 10, 100)}%` }} /></div><span className="w-8 text-right font-bold tabular-nums text-foreground">{item.points}</span></div>)}</div></div>}</div>
+          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(220px,0.8fr)]"><div className="rounded-xl border border-[#e3e8f5] bg-[#fbfcff] p-4"><div className="flex items-center justify-between gap-2"><h3 className="text-sm font-bold text-foreground">{role === "homeroom" ? "本学期全部科目等第" : "本学期所教科目等第"}</h3><span className="text-xs text-muted-foreground">{getSemesterLabel()}</span></div><div className="mt-3 overflow-hidden rounded-lg border border-[#e5e9f5] bg-white"><table className="w-full text-sm"><caption className="sr-only">{selectedStudent.name}本学期科目等第</caption><thead className="bg-[#f5f7ff] text-xs text-muted-foreground"><tr><th scope="col" className="px-3 py-2 text-left font-semibold">科目</th><th scope="col" className="px-3 py-2 text-right font-semibold">总评等第</th></tr></thead><tbody>{academicScores.map((score) => <tr key={score.subject} className="border-t border-[#edf0f8]"><th scope="row" className="px-3 py-2.5 text-left font-medium text-foreground">{score.subject}</th><td className="px-3 py-2.5 text-right text-sm font-bold text-primary">{score.grade}</td></tr>)}</tbody></table></div></div>{role === "homeroom" && <div className="rounded-xl border border-[#e3e8f5] bg-[#fbfcff] p-4"><div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Award className="size-4 text-brand-orange" aria-hidden="true" />本学期五育积分</h3><span className="text-base font-bold tabular-nums text-brand-orange">{totalPoints} 分</span></div><div className="mt-3 space-y-2.5">{pointsByLevel.map((item) => <div key={item.level1} className="flex items-center gap-2 text-xs"><span className="w-10 shrink-0 text-muted-foreground">{item.level1}</span><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#e7ebf8]"><div className="h-full rounded-full bg-brand-orange" style={{ width: `${Math.min(item.points * 10, 100)}%` }} /></div><span className="w-8 text-right font-bold tabular-nums text-foreground">{item.points}</span></div>)}<p className="pt-1 text-[11px] text-muted-foreground">统计范围：{getSemesterLabel()} · 已通过的奖卡与荣誉积分</p></div><div className="mt-4 border-t border-[#e8ebf6] pt-4"><div className="flex items-center justify-between gap-2"><h4 className="text-xs font-bold text-foreground">五育积分与班级均分对比</h4><span className="text-[11px] text-muted-foreground">单位：分</span></div><p className="sr-only">{selectedStudent.name}本学期五育积分为{totalPoints}分，班级均分为{Math.round(classAverageByLevel.reduce((sum, value) => sum + value, 0) * 100) / 100}分。雷达图按德育、智育、体育、美育、劳育展示学生与班级均分对比。</p><div className="mt-2"><PointsRadarChart series={radarSeries} /></div></div></div>}</div>
           <form className="mt-4 rounded-xl border border-[#d9dff2] bg-[#faf9ff] p-4" onSubmit={saveComment}><div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Star className="size-4 text-[#7166b3]" aria-hidden="true" />本学期成长评语</h3><p className="mt-1 text-xs text-muted-foreground">建议结合成绩、课堂表现与五育成长填写。</p></div>{selectedRecord && !editing && <button type="button" onClick={() => setEditing(true)} className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-[#7166b3] transition-colors hover:bg-[#f0edff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7166b3]/40">修改评语</button>}</div><label className="sr-only" htmlFor="student-comment">{selectedStudent.name}本学期评语</label><textarea id="student-comment" name="student-comment" rows={5} value={draft} readOnly={!editing} onChange={(event) => setDraft(event.target.value)} placeholder="请输入对学生本学期表现的综合评价与成长建议…" className={cn("mt-3 min-h-32 w-full resize-y rounded-xl border px-3 py-2.5 text-sm leading-6 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#7166b3]/40", editing ? "border-[#d8d1f7] bg-white hover:border-[#7166b3]/55" : "border-[#e7e9f3] bg-[#f5f6fb] text-foreground")} />{error && <p className="mt-2 text-xs font-medium text-destructive" role="alert">{error}</p>}{feedback && <p className="mt-2 text-xs font-medium text-brand-green" role="status" aria-live="polite"><CheckCircle2 className="mr-1 inline size-3.5" aria-hidden="true" />{feedback}</p>}{editing && <div className="mt-3 flex justify-end"><button type="submit" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#7166b3] px-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#6258a4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7166b3]/40"><Save className="size-4" aria-hidden="true" />保存评语</button></div>}</form>
         </>}
       </section>

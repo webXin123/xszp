@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import * as XLSX from "xlsx"
-import { CheckCircle2, Download, Eye, FileSpreadsheet, Upload, UsersRound } from "lucide-react"
+import { Bell, CheckCircle2, Download, Eye, FileSpreadsheet, Upload, UsersRound } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { getAcademicScores, getAcademicSubjectConfig, type AcademicSubject } from "@/lib/academic-scores"
@@ -37,6 +37,8 @@ interface TeacherScoreTask {
   semester: string
   scoreName: string
   gradeIds: string[]
+  subjectIds?: string[]
+  method?: "teacher" | "automatic"
   progress: TeacherScoreProgress[]
 }
 
@@ -89,7 +91,7 @@ async function readPreviewRows(file: File, schoolClass: SchoolClass, subject: st
 }
 
 export function TeacherScoreEntry() {
-  const { currentTeacher, classes, students } = useEvaluation()
+  const { currentTeacher, classes, students, scoreTaskNotifications } = useEvaluation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [tasks, setTasks] = useState<TeacherScoreTask[]>([])
   const [pendingTarget, setPendingTarget] = useState<UploadTarget | null>(null)
@@ -108,6 +110,7 @@ export function TeacherScoreEntry() {
     return preferred.length > 0 ? preferred : classes.slice(0, 2)
   }, [classes, useDemoAssignment, workClasses])
   const scoreSubjects = useDemoAssignment ? ["语文"] : teachingSubjects
+  const teacherNotifications = useMemo(() => scoreTaskNotifications.filter((notification) => notification.teacherId === currentTeacher?.id), [currentTeacher?.id, scoreTaskNotifications])
 
   useEffect(() => {
     try {
@@ -138,10 +141,13 @@ export function TeacherScoreEntry() {
   const hasMatchingTask = useMemo(() => tasks.some((task) => task.gradeIds?.some((gradeId) => scoreClasses.some((schoolClass) => schoolClass.gradeId === gradeId))), [scoreClasses, tasks])
   const displayTasks = hasMatchingTask ? tasks : [demoTask]
 
-  const uploadTargets = useMemo(() => displayTasks.flatMap((task) => scoreClasses
-    .filter((schoolClass) => task.gradeIds.includes(schoolClass.gradeId))
-    .flatMap((schoolClass) => scoreSubjects.map((subject) => ({ taskId: task.id, scoreName: task.scoreName, classId: schoolClass.id, subject }))),
-  ), [displayTasks, scoreClasses, scoreSubjects])
+  const uploadTargets = useMemo(() => displayTasks.flatMap((task) => {
+    if (task.method === "automatic") return []
+    const taskSubjects = scoreSubjects.filter((subject) => !task.subjectIds || task.subjectIds.includes(getAcademicSubjectConfig(subject)?.id ?? subject))
+    return scoreClasses
+      .filter((schoolClass) => task.gradeIds.includes(schoolClass.gradeId))
+      .flatMap((schoolClass) => taskSubjects.map((subject) => ({ taskId: task.id, scoreName: task.scoreName, classId: schoolClass.id, subject })))
+  }), [displayTasks, scoreClasses, scoreSubjects])
 
   const progressByTarget = useMemo(() => {
     const map = new Map<string, TeacherScoreProgress>()
@@ -219,6 +225,7 @@ export function TeacherScoreEntry() {
       <div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf8f1] text-brand-green"><FileSpreadsheet className="size-5" aria-hidden="true" /></span><div><h1 id="teacher-score-entry-title" className="text-lg font-bold text-foreground">本学期成绩上传</h1><p className="mt-1 text-xs text-muted-foreground">{getSemesterLabel()} · 按任教学科与班级下载模板后上传</p></div></div>
       <div className="flex flex-wrap items-center gap-2"><span className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#f5f8ff] px-3 text-xs font-semibold text-muted-foreground"><UsersRound className="size-3.5 text-primary" aria-hidden="true" />{scoreClasses.length} 个任教班级</span></div>
     </div>
+    {teacherNotifications.length > 0 && <section className="mt-4 rounded-xl border border-[#cdd9fb] bg-[linear-gradient(110deg,#f1f5ff,#ffffff)] p-3.5" aria-label="成绩录入任务通知"><div className="flex items-center gap-2"><span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><Bell className="size-4" aria-hidden="true" /></span><div><p className="text-sm font-bold text-foreground">任务通知</p><p className="text-xs text-muted-foreground">管理员已向你发送成绩上传任务</p></div><span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-white">{teacherNotifications.length} 条</span></div><div className="mt-3 grid gap-2">{teacherNotifications.slice(0, 3).map((notification) => <div key={notification.id} className="rounded-lg border border-[#dce4fa] bg-white px-3 py-2.5"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-bold text-foreground">{notification.title}</p><time className="text-[11px] text-muted-foreground">{new Date(notification.createdAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</time></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{notification.summary}</p></div>)}</div>{teacherNotifications.length > 3 && <p className="mt-2 text-right text-[11px] text-muted-foreground">仅展示最近 3 条通知</p>}</section>}
     {feedback && <p className="mt-4 rounded-xl border border-[#bfe6d1] bg-[#f0fbf5] px-3 py-2 text-sm font-medium text-brand-green" role="status" aria-live="polite"><CheckCircle2 className="mr-1.5 inline size-4" aria-hidden="true" />{feedback}</p>}
     {uploadTargets.length === 0 ? <div className="mt-5 rounded-xl border border-dashed border-[#d8e0f7] bg-[#fbfcff] px-4 py-8 text-center"><p className="text-sm font-semibold text-foreground">暂无待处理的学科成绩任务</p><p className="mt-1 text-xs text-muted-foreground">请由管理员先按年级发布成绩录入任务，并在后台配置任教学科与班级。</p></div> : <div className="data-card-grid mt-5 gap-3">
       {uploadTargets.map((target) => {

@@ -7,6 +7,8 @@ import { buildPointEntries, getSemesterRange, inRange } from "./points-utils"
 import type {
   Activity,
   ActivityEvaluation,
+  ActivityParticipant,
+  ActivityPointAwardConfig,
   ActivitySubmission,
   AwardCardRecord,
   AwardSource,
@@ -24,6 +26,7 @@ import type {
   MallRedemption,
   ParentUser,
   ScoreRecord,
+  ScoreTaskNotification,
   Teacher,
   WeeklyFlag,
 } from "./types"
@@ -39,10 +42,12 @@ const AWARD_CARDS_KEY = "mzlg-award-cards-v1"
 const HONORS_KEY = "mzlg-honors-v1"
 const ACTIVITIES_KEY = "mzlg-activities-v1"
 const ENROLLMENTS_KEY = "mzlg-enrollments-v1"
+const ACTIVITY_PARTICIPANTS_KEY = "mzlg-activity-participants-v1"
 const SUBMISSIONS_KEY = "mzlg-submissions-v1"
 const EVALUATIONS_KEY = "mzlg-evaluations-v1"
 const CURRENT_USER_KEY = "mzlg-current-user-v1"
 const PE_SCORES_KEY = "mzlg-pe-scores-v1"
+const SCORE_TASK_NOTIFICATIONS_KEY = "mzlg-score-task-notifications-v1"
 const MALL_PRODUCTS_KEY = "mzlg-mall-products-v1"
 const MALL_CONFIG_KEY = "mzlg-mall-config-v1"
 const MALL_CART_KEY = "mzlg-mall-cart-v1"
@@ -866,6 +871,8 @@ interface EvaluationContextValue {
   setCurrentUser: (user: CurrentUser) => void
   /** 便捷访问：当前教师身份（学生身份时为 null） */
   currentTeacher: Teacher | null
+  scoreTaskNotifications: ScoreTaskNotification[]
+  addScoreTaskNotifications: (notifications: Omit<ScoreTaskNotification, "id" | "createdAt">[]) => void
   grades: typeof GRADES
   classes: typeof CLASSES
   students: typeof STUDENTS
@@ -903,6 +910,9 @@ interface EvaluationContextValue {
   activities: Activity[]
   addActivity: (activity: Omit<Activity, "id" | "createdAt" | "publisherId" | "publisherName" | "status">) => string
   updateActivity: (id: string, patch: Partial<Activity>) => void
+  activityParticipants: ActivityParticipant[]
+  saveActivityParticipants: (activityId: string, participants: ActivityParticipant[]) => void
+  issueActivityPoints: (activityId: string, participants: ActivityParticipant[], config: ActivityPointAwardConfig) => { issuedCount: number; skippedCount: number }
   enrollments: Enrollment[]
   enroll: (activityId: string, remark: string) => { ok: boolean; reason?: string }
   /** 家长代孩子报名：校验报名窗口 / 重复报名 / 名额 / 积分门槛，报名预扣积分 */
@@ -958,6 +968,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
   const [honors, setHonors] = useState<HonorRecord[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [activityParticipants, setActivityParticipants] = useState<ActivityParticipant[]>([])
   const [submissions, setSubmissions] = useState<ActivitySubmission[]>([])
   const [evaluations, setEvaluations] = useState<ActivityEvaluation[]>([])
   const [mallProducts, setMallProducts] = useState<MallProduct[]>([])
@@ -966,6 +977,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
   const [mallRedemptions, setMallRedemptions] = useState<MallRedemption[]>([])
   const [selectedDate, setSelectedDate] = useState(() => new Date(INITIAL_RENDER_DATE))
   const [peScoreUploads, setPeScoreUploads] = useState<PeScoreUpload[]>([])
+  const [scoreTaskNotifications, setScoreTaskNotifications] = useState<ScoreTaskNotification[]>([])
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
@@ -978,10 +990,12 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       const rawHonors = localStorage.getItem(HONORS_KEY)
       const rawActivities = localStorage.getItem(ACTIVITIES_KEY)
       const rawEnrollments = localStorage.getItem(ENROLLMENTS_KEY)
+      const rawActivityParticipants = localStorage.getItem(ACTIVITY_PARTICIPANTS_KEY)
       const rawSubmissions = localStorage.getItem(SUBMISSIONS_KEY)
       const rawEvaluations = localStorage.getItem(EVALUATIONS_KEY)
       const rawCurrentUser = localStorage.getItem(CURRENT_USER_KEY)
       const rawPeScores = localStorage.getItem(PE_SCORES_KEY)
+      const rawScoreTaskNotifications = localStorage.getItem(SCORE_TASK_NOTIFICATIONS_KEY)
       const rawMallProducts = localStorage.getItem(MALL_PRODUCTS_KEY)
       const rawMallConfig = localStorage.getItem(MALL_CONFIG_KEY)
       const rawMallCart = localStorage.getItem(MALL_CART_KEY)
@@ -1012,6 +1026,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       setHonors(rawHonors ? mergeMissingDemoRecords(JSON.parse(rawHonors) as HonorRecord[], seedHonors().filter((item) => item.id.startsWith("honor-parent-demo-") || item.id.startsWith("honor-parent-dashboard-"))) : seedHonors())
       setActivities(rawActivities ? normalizeActivities(JSON.parse(rawActivities)) : normalizeActivities(seedActivities()))
       setEnrollments(rawEnrollments ? JSON.parse(rawEnrollments) : seedEnrollments())
+      setActivityParticipants(rawActivityParticipants ? JSON.parse(rawActivityParticipants) : [])
       setSubmissions(rawSubmissions ? JSON.parse(rawSubmissions) : seedSubmissions())
       setEvaluations(rawEvaluations ? JSON.parse(rawEvaluations) : seedEvaluations())
       setMallProducts(rawMallProducts ? JSON.parse(rawMallProducts) : seedMallProducts())
@@ -1037,6 +1052,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       }
       const storedPeScores = rawPeScores ? JSON.parse(rawPeScores) as PeScoreUpload[] : null
       setPeScoreUploads(storedPeScores && storedPeScores.length > 0 ? storedPeScores : seedPeScoreUploads())
+      setScoreTaskNotifications(rawScoreTaskNotifications ? JSON.parse(rawScoreTaskNotifications) as ScoreTaskNotification[] : [])
     } catch {
       setRecords(seedRecords())
       setFlags(seedFlags())
@@ -1046,6 +1062,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       setHonors(seedHonors())
       setActivities(seedActivities())
       setEnrollments(seedEnrollments())
+      setActivityParticipants([])
       setSubmissions(seedSubmissions())
       setEvaluations(seedEvaluations())
       setMallProducts(seedMallProducts())
@@ -1053,6 +1070,7 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       setMallCartItems([])
       setMallRedemptions(seedMallRedemptions())
       setPeScoreUploads(seedPeScoreUploads())
+      setScoreTaskNotifications([])
     } finally {
       setHydrated(true)
     }
@@ -1119,6 +1137,11 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
+    localStorage.setItem(ACTIVITY_PARTICIPANTS_KEY, JSON.stringify(activityParticipants))
+  }, [activityParticipants, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
     localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(submissions))
   }, [submissions, hydrated])
 
@@ -1157,10 +1180,24 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(PE_SCORES_KEY, JSON.stringify(peScoreUploads))
   }, [peScoreUploads, hydrated])
 
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(SCORE_TASK_NOTIFICATIONS_KEY, JSON.stringify(scoreTaskNotifications))
+  }, [scoreTaskNotifications, hydrated])
+
   const currentTeacher = useMemo(
     () => (currentUser.kind === "teacher" || currentUser.kind === undefined ? (currentUser as Teacher) : null),
     [currentUser],
   )
+
+  const addScoreTaskNotifications: EvaluationContextValue["addScoreTaskNotifications"] = (notifications) => {
+    const stamped = notifications.map((notification, index) => ({
+      ...notification,
+      id: `score-task-notification-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: new Date().toISOString(),
+    }))
+    if (stamped.length > 0) setScoreTaskNotifications((prev) => [...stamped, ...prev])
+  }
 
   const getStudentPoints = (studentId: string) =>
     awardCards.filter((a) => a.studentId === studentId).reduce((sum, a) => sum + a.points, 0)
@@ -1500,6 +1537,72 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     }))
   }
 
+  const saveActivityParticipants: EvaluationContextValue["saveActivityParticipants"] = (activityId, participants) => {
+    const incoming = participants.filter((participant) => participant.activityId === activityId)
+    setActivityParticipants((prev) => {
+      const existing = new Map(prev.filter((participant) => participant.activityId === activityId).map((participant) => [participant.studentId, participant]))
+      incoming.forEach((participant) => {
+        const previous = existing.get(participant.studentId)
+        existing.set(participant.studentId, previous?.issuedAt
+          ? { ...participant, ...previous, studentName: participant.studentName, classId: participant.classId }
+          : { ...participant, id: participant.id || `${activityId}-${participant.studentId}`, addedAt: participant.addedAt || new Date().toISOString() })
+      })
+      return [...prev.filter((participant) => participant.activityId !== activityId), ...existing.values()]
+    })
+  }
+
+  const issueActivityPoints: EvaluationContextValue["issueActivityPoints"] = (activityId, participants, config) => {
+    if (!currentTeacher) return { issuedCount: 0, skippedCount: participants.length }
+    const now = new Date()
+    const issuedKeys = new Set([
+      ...awardCards.filter((card) => card.activityId === activityId).map((card) => card.studentId),
+      ...activityParticipants.filter((participant) => participant.activityId === activityId && participant.issuedAt).map((participant) => participant.studentId),
+    ])
+    const candidates = participants.filter((participant) => !issuedKeys.has(participant.studentId))
+    const stampedParticipants = candidates.map((participant) => ({
+      ...participant,
+      id: participant.id || `${activityId}-${participant.studentId}`,
+      activityId,
+      addedAt: participant.addedAt || now.toISOString(),
+      issuedAt: now.toISOString(),
+      issuedBy: currentTeacher.name,
+      issuedPoints: config.points,
+      issuedLevel1: config.level1,
+      issuedLevel2: config.level2,
+      issuedLevel3: config.level3,
+    }))
+    const weekKey = getISOWeekKey(now)
+    const cards: AwardCardRecord[] = stampedParticipants.map((participant, index) => ({
+      id: `award-activity-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+      studentId: participant.studentId,
+      studentName: participant.studentName,
+      classId: participant.classId,
+      indicatorId: config.indicatorId,
+      level1: config.level1,
+      level2: config.level2,
+      level3: config.level3,
+      points: config.points,
+      weekKey,
+      date: formatDate(now),
+      source: "online",
+      activityId,
+      operatorId: currentTeacher.id,
+      operatorName: currentTeacher.name,
+      createdAt: now.toISOString(),
+    }))
+    setActivityParticipants((prev) => {
+      const map = new Map(prev.filter((participant) => participant.activityId === activityId).map((participant) => [participant.studentId, participant]))
+      participants.forEach((participant) => {
+        const current = map.get(participant.studentId)
+        if (!current) map.set(participant.studentId, participant)
+      })
+      stampedParticipants.forEach((participant) => map.set(participant.studentId, participant))
+      return [...prev.filter((participant) => participant.activityId !== activityId), ...map.values()]
+    })
+    if (cards.length > 0) setAwardCards((prev) => [...prev, ...cards])
+    return { issuedCount: cards.length, skippedCount: participants.length - cards.length }
+  }
+
   const enroll: EvaluationContextValue["enroll"] = () => {
     // 学生身份已下线，报名入口随之关闭
     return { ok: false, reason: "报名入口已关闭" }
@@ -1632,6 +1735,8 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     currentUser,
     setCurrentUser,
     currentTeacher,
+    scoreTaskNotifications,
+    addScoreTaskNotifications,
     grades: GRADES,
     classes: CLASSES,
     students: STUDENTS,
@@ -1661,6 +1766,9 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
     activities,
     addActivity,
     updateActivity,
+    activityParticipants,
+    saveActivityParticipants,
+    issueActivityPoints,
     enrollments,
     enroll,
     enrollChild,

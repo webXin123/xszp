@@ -17,6 +17,7 @@ import {
   LayoutGrid,
   Menu,
   Medal,
+  NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
   Settings2,
@@ -299,7 +300,12 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
       if (isDirector || isMoralDirector) items.push({ key: "class_config", label: "评价配置", icon: Settings2, group: "评价管理" })
     }
     if (isSubject) {
-      items.push({ key: "teaching", label: "教学工作", icon: role === "pe_teacher" ? HeartPulse : BookOpenText, group: "教学与学业" })
+      items.push({ key: role === "pe_teacher" ? "pe_import" : "score_entry", label: role === "pe_teacher" ? "体测成绩" : "成绩录入", icon: role === "pe_teacher" ? HeartPulse : BookOpenText, group: "教学与学业" })
+      items.push({ key: "comment_entry", label: "评语录入", icon: NotebookPen, group: "教学与学业" })
+      items.push({ key: "semester_evaluation", label: "学期评价", icon: CalendarCheck2, group: "教学与学业" })
+    }
+    if (isHomeroom) {
+      items.push({ key: "comment_entry", label: "评语录入", icon: NotebookPen, group: "教学与学业" })
     }
 
     if (isDirector) {
@@ -338,8 +344,12 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
       if (isDirector) items.push({ key: "mall_management", label: "商城管理", icon: ShoppingBag })
     } else if (isHomeroom) {
       items.push({ key: "ranking", label: "班级排名", icon: Trophy })
+      items.push({ key: "comment_entry", label: "评语录入", icon: NotebookPen })
       items.push({ key: "award", label: "奖卡发放", icon: Award })
     } else if (isSubject) {
+      items.push({ key: role === "pe_teacher" ? "pe_import" : "score_entry", label: role === "pe_teacher" ? "体测成绩" : "成绩录入", icon: role === "pe_teacher" ? HeartPulse : BookOpenText })
+      items.push({ key: "comment_entry", label: "评语录入", icon: NotebookPen })
+      items.push({ key: "semester_evaluation", label: "学期评价", icon: CalendarCheck2 })
       items.push({ key: "award", label: "奖卡发放", icon: Award })
     }
     return items
