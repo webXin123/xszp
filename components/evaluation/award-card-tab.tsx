@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import { ArrowRight, ChevronDown, ChevronRight, Info, Mic, Search, Sparkles, Trash2, User, Users } from "lucide-react"
@@ -598,14 +598,21 @@ export function AwardCardTab() {
 
                       <button type="button" onClick={() => handleCardClick(activeLevel2Group.level1, activeLevel2Group.level2, item)} className="group/image relative min-h-24 overflow-hidden rounded-xl border border-[#dfe4f7] bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" aria-label={`点击图片发放 ${item.level3} 奖卡`}>
                         {item.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={item.image}
-                            alt={`${item.level3} - ${activeLevel2Group.level1} 奖卡正面`}
-                            width={320}
-                            height={240}
-                            className="aspect-[4/3] w-full bg-white object-contain transition-transform duration-200 group-hover/image:scale-[1.03]"
-                          />
+                          <>
+                            {/* 生成底图不携带学校标识，统一叠加产品公司的品牌 Logo。 */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.image}
+                              alt={`${item.level3} - ${activeLevel2Group.level1} 奖卡正面`}
+                              width={320}
+                              height={240}
+                              className="aspect-[4/3] w-full bg-white object-contain transition-transform duration-200 group-hover/image:scale-[1.03]"
+                            />
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <span className="pointer-events-none absolute left-2.5 top-2.5 z-10 flex size-8 items-center justify-center rounded-lg bg-white/90 p-1.5 shadow-sm backdrop-blur-sm">
+                              <img src="/xszp/images/logo.png" alt="公司品牌 Logo" width={24} height={24} className="size-full object-contain" />
+                            </span>
+                          </>
                         ) : (
                           <span className="flex aspect-[4/3] w-full items-center justify-center bg-[#f7f8ff] text-xs text-muted-foreground">
                             暂无图片
@@ -649,7 +656,8 @@ export function AwardCardTab() {
         aria-label="语音发放奖卡"
         style={{ transform: `translate3d(${voiceFabOffset.x}px, ${voiceFabOffset.y}px, 0)` }}
         className={cn(
-          "fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 sm:right-5 lg:absolute lg:bottom-auto lg:right-4 lg:top-[54%]",
+          "fixed right-4 z-40 sm:right-5 lg:absolute lg:bottom-auto lg:right-4 lg:top-[54%]",
+          issueMode === "batch" && mobileStep === "selection" ? "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]" : "bottom-[calc(1.25rem+env(safe-area-inset-bottom))]",
           isVoiceFabDragging && "cursor-grabbing",
         )}
       >

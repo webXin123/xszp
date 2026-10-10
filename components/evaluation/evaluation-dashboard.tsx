@@ -8,6 +8,7 @@ import {
   CalendarCheck2,
   CalendarRange,
   ChartNoAxesCombined,
+  ChevronDown,
   ClipboardCheck,
   FileDown,
   FileSpreadsheet,
@@ -23,6 +24,7 @@ import {
   Settings2,
   ShoppingBag,
   Trophy,
+  X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -99,6 +101,14 @@ const WORKBENCH_NAVIGATION_MESSAGE = "xszp:workbench-navigation"
 
 function isParentMobileTab(value: string | null): value is ParentMobileTab {
   return value === "home" || value === "honors" || value === "activities" || value === "semester-scores" || value === "semester-report"
+}
+
+const PARENT_MOBILE_TAB_LABELS: Record<ParentMobileTab, string> = {
+  home: "首页",
+  honors: "荣誉记录",
+  activities: "活动记录",
+  "semester-scores": "学期成绩",
+  "semester-report": "学期报告",
 }
 
 const STANDALONE_LABELS: Partial<Record<MainTab, string>> = {
@@ -193,11 +203,14 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   const isMoralDirector = role === "moral_director"
   const canUploadHonor = isHomeroom
   const canOpenEvaluation = canEvaluate || canManageFlags
+  const canAccessClassEvaluation = canOpenEvaluation || isHomeroom || role === "subject"
 
   const [mainTab, setMainTab] = useState<MainTab>(() => initialMainTab ?? (
     standaloneView === "ranking" ? "ranking" : standaloneView === "config" ? "class_config" : standaloneView === "evaluation" ? "score" : isParent ? "parent_home" : isHomeroom ? "home" : isSubject ? "subject_home" : isDirector || isMoralDirector ? "admin_home" : "award"
   ))
   const [parentMobileTab, setParentMobileTab] = useState<ParentMobileTab>("home")
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [expandedMenuGroups, setExpandedMenuGroups] = useState<string[]>([])
 
   useEffect(() => {
     const queryTab = new URLSearchParams(window.location.search).get("parentTab")
@@ -231,7 +244,7 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
     : mainTab === "subject_home" && isSubject ? <SubjectDashboard onNavigate={navigate} />
       : mainTab === "admin_home" && (isDirector || isMoralDirector) ? <AdminDashboard onNavigate={navigate} />
         : mainTab === "dashboard" && (isDirector || isMoralDirector) ? <AdminDataDashboard onBack={() => router.push("/")} />
-          : (mainTab === "class_rating" || mainTab === "score") && canOpenEvaluation ? <ClassEvaluationTab />
+          : (mainTab === "class_rating" || mainTab === "score") && canAccessClassEvaluation ? <ClassEvaluationTab />
             : mainTab === "ranking" && canOpenEvaluation ? <ClassRankingTab />
               : mainTab === "class_config" && (isDirector || isMoralDirector) ? <ClassConfigTab />
             : mainTab === "score_entry" ? <TeacherScoreEntry />
@@ -298,6 +311,8 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
       items.push({ key: "score", label: "班级评价", icon: ClipboardCheck, group: "评价管理" })
       items.push({ key: "ranking", label: "班级排行", icon: Trophy, group: "评价管理" })
       if (isDirector || isMoralDirector) items.push({ key: "class_config", label: "评价配置", icon: Settings2, group: "评价管理" })
+    } else if (isHomeroom || role === "subject") {
+      items.push({ key: "score", label: "班级评价", icon: ClipboardCheck, group: "评价管理" })
     }
     if (isSubject) {
       items.push({ key: role === "pe_teacher" ? "pe_import" : "score_entry", label: role === "pe_teacher" ? "体测成绩" : "成绩录入", icon: role === "pe_teacher" ? HeartPulse : BookOpenText, group: "教学与学业" })
@@ -343,10 +358,12 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
       items.push({ key: "award", label: "奖卡发放", icon: Award })
       if (isDirector) items.push({ key: "mall_management", label: "商城管理", icon: ShoppingBag })
     } else if (isHomeroom) {
+      items.push({ key: "score", label: "班级评价", icon: ClipboardCheck })
       items.push({ key: "ranking", label: "班级排名", icon: Trophy })
       items.push({ key: "comment_entry", label: "评语录入", icon: NotebookPen })
       items.push({ key: "award", label: "奖卡发放", icon: Award })
     } else if (isSubject) {
+      if (role === "subject") items.push({ key: "score", label: "班级评价", icon: ClipboardCheck })
       items.push({ key: role === "pe_teacher" ? "pe_import" : "score_entry", label: role === "pe_teacher" ? "体测成绩" : "成绩录入", icon: role === "pe_teacher" ? HeartPulse : BookOpenText })
       items.push({ key: "comment_entry", label: "评语录入", icon: NotebookPen })
       items.push({ key: "semester_evaluation", label: "学期评价", icon: CalendarCheck2 })
@@ -354,6 +371,40 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
     }
     return items
   }, [canOpenEvaluation, homeKey, isDirector, isHomeroom, isMoralDirector, isParent, isSubject])
+
+  // 移动端顶部菜单：菜单内容与 PC 端侧栏 tab 保持一致（家长端保留学期成绩/学期报告视图入口）
+  const mobileMenuGroups = useMemo<Array<{ label: string; items: SidebarItem[] }>>(() => {
+    const items = isParent
+      ? mobileSidebarItems.map((item) => ({ ...item, group: "成长服务" }))
+      : sidebarItems
+    return items.reduce<Array<{ label: string; items: SidebarItem[] }>>((groups, item) => {
+      const label = item.group ?? "其他功能"
+      const group = groups.find((entry) => entry.label === label)
+      if (group) group.items.push(item)
+      else groups.push({ label, items: [item] })
+      return groups
+    }, [])
+  }, [isParent, mobileSidebarItems, sidebarItems])
+
+  const isMobileMenuItemActive = (item: SidebarItem) => (
+    isParent && item.mobileTab ? item.key === "parent_home" && item.mobileTab === parentMobileTab : item.key === mainTab
+  )
+
+  const currentPageLabel = isParent
+    ? mainTab === "parent_mall" ? "积分商城" : mainTab === "parent_dashboard" ? "成长大屏" : PARENT_MOBILE_TAB_LABELS[parentMobileTab]
+    : sidebarItems.find((item) => item.key === mainTab)?.label ?? mobileSidebarItems.find((item) => item.key === mainTab)?.label ?? roleLabel
+
+  const openMobileMenu = () => {
+    const activeGroupLabel = mobileMenuGroups.find((group) => group.items.some((item) => isMobileMenuItemActive(item)))?.label
+    setExpandedMenuGroups(activeGroupLabel ? [activeGroupLabel] : mobileMenuGroups.slice(0, 1).map((group) => group.label))
+    setMobileMenuOpen(true)
+  }
+
+  const handleMobileMenuNavigate = (item: SidebarItem) => {
+    setMobileMenuOpen(false)
+    if (isParent && item.mobileTab) setParentMobileTab(item.mobileTab)
+    if (item.key) navigate(item.key)
+  }
 
   useEffect(() => {
     if (isEmbedded) return
@@ -448,12 +499,43 @@ export function EvaluationDashboard({ standaloneView, initialMainTab, embedded =
   return <div className={cn("app-page-shell flex h-dvh min-h-0 flex-col overflow-hidden", isSidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[216px]")}>
     <a href="#main-content" className="sr-only z-[80] rounded-md bg-white px-3 py-2 text-sm font-semibold text-[#1f3845] focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:ring-2 focus-visible:ring-[#28bd73]/50">跳转到主要内容</a>
     <div className={cn("fixed inset-y-0 left-0 z-50 hidden lg:block", isSidebarCollapsed ? "w-[72px]" : "w-[216px]")}>{sidebar()}</div>
-    <header className="app-header sticky top-0 z-40 h-[60px] border-b border-border bg-background/90 backdrop-blur-xl"><div className="flex h-full w-full items-center justify-between gap-4 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-3"><Menu className="size-5 shrink-0 text-primary lg:hidden" aria-hidden="true" /><button type="button" onClick={toggleSidebar} aria-controls="workbench-sidebar" aria-expanded={!isSidebarCollapsed} aria-label={isSidebarCollapsed ? "展开左侧导航" : "收起左侧导航"} title={isSidebarCollapsed ? "展开左侧导航" : "收起左侧导航"} className="hidden size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 lg:flex">{isSidebarCollapsed ? <PanelLeftOpen className="size-5" aria-hidden="true" /> : <PanelLeftClose className="size-5" aria-hidden="true" />}</button><div className="min-w-0"><h1 className="truncate text-base font-extrabold tracking-tight text-foreground">{roleLabel}</h1><p className="hidden text-xs font-medium text-muted-foreground sm:block">综合素质评价 · 工作台</p></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-xl bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground xl:inline-flex">2025-2026学年 第二学期</span><TeacherSwitcher /></div></div></header>
-    <main id="main-content" tabIndex={-1} className={cn("app-content flex h-[calc(100dvh-124px-env(safe-area-inset-bottom))] min-h-0 w-full min-w-0 flex-col gap-0 overflow-hidden p-0 lg:h-[calc(100dvh-60px)]", homeBackgroundClass)}>
+    <header className="app-header sticky top-0 z-40 h-[60px] border-b border-border bg-background/90 backdrop-blur-xl"><div className="flex h-full w-full items-center justify-between gap-4 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-3"><button type="button" onClick={toggleSidebar} aria-controls="workbench-sidebar" aria-expanded={!isSidebarCollapsed} aria-label={isSidebarCollapsed ? "展开左侧导航" : "收起左侧导航"} title={isSidebarCollapsed ? "展开左侧导航" : "收起左侧导航"} className="hidden size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 lg:flex">{isSidebarCollapsed ? <PanelLeftOpen className="size-5" aria-hidden="true" /> : <PanelLeftClose className="size-5" aria-hidden="true" />}</button><div className="min-w-0"><h1 className="truncate text-base font-extrabold tracking-tight text-foreground"><span className="lg:hidden">{currentPageLabel}</span><span className="hidden lg:inline">{roleLabel}</span></h1><p className="hidden text-xs font-medium text-muted-foreground lg:block">综合素质评价 · 工作台</p></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-xl bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground xl:inline-flex">2025-2026学年 第二学期</span><TeacherSwitcher /><button type="button" onClick={(event) => { event.preventDefault(); if (mobileMenuOpen) setMobileMenuOpen(false); else openMobileMenu() }} aria-controls="mobile-workbench-menu" aria-expanded={mobileMenuOpen} aria-haspopup="menu" aria-label={mobileMenuOpen ? "关闭功能菜单" : "打开功能菜单"} title={mobileMenuOpen ? "关闭功能菜单" : "打开功能菜单"} className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 lg:hidden">{mobileMenuOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}</button></div></div></header>
+    {mobileMenuOpen && <>
+      <div className="fixed inset-0 z-[45] animate-in fade-in-0 duration-200 bg-[#16233f]/35 backdrop-blur-[2px] lg:hidden" onClick={() => setMobileMenuOpen(false)} aria-hidden="true" />
+      <nav id="mobile-workbench-menu" aria-label="移动端功能菜单" className="fixed inset-x-0 top-[60px] z-[46] flex max-h-[calc(100dvh-60px)] animate-in fade-in-0 slide-in-from-top-2 duration-200 flex-col gap-0.5 overflow-y-auto overscroll-contain rounded-b-[22px] border-b border-[#d9e3f2] bg-white/97 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 shadow-[0_36px_72px_-32px_rgba(38,62,118,0.5)] backdrop-blur-xl lg:hidden">
+        <p className="px-4 pb-1 pt-1.5 text-[10px] font-bold tracking-[0.18em] text-[#9aa8c2]">功能菜单</p>
+        {mobileMenuGroups.map(({ label: groupLabel, items }) => {
+          if (items.length === 1) {
+            const item = items[0]
+            const active = isMobileMenuItemActive(item)
+            return <button key={`single-${groupLabel}`} type="button" onClick={(event) => { event.preventDefault(); handleMobileMenuNavigate(item) }} aria-controls="workbench-content-frame" aria-current={active ? "page" : undefined} className={cn("mx-2 flex min-h-12 w-[calc(100%-16px)] items-center gap-3 rounded-2xl px-4 text-left text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 active:scale-[0.99]", active ? "bg-primary/[0.09] text-primary shadow-[inset_0_0_0_1px_rgba(53,101,212,0.16)]" : "text-[#3d4c66] hover:bg-primary/5 hover:text-primary")}>
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {active && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />}
+            </button>
+          }
+          const expanded = expandedMenuGroups.includes(groupLabel)
+          return <div key={groupLabel}>
+            <button type="button" onClick={() => setExpandedMenuGroups((current) => expanded ? current.filter((entry) => entry !== groupLabel) : [...current, groupLabel])} aria-expanded={expanded} className="mt-1 flex min-h-10 w-full items-center justify-between gap-3 rounded-xl px-4 text-left text-[11px] font-bold tracking-[0.14em] text-[#93a2bb] transition-colors hover:bg-primary/5 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45">
+              {groupLabel}
+              <span className={cn("flex size-6 items-center justify-center rounded-full transition-colors", expanded ? "bg-primary/10 text-primary" : "text-[#b6c1d6]")}>
+                <ChevronDown className={cn("size-3.5 transition-transform duration-200", expanded && "rotate-180")} aria-hidden="true" />
+              </span>
+            </button>
+            {expanded && <div role="group" aria-label={groupLabel} className="animate-in fade-in-0 slide-in-from-top-1 flex flex-col gap-0.5 pb-1 duration-150">
+              {items.map((item) => {
+                const active = isMobileMenuItemActive(item)
+                return <button key={`${item.key ?? "view"}-${item.label}`} type="button" onClick={(event) => { event.preventDefault(); handleMobileMenuNavigate(item) }} aria-controls="workbench-content-frame" aria-current={active ? "page" : undefined} className={cn("mx-2 flex min-h-11 w-[calc(100%-16px)] items-center gap-3 rounded-xl pl-7 pr-3 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45 active:scale-[0.99]", active ? "bg-primary/[0.09] font-bold text-primary shadow-[inset_0_0_0_1px_rgba(53,101,212,0.16)]" : "font-medium text-[#3d4c66] hover:bg-primary/5 hover:text-primary")}>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {active && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />}
+                </button>
+              })}
+            </div>}
+          </div>
+        })}
+      </nav>
+    </>}
+    <main id="main-content" tabIndex={-1} className={cn("app-content flex h-[calc(100dvh-60px)] min-h-0 w-full min-w-0 flex-col gap-0 overflow-hidden p-0", homeBackgroundClass)}>
       {renderHostContent()}
     </main>
-    <nav className="fixed inset-x-0 bottom-0 z-50 flex min-h-16 items-stretch gap-1 border-t border-[#d9e3f2] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_28px_-24px_rgba(43,72,130,.65)] backdrop-blur-xl lg:hidden" aria-label="移动端功能导航">
-      {mobileSidebarItems.map(({ key, label, icon: Icon, mobileTab }) => { const active = isParent && mobileTab ? mobileTab === parentMobileTab : key === mainTab; const itemClass = cn("flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45", active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-primary/5 hover:text-primary"); const content = <><Icon className="size-4" aria-hidden="true" /><span className="max-w-full truncate">{label}</span></>; return <button key={label} type="button" onClick={(event) => { event.preventDefault(); if (isParent && mobileTab) setParentMobileTab(mobileTab); if (key) navigate(key) }} aria-controls="workbench-content-frame" aria-current={active ? "page" : undefined} className={itemClass}>{content}</button> })}
-    </nav>
   </div>
 }

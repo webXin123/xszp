@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
-import { computeWeeklyScore, findClassRating, formatDate, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek, getWeekRange } from "@/lib/scoring-utils"
+import { computeWeeklyScore, formatDate, formatDateRangeLabel, getISOWeekKey, getRecordsForWeek, getWeekRange } from "@/lib/scoring-utils"
 
 type RankingPeriod = "day" | "week" | "month"
 type ScoreDetailKind = "addition" | "deduction"
@@ -26,12 +26,6 @@ const RANK_MEDAL_IMAGES = {
   2: `${DEFAULT_ICON_PATH}/ranking-medals/silver.png`,
   3: `${DEFAULT_ICON_PATH}/ranking-medals/bronze.png`,
 } as const
-const RATING_IMAGES = {
-  smile: `${DEFAULT_ICON_PATH}/rating-smile-generated.png`,
-  neutral: `${DEFAULT_ICON_PATH}/rating-neutral-generated.png`,
-  cry: `${DEFAULT_ICON_PATH}/rating-cry-generated.png`,
-} as const
-
 function getSemesterStart(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() >= 7 ? 8 : 1, 1)
 }
@@ -73,7 +67,7 @@ function periodScoreLabel(period: RankingPeriod, kind: ScoreDetailKind) {
 }
 
 export function ClassRankingTab() {
-  const { classes, grades, records, flags, flagConfigs, classRatingConfigs, setFlag, issueFlagReward, removeRecord } = useEvaluation()
+  const { classes, grades, records, flags, flagConfigs, setFlag, issueFlagReward, removeRecord } = useEvaluation()
   const { visibleGrades, canManageFlags, role, scoringClasses } = usePermission()
   const [period, setPeriod] = useState<RankingPeriod>("day")
   const weekOptions = useMemo(() => getSemesterWeekKeys(new Date()), [])
@@ -104,7 +98,7 @@ export function ClassRankingTab() {
     [flagConfigs, isHistorical, period],
   )
   const tableMinWidth = period === "day" ? 680 : period === "week" ? 900 + activeFlagConfigs.length * 108 : 720
-  const tableColumnCount = 5 + (period === "week" ? 1 : 0) + activeFlagConfigs.length
+  const tableColumnCount = 5 + activeFlagConfigs.length
 
   const ranking = useMemo(() => availableClasses
     .filter((item) => gradeFilter === "all" || item.gradeId === gradeFilter)
@@ -128,12 +122,6 @@ export function ClassRankingTab() {
   const podiumRows = [ranking[1], ranking[0], ranking[2]]
 
   const getMedalImage = (rank: number) => RANK_MEDAL_IMAGES[Math.min(Math.max(rank, 1), 3) as 1 | 2 | 3]
-
-  const getRating = (rank: number, score: number) => {
-    const config = findClassRating(classRatingConfigs, rank + 1, score)
-    if (config) return { label: config.name, image: config.image ?? RATING_IMAGES[config.defaultImage] }
-    return { label: "成长加油", image: `${DEFAULT_ICON_PATH}/rating-cry-generated.png` }
-  }
 
   const isFlagAwarded = (classId: string, configId: string, configIndex: number) => flags.some((item) => item.classId === classId && item.weekKey === periodKey && (item.configId === configId || (!item.configId && period === "week" && configIndex === 0)) && item.awarded)
   const selectedFlagConfig = flagDialog ? flagConfigs.find((item) => item.id === flagDialog.configId) : undefined
@@ -200,20 +188,17 @@ export function ClassRankingTab() {
                 <th className="px-4 py-3 text-center">{period === "day" ? "今日加分" : period === "week" ? "本周总加分" : "本月总加分"}</th>
                 <th className="px-4 py-3 text-center">{period === "day" ? "今日扣分" : period === "week" ? "本周总扣分" : "本月总扣分"}</th>
                 <th className="px-4 py-3 text-center">{period === "day" ? "今日累计分数" : period === "week" ? "本周班级总分" : "本月总分"}</th>
-                {period === "week" && <th className="px-4 py-3 text-center">班级评级</th>}
                 {activeFlagConfigs.map((config) => <th key={config.id} className="min-w-[108px] px-3 py-3 text-center"><span className="line-clamp-2 inline-block max-w-[96px] leading-4">{config.name}</span></th>)}
               </tr>
             </thead>
             <tbody>
               {ranking.length === 0 ? <tr><td colSpan={tableColumnCount} className="px-4 py-12 text-center text-sm text-muted-foreground">当前筛选条件下暂无班级数据</td></tr> : ranking.map((row, index) => {
-                const rating = getRating(index, row.total)
                 return <tr key={row.cls.id} className={cn("border-b border-[#edf0fa] transition-colors last:border-0 hover:bg-[#f5f7ff]", index === 0 && "bg-[#fbfaff]", index === 1 && "bg-slate-50/50", index === 2 && "bg-[#fffdfa]")}>
                   <td className="px-4 py-2.5 text-center"><span className={cn("inline-flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-sm", index === 0 ? "bg-gradient-to-br from-[#ffd976] to-[#f3aa4b] text-[#72501b]" : index === 1 ? "bg-gradient-to-br from-[#e7ecff] to-[#aebae5] text-[#55617f]" : index === 2 ? "bg-gradient-to-br from-[#ffcfad] to-[#ef9268] text-[#874527]" : "bg-muted text-muted-foreground")}>{index + 1}</span></td>
                   <td className="px-4 py-2.5 text-center"><button type="button" onClick={() => setDetailClassId(row.cls.id)} className="rounded-sm text-center font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">{row.cls.name}<span className="ml-2 text-xs font-normal text-muted-foreground">{row.grade?.name}</span></button></td>
                   <td className="px-4 py-2.5 text-center font-medium text-emerald-700">{row.addition > 0 ? <button type="button" onClick={() => setScoreDetail({ classId: row.cls.id, kind: "addition" })} className="inline-flex min-h-9 min-w-[44px] touch-manipulation items-center justify-center rounded-sm px-1 font-medium underline decoration-emerald-200 underline-offset-4 transition-colors hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40" aria-label={`查看${row.cls.name}${periodScoreLabel(period, "addition")}明细`}>+{row.addition.toFixed(1)}</button> : "—"}</td>
                   <td className="px-4 py-2.5 text-center font-medium text-rose-700">{row.deduction > 0 ? <button type="button" onClick={() => setScoreDetail({ classId: row.cls.id, kind: "deduction" })} className="inline-flex min-h-9 min-w-[44px] touch-manipulation items-center justify-center rounded-sm px-1 font-medium underline decoration-rose-200 underline-offset-4 transition-colors hover:text-rose-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40" aria-label={`查看${row.cls.name}${periodScoreLabel(period, "deduction")}明细`}>-{row.deduction.toFixed(1)}</button> : "—"}</td>
                   <td className="px-4 py-2.5 text-center"><button type="button" onClick={() => setDetailClassId(row.cls.id)} className="rounded-sm font-bold text-primary transition-colors hover:text-primary-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">{row.total > 0 ? "+" : ""}{row.total.toFixed(1)}</button></td>
-                  {period === "week" && <td className="px-4 py-2.5 text-center"><span className="inline-flex items-center justify-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.05] py-1 pl-1 pr-2.5 text-xs font-medium text-primary shadow-[0_4px_10px_-9px_rgba(95,102,205,0.9)]"><img src={rating.image} alt="" width="24" height="24" loading="lazy" className="size-6 rounded-full object-cover" />{rating.label}</span></td>}
                   {activeFlagConfigs.map((config, configIndex) => {
                     const awarded = isFlagAwarded(row.cls.id, config.id, configIndex)
                     const image = config.image ?? (awarded ? `${DEFAULT_ICON_PATH}/flag-issued.svg` : `${DEFAULT_ICON_PATH}/flag-unissued.svg`)

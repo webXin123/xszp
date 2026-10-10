@@ -37,7 +37,7 @@ export interface Teacher {
   title: string
   /** 判别字段：教师身份 */
   kind?: "teacher"
-  /** Class ids this teacher is allowed to score (班级评价) */
+  /** Class ids this teacher is allowed to score for scoped roles (班级评价；班主任/任课教师工作区可覆盖为全校范围) */
   scoringClassIds: string[]
   /** Class ids this teacher can issue award cards to (奖卡发放); undefined = 全部班级 */
   awardClassIds?: string[]

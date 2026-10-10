@@ -12,7 +12,6 @@ import {
   Plus,
   Save,
   Settings2,
-  Smile,
   Trash2,
   Users,
 } from "lucide-react"
@@ -23,7 +22,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
-import { usePermission } from "@/lib/use-permission"
 import { TEACHERS } from "@/lib/mock-data"
 import { INDICATOR_GROUPS, LEVEL1_LIST } from "@/lib/scoring-utils"
 import type { ClassRatingConfig, FlagConfig } from "@/lib/types"
@@ -329,9 +327,7 @@ function FlagEditor({ period, items, onAdd, onEdit }: FlagEditorProps) {
 
 export function ClassConfigTab() {
   const { flagConfigs, updateFlagConfig, addFlagConfig, removeFlagConfig, classRatingConfigs: appearances, updateClassRatingConfig, addClassRatingConfig, removeClassRatingConfig } = useEvaluation()
-  const { role } = usePermission()
-  const isHomeroomTeacher = role === "homeroom"
-  const [page, setPage] = useState<ConfigPage>(() => role === "homeroom" ? "appearance" : "indicator")
+  const [page, setPage] = useState<ConfigPage>("indicator")
   const [tree, setTree] = useState<Level1Node[]>(createInitialTree)
   const [selectedId, setSelectedId] = useState("level1-0")
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
@@ -383,10 +379,6 @@ export function ClassConfigTab() {
   useEffect(() => {
     if (selected?.kind === "level3") setScoreDraft(String(selected.node.defaultScore))
   }, [selectedId])
-
-  useEffect(() => {
-    if (isHomeroomTeacher) setPage("appearance")
-  }, [isHomeroomTeacher])
 
   const notify = (message: string) => {
     setToast(message)
@@ -631,16 +623,15 @@ export function ClassConfigTab() {
           </div>
           <div className="min-w-0">
   <div className="flex flex-wrap items-end justify-between gap-3">
-          {!isHomeroomTeacher && <div className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-[#dce2fa] bg-[#eef1ff] p-1" role="tablist" aria-label="班级评价配置分类">
+          <div className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-[#dce2fa] bg-[#eef1ff] p-1" role="tablist" aria-label="班级评价配置分类">
             {([
               { key: "indicator" as const, label: "指标配置", icon: Settings2 },
               { key: "flag" as const, label: "流动红旗配置", icon: Flag },
-              { key: "appearance" as const, label: "班级评级配置", icon: Smile },
             ]).map((tab) => {
               const Icon = tab.icon
               return <button key={tab.key} type="button" role="tab" aria-selected={page === tab.key} onClick={() => setPage(tab.key)} className={cn("flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50", page === tab.key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Icon className="size-3.5" />{tab.label}</button>
             })}
-          </div>}
+          </div>
         </div>
           </div>
         </div>

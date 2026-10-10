@@ -66,7 +66,7 @@ export function usePermission(): Permission {
     const canManageFlags = teacher.role === "moral_director" || teacher.role === "director"
     // 任意角色都可以查看历史周次
     const canPickHistoricalWeek = true
-    // 班级评价：任课教师无权限
+    // 班级评价的全校评价范围由班主任/任课教师工作区按角色放开；此处保留其他角色的授权班级能力
     const canEvaluate = scoringClasses.length > 0
     // 活动管理：德育主任 + 管理员
     const canManageActivities = teacher.role === "moral_director" || teacher.role === "director"

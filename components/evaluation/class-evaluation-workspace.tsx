@@ -30,9 +30,10 @@ type MobileEvaluationStep = "selection" | "evaluation"
 
 export function ClassEvaluationWorkspace() {
   const { grades, classes, students, records, addRecord } = useEvaluation()
-  const { visibleGrades, scoringClasses } = usePermission()
-  const availableGrades = visibleGrades.length > 0 ? visibleGrades : grades
-  const availableClasses = scoringClasses.length > 0 ? scoringClasses : classes
+  const { role, visibleGrades, scoringClasses } = usePermission()
+  const canEvaluateAllStudents = role === "homeroom" || role === "subject"
+  const availableGrades = canEvaluateAllStudents ? grades : visibleGrades.length > 0 ? visibleGrades : grades
+  const availableClasses = canEvaluateAllStudents ? classes : scoringClasses.length > 0 ? scoringClasses : classes
   const workspaceRef = useRef<HTMLDivElement>(null)
 
   const [mode, setMode] = useState<TargetMode>("class")
@@ -248,7 +249,7 @@ export function ClassEvaluationWorkspace() {
           {mode === "student" ? (
             <div className="flex w-full min-w-0 flex-1 flex-col">
               <div className="mb-3 flex items-center gap-2">
-                <Select value={currentClass?.name ?? ""} onValueChange={(value) => selectClass(availableClasses.find((item) => item.name === value)?.id ?? "")}><SelectTrigger aria-label="选择班级" className="h-9 min-w-0 flex-1 rounded-lg bg-white px-2.5 text-sm font-semibold"><SelectValue placeholder="请选择班级" /></SelectTrigger><SelectContent>{availableClasses.map((item) => <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>)}</SelectContent></Select>
+                <Select value={currentClass?.name ?? ""} onValueChange={(value) => selectClass(availableClasses.find((item) => item.name === value)?.id ?? "")}><SelectTrigger aria-label="选择班级" className="h-9 min-w-0 flex-1 rounded-lg bg-white px-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><SelectValue placeholder="请选择班级" /></SelectTrigger><SelectContent>{availableClasses.map((item) => <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>)}</SelectContent></Select>
               </div>
               <div className="student-card-grid min-w-0 content-start gap-1.5 pr-1">
                 {classStudents.map((student) => {
@@ -269,7 +270,7 @@ export function ClassEvaluationWorkspace() {
                 {availableGrades.map((grade) => {
                   const gradeClasses = availableClasses.filter((item) => item.gradeId === grade.id)
                   const expanded = expandedGradeId === grade.id
-                  return <div key={grade.id}><button type="button" onClick={() => setExpandedGradeId(expanded ? "" : grade.id)} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold hover:bg-accent/60">{expanded ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}<span>{grade.name}</span></button>{expanded && <div className="ml-3 border-l border-border/70 pl-2">{gradeClasses.map((item) => <div key={item.id} className={cn("flex items-center gap-2 rounded-lg px-2 py-2", selectedClassId === item.id && "bg-primary/10")}><input type="checkbox" aria-label={`选择${item.name}`} checked={selectedClassIds.includes(item.id)} onChange={() => toggleClassSelection(item.id)} className="size-4 accent-[var(--primary)]" /><button type="button" onClick={() => selectClass(item.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium hover:text-primary">{item.name}</button></div>)}</div>}</div>
+                  return <div key={grade.id}><button type="button" onClick={() => setExpandedGradeId(expanded ? "" : grade.id)} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left text-sm font-semibold hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">{expanded ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}<span>{grade.name}</span></button>{expanded && <div className="ml-3 border-l border-border/70 pl-2">{gradeClasses.map((item) => <div key={item.id} className={cn("flex items-center gap-2 rounded-lg px-2 py-2", selectedClassId === item.id && "bg-primary/10")}><input type="checkbox" aria-label={`选择${item.name}`} checked={selectedClassIds.includes(item.id)} onChange={() => toggleClassSelection(item.id)} className="size-4 accent-[var(--primary)]" /><button type="button" onClick={() => selectClass(item.id)} className="min-w-0 flex-1 truncate text-left text-sm font-medium hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">{item.name}</button></div>)}</div>}</div>
                 })}
               </div>
             </div>
@@ -337,7 +338,7 @@ export function ClassEvaluationWorkspace() {
         role="group"
         aria-label="评价辅助工具"
         style={{ transform: `translate3d(${toolOffset.x}px, ${toolOffset.y}px, 0)` }}
-        className={cn("fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 flex flex-col items-end gap-2 sm:right-5 lg:absolute lg:bottom-12 lg:right-4", isToolDragging && "cursor-grabbing")}
+        className={cn("fixed right-4 z-40 flex flex-col items-end gap-2 sm:right-5 lg:absolute lg:bottom-12 lg:right-4", mobileStep === "selection" ? "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]" : "bottom-[calc(1.25rem+env(safe-area-inset-bottom))]", isToolDragging && "cursor-grabbing")}
       >
         {toolsOpen && <div className="w-52 rounded-2xl border border-[#d8dff8] bg-white p-2.5 shadow-[0_20px_40px_-24px_rgba(52,68,152,0.58)]">
           <div className="mb-2 flex items-center justify-between px-1"><span className="text-xs font-bold text-foreground">快捷评价</span><span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">选择方式</span></div>

@@ -1,192 +1,72 @@
 [
   {
-    "level1": "智慧小博士",
+    "level1": "深度学习",
     "items": [
-      {
-        "id": "award-1-1",
-        "level2": "乐于探究",
-        "description": "勤于观察、主动提问，对未知事物保持好奇心",
-        "points": 1,
-        "image": "/images/award-cards/id_04b68e512fb74c3c8f962c843e25a571.jpg"
-      },
-      {
-        "id": "award-1-2",
-        "level2": "勤于思考",
-        "description": "遇到问题先动脑，善于分析并寻找解决办法",
-        "points": 1,
-        "image": "/images/award-cards/id_07bc8e6a63d54766a07a51d7c095e17f.jpg"
-      }
+      { "id": "award-1-1", "level2": "课前主动预习", "description": "带着问题走进课堂，提前了解学习内容", "points": 1, "image": "/images/award-cards/award-intellect-v2.png" },
+      { "id": "award-1-2", "level2": "讲清解题思路", "description": "能用自己的话说明思考过程与解决方法", "points": 1, "image": "/images/award-cards/award-intellect-v2.png" }
     ]
   },
   {
-    "level1": "小小工程师",
+    "level1": "探究实践",
     "items": [
-      {
-        "id": "award-2-1",
-        "level2": "动手实践",
-        "description": "积极动手操作，在实践中验证想法",
-        "points": 1,
-        "image": "/images/award-cards/id_0cbf803e9d124e5fb55a3dd82efb8050.jpg"
-      },
-      {
-        "id": "award-2-2",
-        "level2": "善于制作",
-        "description": "能利用身边材料完成有创意的小制作、小发明",
-        "points": 1,
-        "image": "/images/award-cards/id_1a8d550b3d6545cd8c02317e274bc028.jpg"
-      }
+      { "id": "award-2-1", "level2": "记录观察发现", "description": "认真记录现象，并用事实验证自己的猜想", "points": 1, "image": "/images/award-cards/award-intellect-v2.png" },
+      { "id": "award-2-2", "level2": "尝试多种方法", "description": "遇到问题愿意换角度思考并尝试不同办法", "points": 1, "image": "/images/award-cards/award-intellect-v2.png" }
     ]
   },
   {
-    "level1": "友善美少年",
+    "level1": "公共责任",
     "items": [
-      {
-        "id": "award-3-1",
-        "level2": "友爱互助",
-        "description": "关心同学、乐于助人，主动帮助有困难的伙伴",
-        "points": 1,
-        "image": "/images/award-cards/id_1eb89b94b046454dacad132448b60d08.jpg"
-      },
-      {
-        "id": "award-3-2",
-        "level2": "尊重包容",
-        "description": "尊重他人差异，友善待人、宽容相处",
-        "points": 1,
-        "image": "/images/award-cards/id_43dae637895745c3b0fcff2bf4e1d295.jpg"
-      }
+      { "id": "award-3-1", "level2": "主动维护秩序", "description": "在公共场合遵守约定并提醒自己保持秩序", "points": 1, "image": "/images/award-cards/award-moral-v2.png" },
+      { "id": "award-3-2", "level2": "珍惜公共资源", "description": "爱护教室、图书和公共设施，避免浪费", "points": 1, "image": "/images/award-cards/award-moral-v2.png" }
     ]
   },
   {
-    "level1": "健康小能手",
+    "level1": "运动习惯",
     "items": [
-      {
-        "id": "award-4-1",
-        "level2": "热爱运动",
-        "description": "积极参加体育锻炼，坚持日常运动",
-        "points": 1,
-        "image": "/images/award-cards/id_4d373b3187554d46bc79adb29dea10b6.jpg"
-      },
-      {
-        "id": "award-4-2",
-        "level2": "健康生活",
-        "description": "作息规律、饮食均衡，养成良好生活习惯",
-        "points": 1,
-        "image": "/images/award-cards/id_5c06a5c4b5ed44e384fbe80ba39cc9cf.jpg"
-      }
+      { "id": "award-4-1", "level2": "完成每日锻炼", "description": "按照计划坚持适量运动，保持积极状态", "points": 1, "image": "/images/award-cards/award-physical-v2.png" },
+      { "id": "award-4-2", "level2": "主动整理器材", "description": "运动结束后归还并整理使用过的器材", "points": 1, "image": "/images/award-cards/award-physical-v2.png" }
     ]
   },
   {
-    "level1": "才艺智多星",
+    "level1": "审美发现",
     "items": [
-      {
-        "id": "award-5-1",
-        "level2": "感知美与欣赏美",
-        "description": "善于发现生活中的美，能欣赏艺术作品",
-        "points": 1,
-        "image": "/images/award-cards/id_5f9550433fb7414bab9e417a6c38d907.jpg"
-      },
-      {
-        "id": "award-5-2",
-        "level2": "表达美与创造美",
-        "description": "能用歌声、画作、表演等方式表达和创造美",
-        "points": 1,
-        "image": "/images/award-cards/id_600dfa989d9e498f89b85a0d13c14d8a.jpg"
-      }
+      { "id": "award-5-1", "level2": "发现色彩与构图", "description": "能留意生活中的色彩、线条和画面关系", "points": 1, "image": "/images/award-cards/award-aesthetic-v2.png" },
+      { "id": "award-5-2", "level2": "说出作品感受", "description": "愿意分享作品带来的感受与独特发现", "points": 1, "image": "/images/award-cards/award-aesthetic-v2.png" }
     ]
   },
   {
-    "level1": "家国红五星",
+    "level1": "友善交往",
     "items": [
-      {
-        "id": "award-6-1",
-        "level2": "家国情怀",
-        "description": "热爱祖国、热爱家乡，关心国家和身边大事",
-        "points": 1,
-        "image": "/images/award-cards/id_6e7daf30411f4490bbddcd930ab2159a.jpg"
-      },
-      {
-        "id": "award-6-2",
-        "level2": "文化传承",
-        "description": "了解并喜爱中华优秀传统文化，主动传承",
-        "points": 1,
-        "image": "/images/award-cards/id_73b96a85e2384a3795e3392f9d1e70c9.jpg"
-      }
+      { "id": "award-6-1", "level2": "认真倾听同伴", "description": "耐心听完同伴表达，再回应对方的想法", "points": 1, "image": "/images/award-cards/award-moral-v2.png" },
+      { "id": "award-6-2", "level2": "分歧中礼貌沟通", "description": "遇到不同意见时先表达理解，再友善讨论", "points": 1, "image": "/images/award-cards/award-moral-v2.png" }
     ]
   },
   {
-    "level1": "合作创享星",
+    "level1": "实践创造",
     "items": [
-      {
-        "id": "award-7-1",
-        "level2": "团队协作",
-        "description": "在小组活动中主动配合，与同伴共同完成任务",
-        "points": 1,
-        "image": "/images/award-cards/id_8137397f428c43f8b6aff07e4c360669.jpg"
-      },
-      {
-        "id": "award-7-2",
-        "level2": "乐于分享",
-        "description": "愿意与他人分享自己的想法、方法和成果",
-        "points": 1,
-        "image": "/images/award-cards/id_8e1d30bf00fb4fbeb872d6bc588651fa.jpg"
-      }
+      { "id": "award-7-1", "level2": "按步骤完成任务", "description": "明确分工并按步骤完成一项劳动任务", "points": 1, "image": "/images/award-cards/award-labor-v2.png" },
+      { "id": "award-7-2", "level2": "改进工具用法", "description": "发现不便时主动想办法，让劳动更安全高效", "points": 1, "image": "/images/award-cards/award-labor-v2.png" }
     ]
   },
   {
-    "level1": "生活阳光星",
+    "level1": "生活自理",
     "items": [
-      {
-        "id": "award-8-1",
-        "level2": "热爱生活",
-        "description": "乐观开朗，以积极心态面对学习和生活",
-        "points": 1,
-        "image": "/images/award-cards/id_a593ee7a0567461bb94efcb2e1533e88.jpg"
-      },
-      {
-        "id": "award-8-2",
-        "level2": "自理自立",
-        "description": "自己的事情自己做，生活自理能力较强",
-        "points": 1,
-        "image": "/images/award-cards/id_bc7e2d7389ce4023ac5258de785ce1d4.jpg"
-      }
+      { "id": "award-8-1", "level2": "整理个人物品", "description": "独立收纳书包、衣物和学习用品", "points": 1, "image": "/images/award-cards/award-labor-v2.png" },
+      { "id": "award-8-2", "level2": "完成餐后整理", "description": "餐后主动收拾桌面并做好垃圾分类", "points": 1, "image": "/images/award-cards/award-labor-v2.png" }
     ]
   },
   {
-    "level1": "自信创造星",
+    "level1": "创意表达",
     "items": [
-      {
-        "id": "award-9-1",
-        "level2": "自信表达",
-        "description": "敢于在集体面前大方表达自己的观点",
-        "points": 1,
-        "image": "/images/award-cards/id_bd5a4d4e6b1349d2b13d482083f25363.jpg"
-      },
-      {
-        "id": "award-9-2",
-        "level2": "大胆创新",
-        "description": "敢于尝试新方法，提出与众不同的想法",
-        "points": 1,
-        "image": "/images/award-cards/id_bfeda3df006b4456798e83f1488f044ce.jpg"
-      }
+      { "id": "award-9-1", "level2": "作品表达感受", "description": "用绘画、音乐或表演表达自己的感受", "points": 1, "image": "/images/award-cards/award-aesthetic-v2.png" },
+      { "id": "award-9-2", "level2": "尝试不同材料", "description": "愿意探索新的材料、技法和表现方式", "points": 1, "image": "/images/award-cards/award-aesthetic-v2.png" }
     ]
   },
   {
-    "level1": "责任担当星",
+    "level1": "安全素养",
     "items": [
-      {
-        "id": "award-10-1",
-        "level2": "主动负责",
-        "description": "主动承担班级事务，认真完成分内工作",
-        "points": 1,
-        "image": "/images/award-cards/id_d264440af29549ad9f8d9747e6eddb6a.jpg"
-      },
-      {
-        "id": "award-10-2",
-        "level2": "爱护集体",
-        "description": "关心集体荣誉，自觉维护班级和校园环境",
-        "points": 1,
-        "image": "/images/award-cards/id_dd1fe9c717f146c39dfd5af07fe2e1c8.jpg"
-      }
+      { "id": "award-10-1", "level2": "运动前做热身", "description": "运动前做好热身准备，运动中关注身体状态", "points": 1, "image": "/images/award-cards/award-physical-v2.png" },
+      { "id": "award-10-2", "level2": "遵守器材规则", "description": "按要求使用场地和器材，保护自己与同伴", "points": 1, "image": "/images/award-cards/award-physical-v2.png" }
     ]
   }
 ]

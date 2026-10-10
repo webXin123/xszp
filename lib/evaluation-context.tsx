@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { CLASSES, GRADES, PARENT_USERS, STUDENTS, TEACHERS } from "./mock-data"
-import { getFiveEducationLevel1 } from "./award-utils"
+import { getAwardIndicatorMeta, getFiveEducationLevel1 } from "./award-utils"
 import { buildPointEntries, getSemesterRange, inRange } from "./points-utils"
 import type {
   Activity,
@@ -38,7 +38,7 @@ const RECORDS_KEY = "mzlg-score-records-v1"
 const FLAGS_KEY = "mzlg-weekly-flags-v1"
 const FLAG_CONFIGS_KEY = "mzlg-flag-configs-v1"
 const CLASS_RATING_CONFIGS_KEY = "mzlg-class-rating-configs-v1"
-const AWARD_CARDS_KEY = "mzlg-award-cards-v1"
+const AWARD_CARDS_KEY = "mzlg-award-cards-v2"
 const HONORS_KEY = "mzlg-honors-v1"
 const ACTIVITIES_KEY = "mzlg-activities-v1"
 const ENROLLMENTS_KEY = "mzlg-enrollments-v1"
@@ -263,7 +263,7 @@ function seedAwardCards(): AwardCardRecord[] {
     return getISOWeekKey(d)
   })()
   const nameOf = (studentId: string) => STUDENTS.find((s) => s.id === studentId)?.name ?? ""
-  // 上周获流动红旗的班级（6-1、7-1）全部学生各获一张“合作创享星”奖卡（+1）
+  // 上周获流动红旗的班级（6-1、7-1）全部学生各获一张劳育奖卡（+1）
   const flagRewardStudents = [
     ...STUDENTS.filter((s) => s.classId === "class-6-1"),
     ...STUDENTS.filter((s) => s.classId === "class-7-1"),
@@ -287,9 +287,9 @@ function seedAwardCards(): AwardCardRecord[] {
     studentName: nameOf(studentId),
     classId,
     indicatorId,
-    level1: getFiveEducationLevel1(level1),
-    level2: level1,
-    level3: level2,
+    level1: getAwardIndicatorMeta(indicatorId)?.level1 ?? getFiveEducationLevel1(level1),
+    level2: getAwardIndicatorMeta(indicatorId)?.level2 ?? level1,
+    level3: getAwardIndicatorMeta(indicatorId)?.level3 ?? level2,
     points,
     weekKey,
     date,
@@ -299,7 +299,7 @@ function seedAwardCards(): AwardCardRecord[] {
     createdAt: new Date(now - daysAgo * day).toISOString(),
   })
   const dateForDaysAgo = (daysAgo: number) => formatDate(new Date(now - daysAgo * day))
-  // 上周获流动红旗的班级（6-1、7-1）全部学生各获一张“合作创享星”奖卡（+1）
+  // 上周获流动红旗的班级（6-1、7-1）全部学生各获一张劳育奖卡（+1）
   const flagRewards: AwardCardRecord[] = flagRewardStudents.map((s, idx) =>
     mk(
       `award-flag-${idx}`,
@@ -1499,8 +1499,8 @@ export function EvaluationProvider({ children }: { children: ReactNode }) {
       classId,
       indicatorId: "award-7-1",
       level1: "劳育",
-      level2: "合作创享星",
-      level3: "团队协作",
+      level2: "实践创造",
+      level3: "按步骤完成任务",
       points: rewardPoints,
       weekKey,
       date,
