@@ -7,6 +7,93 @@
   50% { transform: translateY(-3px) rotate(1.5deg); }
 }
 
+.voice-evaluation-wash {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(129, 140, 248, .24), transparent 30%),
+    linear-gradient(128deg, #edf1ff 0%, #f8faff 54%, #edf9ff 100%);
+}
+
+.voice-award-wash {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(251, 191, 36, .22), transparent 30%),
+    linear-gradient(128deg, #fff5e8 0%, #fffaf3 54%, #fff4ec 100%);
+}
+
+.voice-wave-panel {
+  isolation: isolate;
+  position: relative;
+}
+
+.voice-wave-panel::before,
+.voice-wave-panel::after {
+  position: absolute;
+  z-index: -1;
+  width: 184px;
+  height: 184px;
+  border: 1px solid rgba(99, 102, 241, .12);
+  border-radius: 50%;
+  content: "";
+  animation: voice-orbit 4.4s ease-in-out infinite;
+}
+
+.voice-wave-panel::after {
+  width: 132px;
+  height: 132px;
+  animation-delay: -2.2s;
+}
+
+.voice-wave-bar {
+  width: 3px;
+  height: var(--bar-height);
+  min-height: 8px;
+  border-radius: 999px;
+  opacity: .82;
+  transform-origin: center;
+  animation: voice-wave 920ms ease-in-out infinite;
+  animation-delay: var(--bar-delay);
+}
+
+.voice-caret {
+  animation: voice-caret 800ms steps(2, start) infinite;
+}
+
+.voice-thinking-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #6366f1;
+  animation: voice-thinking 800ms ease-in-out infinite alternate;
+}
+
+@keyframes voice-wave {
+  0%, 100% { transform: scaleY(.28); opacity: .48; }
+  50% { transform: scaleY(1); opacity: .96; }
+}
+
+@keyframes voice-orbit {
+  0%, 100% { transform: scale(.88); opacity: .35; }
+  50% { transform: scale(1.08); opacity: .8; }
+}
+
+@keyframes voice-caret {
+  to { visibility: hidden; }
+}
+
+@keyframes voice-thinking {
+  from { transform: translateY(2px); opacity: .35; }
+  to { transform: translateY(-2px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-wave-bar,
+  .voice-wave-panel::before,
+  .voice-wave-panel::after,
+  .voice-caret,
+  .voice-thinking-dot {
+    animation: none;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -272,10 +359,22 @@
     }
   }
 
-  /* 指标卡片根据右侧面板可用宽度自动换列。 */
+  /* 按断点固定每行卡片数量，列宽随右侧评价面板伸缩。 */
   .indicator-card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  @media (min-width: 640px) {
+    .indicator-card-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .indicator-card-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   /* 流动红旗最多五列，卡片保持固定可读宽度并从左向右排列。 */
@@ -447,15 +546,15 @@
   }
 
   .config-subpanel {
-    @apply border border-[#dce6f3] bg-[#f6f9fd] shadow-[0_10px_24px_-24px_rgba(43,72,130,0.44)] dark:border-white/12 dark:bg-white/5;
+    @apply border border-[#d5e0ef] bg-[#f5f8fc] shadow-[0_12px_28px_-24px_rgba(43,72,130,0.38)] dark:border-white/12 dark:bg-white/5;
   }
 
   .config-editor-panel {
-    @apply border border-[#dce6f3] bg-white shadow-[0_12px_28px_-26px_rgba(43,72,130,0.48)] dark:border-white/12 dark:bg-slate-900;
+    @apply border border-[#d5e0ef] bg-white shadow-[0_14px_32px_-26px_rgba(43,72,130,0.46)] dark:border-white/12 dark:bg-slate-900;
   }
 
   .config-inset {
-    @apply border border-[#e2eaf4] bg-white shadow-inner shadow-[#dbe6f4]/35 dark:border-white/10 dark:bg-white/5;
+    @apply border border-[#dce5f1] bg-white shadow-[0_2px_8px_-7px_rgba(43,72,130,0.35)] dark:border-white/10 dark:bg-white/5;
   }
 }
 

@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { useEvaluation } from "@/lib/evaluation-context"
 import { usePermission } from "@/lib/use-permission"
 import { useDraggableFab } from "@/components/ui/use-draggable-fab"
+import { VoiceActionDialog } from "@/components/evaluation/voice-action-dialog"
 import { AWARD_GROUPS } from "@/lib/award-utils"
 import { formatDate, getISOWeekKey } from "@/lib/scoring-utils"
 import type { AwardCardRecord, AwardIndicatorLevel3, SchoolClass, Student } from "@/lib/types"
@@ -48,6 +49,8 @@ export function AwardCardTab() {
   const [zoomImage, setZoomImage] = useState<{ src: string; title: string } | null>(null)
   const [weeklyDetailStudent, setWeeklyDetailStudent] = useState<Student | null>(null)
   const [hint, setHint] = useState<string | null>(null)
+  const [voiceOpen, setVoiceOpen] = useState(false)
+  const [voiceTargetStudentIds, setVoiceTargetStudentIds] = useState<string[]>([])
   const {
     offset: voiceFabOffset,
     dragging: isVoiceFabDragging,
@@ -121,6 +124,10 @@ export function AwardCardTab() {
   const singleStudentStats = singleStudent
     ? weeklyStatsByStudent.get(singleStudent.id) ?? { count: 0, points: 0 }
     : { count: 0, points: 0 }
+  const voiceTargetStudents = students.filter((student) => voiceTargetStudentIds.includes(student.id))
+  const voiceAwardIndicator = AWARD_GROUPS
+    .flatMap((group) => group.items.map((item) => ({ ...item, level1: group.level1 })))
+    .find((item) => item.level2 === "友善交往")?.items[0]
 
   const matchesSearch = (student: Student, cls: SchoolClass) => {
     if (!search) return true
@@ -165,11 +172,15 @@ export function AwardCardTab() {
 
   const handleVoiceAward = () => {
     if (consumeVoiceFabClick()) return
-    if (selectedStudentIds.length === 0) {
-      showHint("请先在左侧勾选要发放的学生")
+    const targetIds = selectedStudentIds.length > 0
+      ? selectedStudentIds
+      : (studentsByClass.get(awardClasses[0]?.id ?? "") ?? []).slice(0, 2).map((student) => student.id)
+    if (targetIds.length === 0) {
+      showHint("当前没有可发放奖卡的学生")
       return
     }
-    showHint(`已开启语音发放，可为 ${selectedStudentIds.length} 名学生录入奖卡`)
+    setVoiceTargetStudentIds(targetIds)
+    setVoiceOpen(true)
   }
 
   const handleCardClick = (level1: string, level2: string, indicator: AwardIndicatorLevel3) => {
@@ -205,6 +216,24 @@ export function AwardCardTab() {
         })),
     )
     setConfirmIndicator(null)
+  }
+
+  const handleVoiceAwardConfirm = () => {
+    if (!voiceAwardIndicator || voiceTargetStudents.length === 0) return
+    addAwardCards(voiceTargetStudents.map((student) => ({
+      studentId: student.id,
+      studentName: student.name,
+      classId: student.classId,
+      indicatorId: voiceAwardIndicator.id,
+      level1: "德育",
+      level2: "友善交往",
+      level3: voiceAwardIndicator.level3,
+      points: voiceAwardIndicator.points,
+      weekKey,
+      date: today,
+    })))
+    setVoiceOpen(false)
+    showHint(`已为 ${voiceTargetStudents.length} 名学生发放奖卡`)
   }
 
   const openSingleStudent = (student: Student) => {
@@ -676,6 +705,23 @@ export function AwardCardTab() {
           <Mic className="size-6" strokeWidth={2.4} aria-hidden="true" />
         </Button>
       </div>
+
+      {voiceAwardIndicator && <VoiceActionDialog
+        open={voiceOpen}
+        onOpenChange={setVoiceOpen}
+        variant="award"
+        title="语音发放奖卡"
+        transcript={`为${voiceTargetStudents.slice(0, 3).map((student) => student.name).join("、")}${voiceTargetStudents.length > 3 ? `等${voiceTargetStudents.length}名同学` : "同学"}发放一张德育友善交往奖卡，表扬${voiceAwardIndicator.level3}。`}
+        targetTitle={`识别到 ${voiceTargetStudents.length} 名学生`}
+        targetMeta="请核对名单后确认发放"
+        details={[
+          { label: "发卡学生", value: `${voiceTargetStudents.slice(0, 4).map((student) => student.name).join("、")}${voiceTargetStudents.length > 4 ? ` 等 ${voiceTargetStudents.length} 人` : ""}` },
+          { label: "奖卡指标", value: `德育 · 友善交往 · ${voiceAwardIndicator.level3}` },
+          { label: "奖励积分", value: `+${voiceAwardIndicator.points} 分 / 人`, emphasis: true },
+        ]}
+        confirmLabel="确认发放"
+        onConfirm={handleVoiceAwardConfirm}
+      />}
 
       {/* ---------------- 单学生发卡弹窗 ---------------- */}
       <Dialog

@@ -137,31 +137,31 @@ export function ClassRankingTab() {
   return (
     <div className="flex flex-col gap-4">
       <section className="overflow-hidden rounded-[26px] border border-[#cfd8f6] bg-white shadow-[0_22px_46px_-34px_rgba(54,67,148,0.78)]">
-        <div className="flex flex-wrap items-start justify-between gap-3 bg-gradient-to-r from-[#eef1ff] via-[#f9faff] to-[#f5efff] px-4 py-4 sm:px-5 sm:py-5">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">班级排行榜</h2>
-            <p className="mt-1 text-xs text-muted-foreground">{isHomeroomRanking ? `${homeroomGrade?.name ?? "本年级"} · ` : ""}{PERIOD_LABEL[period]} · {ranking.length} 个班级参与评比 · 点击班级可查看评价详情</p>
-          </div>
-          {isHomeroomRanking ? <span className="inline-flex min-h-10 items-center rounded-xl border border-primary/15 bg-white/80 px-3 text-xs font-semibold text-primary">仅查看{homeroomGrade?.name ?? "本年级"}</span> : <Select value={gradeFilter === "all" ? "全部年级" : gradeOptions.find((grade) => grade.id === gradeFilter)?.name ?? ""} onValueChange={(value) => setGradeFilter(value === "全部年级" ? "all" : gradeOptions.find((grade) => grade.name === value)?.id ?? "all")}><SelectTrigger aria-label="筛选年级" className="w-32 text-xs font-semibold"><SelectValue placeholder="全部年级" /></SelectTrigger><SelectContent><SelectItem value="全部年级">全部年级</SelectItem>{gradeOptions.map((grade) => <SelectItem key={grade.id} value={grade.name}>{grade.name}</SelectItem>)}</SelectContent></Select>}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[#e8ebfa] bg-white px-4 py-3 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex rounded-2xl border border-primary/10 bg-[#eef1ff] p-1.5 shadow-[inset_0_1px_0_rgb(255_255_255_/_80%)]" role="tablist" aria-label="排行榜周期">
-              {(["day", "week", "month"] as RankingPeriod[]).map((item) => <button key={item} type="button" role="tab" aria-selected={period === item} onClick={() => setPeriod(item)} className={cn("min-h-10 min-w-16 rounded-xl px-3.5 text-xs font-bold transition-[background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50", period === item ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-[0_7px_16px_-9px_rgba(63,81,188,0.92)]" : "text-[#687898] hover:bg-white/85 hover:text-primary")}>{PERIOD_LABEL[item]}</button>)}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-3 border-b border-[#e8ebfa] bg-gradient-to-r from-[#eef1ff] via-[#f9faff] to-[#f5efff] px-4 py-4 lg:flex lg:items-center lg:justify-between lg:gap-x-4 sm:px-5">
+          <h2 className="col-start-1 row-start-1 min-w-0 shrink-0 text-lg font-bold tracking-tight text-foreground sm:text-xl lg:text-2xl">班级排行榜</h2>
+          <div className="contents lg:flex lg:w-auto lg:min-w-0 lg:flex-1 lg:flex-wrap lg:items-center lg:justify-end lg:gap-2">
+            <div className="col-start-2 row-start-1 inline-flex min-w-0 rounded-2xl border border-primary/10 bg-[#eef1ff] p-1 shadow-[inset_0_1px_0_rgb(255_255_255_/_80%)] lg:p-1.5" role="tablist" aria-label="排行榜周期">
+              {(["day", "week", "month"] as RankingPeriod[]).map((item) => <button key={item} type="button" role="tab" aria-selected={period === item} onClick={() => setPeriod(item)} className={cn("min-h-11 min-w-14 rounded-xl px-2.5 text-xs font-bold transition-[background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:min-w-16 sm:px-3.5", period === item ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-[0_7px_16px_-9px_rgba(63,81,188,0.92)]" : "text-[#687898] hover:bg-white/85 hover:text-primary")}>{PERIOD_LABEL[item]}</button>)}
             </div>
-            {period === "day" && <div className="flex h-11 items-center gap-2 rounded-xl border border-[#dbe3f7] bg-[#fbfcff] px-3"><CalendarDays className="size-3.5 text-primary" /><Input type="date" name="ranking-day" autoComplete="off" aria-label="选择排行榜日期" max={currentDate} value={dayDate} onChange={(event) => setDayDate(event.target.value)} className="h-8 w-[132px] border-0 bg-transparent p-0 text-xs font-semibold shadow-none focus-visible:ring-0" /></div>}
+            {period === "day" && <div className="col-start-1 row-start-2 flex h-11 min-w-0 w-full items-center gap-2 rounded-xl border border-[#dbe3f7] bg-[#fbfcff] px-2.5 lg:w-auto lg:px-3"><CalendarDays className="size-3.5 shrink-0 text-primary" /><Input type="date" name="ranking-day" autoComplete="off" aria-label="选择排行榜日期" max={currentDate} value={dayDate} onChange={(event) => setDayDate(event.target.value)} className="h-8 min-w-0 w-full border-0 bg-transparent p-0 text-xs font-semibold shadow-none focus-visible:ring-0 lg:w-[132px]" /></div>}
             {period === "week" && <Select value={weekKey} onValueChange={(value) => setWeekKey(String(value ?? currentWeekKey))}>
-              <SelectTrigger aria-label="选择历史周次" className="h-11 min-w-44 rounded-xl border-[#dbe3f7] bg-[#fbfcff] px-3 text-xs font-semibold"><CalendarDays className="size-3.5 text-primary" /><SelectValue placeholder="选择周次" /></SelectTrigger>
+              <SelectTrigger aria-label="选择历史周次" className="col-start-1 row-start-2 h-11 min-h-11 w-full min-w-0 rounded-xl border-[#dbe3f7] bg-[#fbfcff] px-3 text-xs font-semibold lg:w-auto lg:min-w-44"><CalendarDays className="size-3.5 text-primary" /><SelectValue placeholder="选择周次" /></SelectTrigger>
               <SelectContent><SelectGroup>{weekOptions.map((key) => <SelectItem key={key} value={key}>{formatWeekLabel(key)}</SelectItem>)}</SelectGroup></SelectContent>
             </Select>}
             {period === "month" && <Select value={monthPrefix} onValueChange={(value) => setMonthPrefix(String(value ?? currentMonthKey))}>
-              <SelectTrigger aria-label="选择历史月份" className="h-11 min-w-36 rounded-xl border-[#dbe3f7] bg-[#fbfcff] px-3 text-xs font-semibold"><CalendarDays className="size-3.5 text-primary" /><SelectValue placeholder="选择月份" /></SelectTrigger>
+              <SelectTrigger aria-label="选择历史月份" className="col-start-1 row-start-2 h-11 min-h-11 w-full min-w-0 rounded-xl border-[#dbe3f7] bg-[#fbfcff] px-3 text-xs font-semibold lg:w-auto lg:min-w-36"><CalendarDays className="size-3.5 text-primary" /><SelectValue placeholder="选择月份" /></SelectTrigger>
               <SelectContent><SelectGroup>{monthOptions.map((key) => <SelectItem key={key} value={key}>{key === currentMonthKey ? `本月 · ${formatMonthLabel(key)}` : formatMonthLabel(key)}</SelectItem>)}</SelectGroup></SelectContent>
             </Select>}
-            {isHistorical && <span className="inline-flex min-h-9 items-center rounded-full border border-[#dbe3f7] bg-[#f7f9ff] px-2.5 text-xs font-semibold text-[#64749a]">历史数据 · 仅查看</span>}
+            {isHistorical && <span className="col-span-2 row-start-3 inline-flex min-h-9 items-center rounded-full border border-[#dbe3f7] bg-[#f7f9ff] px-2.5 text-xs font-semibold text-[#64749a] lg:col-auto lg:row-auto">历史数据 · 仅查看</span>}
+            {isHomeroomRanking ? (
+              <span className="col-start-2 row-start-2 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-primary/15 bg-white/80 px-2 text-xs font-semibold text-primary lg:w-auto lg:px-3">仅查看{homeroomGrade?.name ?? "本年级"}</span>
+            ) : (
+              <Select value={gradeFilter === "all" ? "全部年级" : gradeOptions.find((grade) => grade.id === gradeFilter)?.name ?? ""} onValueChange={(value) => setGradeFilter(value === "全部年级" ? "all" : gradeOptions.find((grade) => grade.name === value)?.id ?? "all")}>
+                <SelectTrigger aria-label="筛选年级" className="col-start-2 row-start-2 h-11 min-h-11 w-full min-w-0 text-xs font-semibold lg:w-32"><SelectValue placeholder="全部年级" /></SelectTrigger>
+                <SelectContent><SelectItem value="全部年级">全部年级</SelectItem>{gradeOptions.map((grade) => <SelectItem key={grade.id} value={grade.name}>{grade.name}</SelectItem>)}</SelectContent>
+              </Select>
+            )}
           </div>
-          <span className="hidden items-center gap-1.5 rounded-full bg-[#f7f8ff] px-2.5 py-1.5 text-xs font-medium text-muted-foreground sm:inline-flex"><Sparkles aria-hidden="true" className="size-3.5 text-[#8f84ee]" />荣耀前三</span>
         </div>
 
         <div className="relative m-3 grid grid-cols-3 items-end gap-2 overflow-hidden rounded-2xl border border-[#e2e6f8] bg-[radial-gradient(circle_at_50%_0%,#fff9dc_0%,#f8f9ff_52%,#f2f4ff_100%)] p-2 pt-3 sm:m-4 sm:gap-3 sm:p-3 sm:pt-4">
@@ -228,26 +228,26 @@ export function ClassRankingTab() {
       </Dialog>
 
       <Dialog open={!!flagDialog} onOpenChange={(open) => !open && setFlagDialog(null)}>
-        <DialogContent className="max-w-md overflow-hidden border border-amber-200/80 bg-gradient-to-b from-[#fff8e8] via-white to-[#f3f1ff] p-0 shadow-[0_24px_60px_-28px_rgba(126,91,209,0.58)] sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-1.5rem)] max-w-md overflow-hidden border border-amber-200/80 bg-gradient-to-b from-[#fff8e8] via-white to-[#f3f1ff] p-0 shadow-[0_24px_60px_-28px_rgba(126,91,209,0.58)] sm:w-full sm:max-w-md">
           <div className="h-1.5 bg-gradient-to-r from-[#f3bd48] via-[#ffda7e] to-[#9d91f7]" />
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <DialogHeader className="items-center text-center">
-              <div className="mb-2 flex size-14 items-center justify-center rounded-2xl border border-amber-200 bg-gradient-to-br from-[#ffd96b] to-[#f09a4c] text-white shadow-[0_12px_24px_-14px_rgba(224,144,43,0.85)]"><Flag className="size-7 fill-current" /></div>
-              <DialogTitle className="text-lg text-[#5c4a28]">{isHistorical ? "查看历史流动红旗" : selectedFlagAwarded ? "流动红旗已发放" : "颁发流动红旗"}</DialogTitle>
+              <div className="mb-2 flex size-12 items-center justify-center rounded-2xl border border-amber-200 bg-gradient-to-br from-[#ffd96b] to-[#f09a4c] text-white shadow-[0_12px_24px_-14px_rgba(224,144,43,0.85)] sm:size-14"><Flag className="size-6 fill-current sm:size-7" /></div>
+              <DialogTitle className="text-base text-[#5c4a28] sm:text-lg">{isHistorical ? "查看历史流动红旗" : selectedFlagAwarded ? "流动红旗已发放" : "颁发流动红旗"}</DialogTitle>
               <p className="text-xs text-[#8b7d5d]">{isHistorical ? "历史周期数据仅供查看，不可修改" : `将${period === "week" ? "本周" : "本月"}荣誉授予表现优秀的班级`}</p>
             </DialogHeader>
-            <div className="mt-5 rounded-2xl border border-amber-200/80 bg-white/75 p-4 text-center">
+            <div className="mt-4 rounded-2xl border border-amber-200/80 bg-white/75 p-3 text-center sm:mt-5 sm:p-4">
               <p className="text-xs font-medium tracking-[0.16em] text-[#af8a42]">{isHistorical ? period === "week" ? `${formatWeekLabel(weekKey)}历史记录` : `${formatMonthLabel(monthPrefix)}历史记录` : period === "week" ? "本周" : "本月"}荣誉班级</p>
-              <p className="mt-1 text-xl font-bold text-[#54477f]">{ranking.find((row) => row.cls.id === flagDialog?.classId)?.cls.name}</p>
+              <p className="mt-1 break-words text-lg font-bold text-[#54477f] sm:text-xl">{ranking.find((row) => row.cls.id === flagDialog?.classId)?.cls.name}</p>
               <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700"><Sparkles className="size-3.5" />{selectedFlagConfig?.name ?? "流动红旗"}</span>
             </div>
             {!isHistorical && !selectedFlagAwarded && selectedFlagConfig?.syncFiveEducation && <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-primary/15 bg-primary/[0.05] p-3 text-sm font-medium text-foreground hover:bg-primary/[0.08]">
               <input type="checkbox" checked={syncPoints} onChange={(event) => setSyncPoints(event.target.checked)} className="size-4 accent-[var(--primary)]" />
               <span className="flex min-w-0 flex-1 flex-col"><span>同步发放五育积分</span><span className="mt-0.5 text-xs font-normal text-muted-foreground">按当前流动红旗配置同步积分</span></span>
             </label>}
-            <DialogFooter className="mt-5 gap-2 sm:justify-center">
-              <Button variant="outline" className="h-10 rounded-full border-border/70 bg-white/70 px-5" onClick={() => setFlagDialog(null)}>{isHistorical || selectedFlagAwarded ? "关闭" : "暂不颁发"}</Button>
-              {!isHistorical && !selectedFlagAwarded && canManageFlags && <Button className="h-10 rounded-full bg-gradient-to-r from-[#f4b63e] to-[#f08a4b] px-5 font-bold text-white shadow-[0_10px_20px_-12px_rgba(213,123,35,0.85)] hover:from-[#e9a832] hover:to-[#e97c40]" onClick={handleFlag}><Flag className="size-4 fill-current" />确认颁发</Button>}
+            <DialogFooter className="mt-4 gap-2 sm:mt-5 sm:justify-center">
+              <Button variant="outline" className="h-11 w-full rounded-xl border-border/70 bg-white/70 px-5 sm:w-auto sm:rounded-full" onClick={() => setFlagDialog(null)}>{isHistorical || selectedFlagAwarded ? "关闭" : "暂不颁发"}</Button>
+              {!isHistorical && !selectedFlagAwarded && canManageFlags && <Button className="h-11 w-full rounded-xl bg-gradient-to-r from-[#f4b63e] to-[#f08a4b] px-5 font-bold text-white shadow-[0_10px_20px_-12px_rgba(213,123,35,0.85)] hover:from-[#e9a832] hover:to-[#e97c40] sm:w-auto sm:rounded-full" onClick={handleFlag}><Flag className="size-4 fill-current" />确认颁发</Button>}
             </DialogFooter>
           </div>
         </DialogContent>

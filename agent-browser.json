@@ -1,6 +1,6 @@
 {
-  "executablePath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-  "profile": "C:\\Users\\CodexSandboxOffline\\.agent-browser-project-profile",
+  "executablePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "profile": "D:\\work-space\\产品原型图\\学生综评\\.agent-browser-chrome-profile",
   "args": "--remote-allow-origins=*,--disable-gpu,--disable-dev-shm-usage",
-  "headed": false
+  "headed": true
 }

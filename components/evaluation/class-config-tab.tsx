@@ -14,10 +14,11 @@ import {
   Settings2,
   Trash2,
   Users,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandInput, CommandList, CommandItem } from "@/components/ui/command"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
@@ -27,7 +28,8 @@ import { INDICATOR_GROUPS, LEVEL1_LIST } from "@/lib/scoring-utils"
 import type { ClassRatingConfig, FlagConfig } from "@/lib/types"
 
 type ConfigPage = "indicator" | "flag" | "appearance"
-type Permission = "all" | "specified"
+type Permission = "all" | "roles" | "teachers"
+type PermissionRole = "moral_director" | "homeroom" | "teaching"
 type NodeKind = "level1" | "level2" | "level3"
 type FlagPeriod = FlagConfig["period"]
 
@@ -35,6 +37,7 @@ interface Level3Item {
   id: string
   name: string
   permission: Permission
+  roleIds: PermissionRole[]
   memberIds: string[]
   defaultScore: number
   description: string
@@ -44,6 +47,7 @@ interface Level2Node {
   id: string
   name: string
   permission: Permission
+  roleIds: PermissionRole[]
   memberIds: string[]
   items: Level3Item[]
 }
@@ -52,6 +56,7 @@ interface Level1Node {
   id: string
   name: string
   permission: Permission
+  roleIds: PermissionRole[]
   memberIds: string[]
   children: Level2Node[]
 }
@@ -63,16 +68,22 @@ type SelectedNode =
   | { kind: "level2"; node: Level2Node; level1: Level1Node }
   | { kind: "level3"; node: Level3Item; level1: Level1Node; level2: Level2Node }
 
-type NodePatch = Partial<Pick<Level3Item, "name" | "permission" | "memberIds" | "defaultScore" | "description">>
+type NodePatch = Partial<Pick<Level3Item, "name" | "permission" | "roleIds" | "memberIds" | "defaultScore" | "description">>
 type AddTarget = { kind: NodeKind; parentId?: string } | null
 
-const PERMISSION_MEMBERS = TEACHERS.map(({ id, name, title }) => ({ id, name, title }))
+const PERMISSION_ROLE_OPTIONS: { id: PermissionRole; label: string }[] = [
+  { id: "moral_director", label: "德育主任" },
+  { id: "homeroom", label: "班主任" },
+  { id: "teaching", label: "任课教师" },
+]
+const PERMISSION_TEACHERS = TEACHERS.map(({ id, name, title }) => ({ id, name, title }))
 
 const createInitialTree = (): Level1Node[] =>
   LEVEL1_LIST.map((level1, level1Index) => ({
     id: `level1-${level1Index}`,
     name: level1,
     permission: "all",
+    roleIds: [],
     memberIds: [],
     children: INDICATOR_GROUPS
       .filter((group) => group.level1 === level1)
@@ -80,11 +91,13 @@ const createInitialTree = (): Level1Node[] =>
         id: `level2-${level1Index}-${level2Index}`,
         name: group.level2,
         permission: "all",
+        roleIds: [],
         memberIds: [],
         items: group.items.map((item) => ({
           id: item.id,
           name: item.name,
-          permission: item.id === "ly-1" ? "specified" : "all",
+          permission: item.id === "ly-1" ? "teachers" : "all",
+          roleIds: [],
           memberIds: item.id === "ly-1" ? ["teacher-zhao"] : [],
           defaultScore: item.penalty,
           description: "用于记录班级日常表现，可按实际情况补充说明。",
@@ -178,23 +191,31 @@ function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange
 
 function PermissionControl({
   value,
+  roleIds,
   memberIds,
   name,
   onChange,
+  onRoleIdsChange,
   onMemberIdsChange,
 }: {
   value: Permission
+  roleIds: PermissionRole[]
   memberIds: string[]
   name: string
   onChange: (value: Permission) => void
+  onRoleIdsChange: (roleIds: PermissionRole[]) => void
   onMemberIdsChange: (memberIds: string[]) => void
 }) {
   const [memberPickerOpen, setMemberPickerOpen] = useState(false)
-  const selectedMembers = PERMISSION_MEMBERS.filter((member) => memberIds.includes(member.id))
+  const selectedTeachers = PERMISSION_TEACHERS.filter((teacher) => memberIds.includes(teacher.id))
 
   const selectPermission = (nextValue: Permission) => {
     onChange(nextValue)
     setMemberPickerOpen(false)
+  }
+
+  const toggleRole = (roleId: PermissionRole) => {
+    onRoleIdsChange(roleIds.includes(roleId) ? roleIds.filter((id) => id !== roleId) : [...roleIds, roleId])
   }
 
   const toggleMember = (memberId: string) => {
@@ -203,12 +224,13 @@ function PermissionControl({
 
   return (
     <div className="space-y-2.5">
-      <div role="radiogroup" aria-label="指标权限范围" className="grid grid-cols-2 gap-1 rounded-xl border border-border/70 bg-background/45 p-1">
+      <div role="radiogroup" aria-label="指标权限范围" className="grid gap-2 rounded-2xl border border-[#dce5f1] bg-[#f8faff] p-2 sm:grid-cols-3">
         {([
-          { value: "all" as const, label: "全部成员", hint: "当前班级全部成员" },
-          { value: "specified" as const, label: "指定成员", hint: "仅允许勾选成员" },
+          { value: "all" as const, label: "全部成员" },
+          { value: "roles" as const, label: "指定角色" },
+          { value: "teachers" as const, label: "指定教师" },
         ]).map((option) => (
-          <label key={option.value} className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-xs transition", value === option.value ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground")}>
+          <label key={option.value} className={cn("flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition-colors", value === option.value ? "border-primary/20 bg-white text-primary shadow-sm" : "border-transparent text-muted-foreground hover:bg-white/70 hover:text-foreground")}>
             <input
               type="radio"
               name={name}
@@ -217,29 +239,36 @@ function PermissionControl({
               onChange={() => selectPermission(option.value)}
               className="size-4 shrink-0 accent-[var(--primary)]"
             />
-            <span className="min-w-0">
-              <span className="block font-semibold">{option.label}</span>
-              <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{option.hint}</span>
-            </span>
+            <span className="min-w-0 font-semibold">{option.label}</span>
           </label>
         ))}
       </div>
 
-      {value === "specified" && (
-        <div className="rounded-xl border border-primary/20 bg-primary/[0.035] p-3">
+      {value === "roles" && (
+        <section className="rounded-2xl border border-primary/15 bg-primary/[0.035] p-3.5 sm:p-4" aria-label="指定角色">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-2.5">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Users aria-hidden="true" className="size-4" /></span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-foreground">指定成员信息</p>
-                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">仅添加的成员可以使用该指标进行评价。</p>
-              </div>
-            </div>
-            <span className="shrink-0 rounded-full bg-background/75 px-2 py-1 text-[11px] font-semibold text-primary">已选 {selectedMembers.length} 人</span>
+            <p className="text-sm font-semibold text-foreground">可使用该指标的角色</p>
+            <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-primary">已选 {roleIds.length} 类</span>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {selectedMembers.length > 0 ? selectedMembers.map((member) => <span key={member.id} className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-background/70 px-2.5 py-1.5 text-[11px] font-semibold text-foreground"><span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] text-primary">{member.name.slice(0, 1)}</span>{member.name}</span>) : <span className="text-[11px] text-muted-foreground">尚未添加成员，请先添加成员信息。</span>}
+          <div className="mt-2 grid gap-2 sm:grid-cols-3" role="group" aria-label="选择角色">
+            {PERMISSION_ROLE_OPTIONS.map((role) => {
+              const checked = roleIds.includes(role.id)
+              return <button key={role.id} type="button" aria-pressed={checked} onClick={() => toggleRole(role.id)} className={cn("flex min-h-11 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", checked ? "border-primary/25 bg-white text-primary shadow-sm" : "border-border/70 bg-white/60 text-foreground hover:border-primary/25 hover:bg-white")}><span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center rounded border", checked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40 bg-white")}>{checked && <Check className="size-3" />}</span><span className="min-w-0">{role.label}</span></button>
+            })}
+          </div>
+        </section>
+      )}
+
+      {value === "teachers" && (
+        <section className="rounded-2xl border border-primary/15 bg-primary/[0.035] p-3.5 sm:p-4" aria-label="指定教师">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold text-foreground">指定教师</p>
+            <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-primary">已选 {selectedTeachers.length} 人</span>
+          </div>
+
+          <div className="mt-3 flex min-h-8 flex-wrap items-center gap-1.5">
+            {selectedTeachers.length > 0 ? selectedTeachers.map((teacher) => <span key={teacher.id} className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-foreground"><span aria-hidden="true" className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] text-primary">{teacher.name.slice(0, 1)}</span>{teacher.name}</span>) : <span className="text-xs text-muted-foreground">尚未选择教师</span>}
           </div>
 
           <Popover open={memberPickerOpen} onOpenChange={setMemberPickerOpen}>
@@ -247,26 +276,26 @@ function PermissionControl({
               render={
                 <button
                   type="button"
-                  aria-label={selectedMembers.length > 0 ? "调整指定成员" : "添加指定成员"}
-                  className="mt-3 flex min-h-10 w-full items-center justify-between gap-2 rounded-lg border border-primary/20 bg-background/65 px-3 text-left text-xs font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  aria-label={selectedTeachers.length > 0 ? "调整指定教师" : "选择教师"}
+                  className="mt-3 flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-primary/20 bg-white px-3 text-left text-sm font-semibold text-primary transition-colors hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 />
               }
             >
-              <span>{selectedMembers.length > 0 ? "调整指定成员" : "添加成员"}</span>
+              <span>{selectedTeachers.length > 0 ? "调整指定教师" : "选择教师"}</span>
               <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-transform data-[popup-open]:rotate-180" />
             </PopoverTrigger>
-            <PopoverContent align="start" className="glass-surface w-[min(21rem,calc(100vw-2rem))] p-1.5">
+            <PopoverContent align="start" className="glass-surface w-[min(24rem,calc(100vw-2rem))] p-1.5">
               <Command>
-                <CommandInput aria-label="搜索成员" placeholder="搜索成员…" />
+                <CommandInput aria-label="搜索教师" placeholder="搜索教师…" />
                 <CommandList className="max-h-64">
-                  <CommandEmpty>未找到匹配成员</CommandEmpty>
-                  {PERMISSION_MEMBERS.map((member) => {
-                    const checked = memberIds.includes(member.id)
+                  <CommandEmpty>未找到匹配教师</CommandEmpty>
+                  {PERMISSION_TEACHERS.map((teacher) => {
+                    const checked = memberIds.includes(teacher.id)
                     return (
-                      <CommandItem key={member.id} value={`${member.name} ${member.title}`} onSelect={() => toggleMember(member.id)} data-checked={checked} aria-selected={checked} aria-label={`${member.name}，${checked ? "已选择" : "未选择"}`} className={cn("min-h-11 gap-2.5 rounded-lg px-2.5 py-2", checked && "bg-primary/10")}>
-                        <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center rounded border transition", checked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40")}>{checked && <Check className="size-3" />}</span>
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">{member.name.slice(0, 1)}</span>
-                        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-foreground">{member.name}</span><span className="block truncate text-[11px] text-muted-foreground">{member.title}</span></span>
+                      <CommandItem key={teacher.id} value={`${teacher.name} ${teacher.title}`} onSelect={() => toggleMember(teacher.id)} data-checked={checked} aria-selected={checked} aria-label={`${teacher.name}，${checked ? "已选择" : "未选择"}`} className={cn("min-h-11 gap-2.5 rounded-lg px-2.5 py-2", checked && "bg-primary/10")}>
+                        <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center rounded border transition-colors", checked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40")}>{checked && <Check aria-hidden="true" className="size-3" />}</span>
+                        <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">{teacher.name.slice(0, 1)}</span>
+                        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-foreground">{teacher.name}</span><span className="block truncate text-[11px] text-muted-foreground">{teacher.title}</span></span>
                       </CommandItem>
                     )
                   })}
@@ -274,7 +303,7 @@ function PermissionControl({
               </Command>
             </PopoverContent>
           </Popover>
-        </div>
+        </section>
       )}
     </div>
   )
@@ -292,33 +321,32 @@ function FlagEditor({ period, items, onAdd, onEdit }: FlagEditorProps) {
   const title = isWeek ? "周流动红旗" : "月流动红旗"
 
   return (
-    <section className="config-editor-panel rounded-2xl p-3 sm:p-4">
+    <section className="config-editor-panel rounded-2xl p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", isWeek ? "bg-brand-yellow/15 text-brand-yellow" : "bg-brand-orange/15 text-brand-orange")}>
+          <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", isWeek ? "bg-brand-yellow/15 text-brand-yellow" : "bg-brand-orange/15 text-brand-orange")}>
             <Flag aria-hidden="true" className="size-4" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-sm font-bold">{title}</h2>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">共 {items.length} 项配置</p>
+            <h2 className="text-sm font-bold tracking-tight sm:text-[16px]">{title}</h2>
           </div>
         </div>
-        <Button type="button" variant="outline" onClick={onAdd} className="h-9 shrink-0 rounded-lg bg-transparent px-2.5 text-xs">
+        <Button type="button" variant="outline" onClick={onAdd} className="h-11 shrink-0 rounded-xl bg-white px-4 text-sm shadow-sm hover:bg-primary/[0.035]">
           <Plus aria-hidden="true" className="size-3.5" />新增
         </Button>
       </div>
 
       <div
-        className="flag-card-grid mt-4 min-w-0 gap-3"
+        className="flag-card-grid mt-5 min-w-0 gap-4"
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 360px))" }}
       >
-        {items.map((item) => <article key={item.id} className={cn("min-h-[112px] w-full max-w-[360px] min-w-0 justify-self-start rounded-2xl border p-4 transition", item.enabled ? "border-primary/30 bg-primary/[0.055]" : "border-[#e0e5fa] bg-white")}>
+        {items.map((item) => <article key={item.id} className={cn("min-h-[120px] w-full max-w-[360px] min-w-0 justify-self-start rounded-2xl border p-4 shadow-[0_8px_20px_-18px_rgba(37,61,111,0.45)]", item.enabled ? "border-primary/30 bg-primary/[0.055]" : "border-[#dce5f1] bg-white")}>
           <div className="flex items-start gap-3">
             <span className={cn("flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl", isWeek ? "bg-brand-yellow/15 text-brand-yellow" : "bg-brand-orange/15 text-brand-orange")}>{item.image ? <img src={item.image} alt={`${item.name}流动红旗图标`} width={44} height={44} className="size-full object-cover" /> : <Flag aria-hidden="true" className="size-5" />}</span>
             <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-foreground">{item.name}</p><p className="mt-1.5 truncate text-xs text-muted-foreground">{item.syncFiveEducation ? [item.syncLevel1, item.syncLevel2, item.syncLevel3].filter(Boolean).join(" / ") : "未关联五育指标"}</p></div>
-            <button type="button" aria-label={`编辑${item.name}`} onClick={() => onEdit(item)} className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"><Pencil aria-hidden="true" className="size-3.5" /></button>
+            <button type="button" aria-label={`编辑${item.name}`} onClick={() => onEdit(item)} className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition-colors hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"><Pencil aria-hidden="true" className="size-3.5" /></button>
           </div>
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-3"><span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", item.enabled ? "bg-brand-green/15 text-brand-green" : "bg-muted text-muted-foreground")}>{item.enabled ? "已启用" : "未启用"}</span><span className="text-xs font-semibold text-primary">发放积分 {item.points ?? 1} 分</span></div>
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-3"><span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", item.enabled ? "bg-brand-green/15 text-brand-green" : "bg-muted text-muted-foreground")}>{item.enabled ? "已启用" : "未启用"}</span><span className="text-xs font-semibold tabular-nums text-primary">发放积分 {item.points ?? 1} 分</span></div>
         </article>)}
       </div>
     </section>
@@ -330,6 +358,7 @@ export function ClassConfigTab() {
   const [page, setPage] = useState<ConfigPage>("indicator")
   const [tree, setTree] = useState<Level1Node[]>(createInitialTree)
   const [selectedId, setSelectedId] = useState("level1-0")
+  const [mobileEditorOpen, setMobileEditorOpen] = useState(false)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     const firstLevel1 = createInitialTree()[0]
     return firstLevel1 ? new Set([firstLevel1.id, ...firstLevel1.children.map((level2) => level2.id)]) : new Set()
@@ -338,6 +367,7 @@ export function ClassConfigTab() {
   const [addTarget, setAddTarget] = useState<AddTarget>(null)
   const [newName, setNewName] = useState("")
   const [newPermission, setNewPermission] = useState<Permission>("all")
+  const [newRoleIds, setNewRoleIds] = useState<PermissionRole[]>([])
   const [newMemberIds, setNewMemberIds] = useState<string[]>([])
   const [newScore, setNewScore] = useState("-1")
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
@@ -363,8 +393,6 @@ export function ClassConfigTab() {
   const selected = useMemo(() => findSelectedNode(tree, selectedId) ?? findSelectedNode(tree, tree[0]?.id ?? ""), [tree, selectedId])
   const weeklyFlags = useMemo(() => flagConfigs.filter((item) => item.period === "week"), [flagConfigs])
   const monthlyFlags = useMemo(() => flagConfigs.filter((item) => item.period === "month"), [flagConfigs])
-  const selectedKindLabel = selected?.kind === "level1" ? "一级指标" : selected?.kind === "level2" ? "二级指标" : "三级指标"
-  const selectedPath = selected ? selected.kind === "level1" ? "顶层指标" : selected.kind === "level2" ? selected.level1.name : `${selected.level1.name} / ${selected.level2.name}` : ""
   const selectedAddLabel = selected?.kind === "level1" ? "新增二级指标" : "新增三级指标"
   const newFlagLevel2Options = newFlagLevel1 ? Object.keys(FIVE_EDUCATION_OPTIONS[newFlagLevel1] ?? {}) : []
   const newFlagLevel3Options = newFlagLevel1 && newFlagLevel2 ? FIVE_EDUCATION_OPTIONS[newFlagLevel1]?.[newFlagLevel2] ?? [] : []
@@ -398,7 +426,10 @@ export function ClassConfigTab() {
     })
   }
 
-  const selectNode = (id: string) => setSelectedId(id)
+  const selectNode = (id: string) => {
+    setSelectedId(id)
+    if (window.matchMedia("(max-width: 1279px)").matches) setMobileEditorOpen(true)
+  }
 
   const updateSelected = (patch: NodePatch) => {
     if (!selected) return
@@ -409,23 +440,33 @@ export function ClassConfigTab() {
     setAddTarget({ kind, parentId })
     setNewName("")
     setNewPermission("all")
+    setNewRoleIds([])
     setNewMemberIds([])
     setNewScore("-1")
   }
 
   const addIndicator = () => {
-    if (!addTarget || !newName.trim()) return
-    if (newPermission === "specified" && newMemberIds.length === 0) {
-      notify("请至少添加一名指定成员")
+    if (!addTarget) return
+    if (!newName.trim()) {
+      notify("请输入指标名称")
+      return
+    }
+    if (newPermission === "roles" && newRoleIds.length === 0) {
+      notify("请至少选择一个指定角色")
+      return
+    }
+    if (newPermission === "teachers" && newMemberIds.length === 0) {
+      notify("请至少选择一名指定教师")
       return
     }
     const id = `${addTarget.kind}-${Date.now()}`
     const name = newName.trim()
+    const permissionSettings = { permission: newPermission, roleIds: [...newRoleIds], memberIds: [...newMemberIds] }
     if (addTarget.kind === "level1") {
-      setTree((current) => [...current, { id, name, permission: newPermission, memberIds: newMemberIds, children: [] }])
+      setTree((current) => [...current, { id, name, ...permissionSettings, children: [] }])
     }
     if (addTarget.kind === "level2" && addTarget.parentId) {
-      setTree((current) => current.map((level1) => level1.id === addTarget.parentId ? { ...level1, children: [...level1.children, { id, name, permission: newPermission, memberIds: newMemberIds, items: [] }] } : level1))
+      setTree((current) => current.map((level1) => level1.id === addTarget.parentId ? { ...level1, children: [...level1.children, { id, name, ...permissionSettings, items: [] }] } : level1))
       setExpandedIds((current) => {
         const next = new Set(current)
         tree.forEach((level1) => next.delete(level1.id))
@@ -439,7 +480,7 @@ export function ClassConfigTab() {
         ...level1,
         children: level1.children.map((level2) => level2.id === addTarget.parentId ? {
           ...level2,
-          items: [...level2.items, { id, name, permission: newPermission, memberIds: newMemberIds, defaultScore: Number.isFinite(score) && score !== 0 ? score : -1, description: "新增评价指标" }],
+          items: [...level2.items, { id, name, ...permissionSettings, defaultScore: Number.isFinite(score) && score !== 0 ? score : -1, description: "新增评价指标" }],
         } : level2),
       })))
       setExpandedIds((current) => new Set([...current, addTarget.parentId!]))
@@ -466,6 +507,20 @@ export function ClassConfigTab() {
       return
     }
     updateSelected({ defaultScore: score })
+  }
+
+  const saveSelected = () => {
+    if (!selected) return
+    if (selected.node.permission === "roles" && selected.node.roleIds.length === 0) {
+      notify("请至少选择一个指定角色")
+      return
+    }
+    if (selected.node.permission === "teachers" && selected.node.memberIds.length === 0) {
+      notify("请至少选择一名指定教师")
+      return
+    }
+    commitScore()
+    notify("指标配置已保存")
   }
 
   const handleNewFlagImage = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -609,44 +664,66 @@ export function ClassConfigTab() {
   }
 
   const addDialogTitle = addTarget?.kind === "level1" ? "新增一级指标" : addTarget?.kind === "level2" ? "新增二级指标" : "新增三级指标"
+  const renderSelectedEditor = (mobile = false) => {
+    if (!selected) return <p className="py-20 text-center text-sm text-muted-foreground">暂无可编辑指标</p>
+    const selectedNode = selected
+    const scoreHelpId = mobile ? "score-help-mobile" : "score-help"
+    return <section className="config-editor-panel flex min-w-0 flex-col rounded-2xl p-4 sm:p-5">
+      {!mobile && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
+        <h2 className="min-w-0 flex-1 text-sm font-bold tracking-tight sm:text-[16px]">{selectedNode.node.name}</h2>
+        <div className="flex max-w-full flex-nowrap items-center justify-end gap-1.5">
+          {selectedNode.kind !== "level3" && <Button type="button" variant="outline" onClick={() => openAddDialog(selectedNode.kind === "level1" ? "level2" : "level3", selectedNode.node.id)} className="h-11 min-h-11 shrink-0 gap-1 rounded-xl bg-white px-2 text-xs shadow-sm hover:bg-primary/[0.035]"><Plus aria-hidden="true" className="size-3.5" />{selectedAddLabel}</Button>}
+          <Button type="button" variant="outline" onClick={() => setConfirmDeleteOpen(true)} className="h-11 min-h-11 shrink-0 gap-1 rounded-xl bg-white px-2 text-xs text-destructive shadow-sm hover:border-destructive/35 hover:bg-destructive/[0.04] hover:text-destructive"><Trash2 aria-hidden="true" className="size-3.5" />删除</Button>
+          <Button type="button" onClick={saveSelected} className="h-11 min-h-11 shrink-0 gap-1 rounded-xl px-2 text-xs shadow-sm"><Save aria-hidden="true" className="size-3.5" />保存指标</Button>
+        </div>
+      </div>}
+      {mobile && selectedNode.kind !== "level3" && <div className="mb-4 border-b border-border/60 pb-4"><Button type="button" variant="outline" onClick={() => openAddDialog(selectedNode.kind === "level1" ? "level2" : "level3", selectedNode.node.id)} className="h-11 min-h-11 w-full rounded-xl bg-white text-sm shadow-sm"><Plus aria-hidden="true" className="size-4" />{selectedAddLabel}</Button></div>}
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-2 text-sm font-semibold text-foreground sm:col-span-2">指标名称
+          <input name="indicator-name" autoComplete="off" value={selectedNode.node.name} onChange={(event) => updateSelected({ name: event.target.value })} className="h-11 rounded-xl border border-[#d7e1ef] bg-[#fbfcff] px-3.5 text-sm font-semibold text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/15" />
+        </label>
+        <div className="flex flex-col gap-2 text-sm font-semibold text-foreground sm:col-span-2"><span>指标权限</span><PermissionControl name={`selected-indicator-permission${mobile ? "-mobile" : ""}`} value={selectedNode.node.permission} roleIds={selectedNode.node.roleIds} memberIds={selectedNode.node.memberIds} onChange={(permission) => updateSelected({ permission })} onRoleIdsChange={(roleIds) => updateSelected({ roleIds })} onMemberIdsChange={(memberIds) => updateSelected({ memberIds })} /></div>
+        {selectedNode.kind === "level3" && <>
+          <label className="flex flex-col gap-2 text-sm font-semibold text-foreground">单次默认分值
+            <input name={`indicator-default-score${mobile ? "-mobile" : ""}`} autoComplete="off" aria-describedby={scoreHelpId} type="number" step="0.5" value={scoreDraft} onChange={(event) => setScoreDraft(event.target.value)} onBlur={commitScore} className="h-11 rounded-xl border border-[#d7e1ef] bg-[#fbfcff] px-3.5 text-sm font-semibold tabular-nums text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/15" />
+          </label>
+          <p id={scoreHelpId} className="self-end pb-1 text-xs font-normal leading-5 text-muted-foreground">负数表示扣分，正数表示加分。</p>
+          <label className="flex flex-col gap-2 text-sm font-semibold text-foreground sm:col-span-2">指标说明
+            <textarea name={`indicator-description${mobile ? "-mobile" : ""}`} autoComplete="off" value={selectedNode.node.description} onChange={(event) => updateSelected({ description: event.target.value })} className="min-h-28 resize-y rounded-xl border border-[#d7e1ef] bg-[#fbfcff] px-3.5 py-3 text-sm font-normal leading-6 text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/15" />
+          </label>
+        </>}
+      </div>
+    </section>
+  }
   return (
     <div className="w-full">
       <a href="#class_config-main" className="sr-only z-[60] rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">跳转到主要内容</a>
-      <main id="class_config-main" tabIndex={-1} className="flex w-full min-w-0 flex-col gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e4e9fa] pb-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-2 text-primary-foreground shadow-lg shadow-primary/25"><Settings2 className="size-4" aria-hidden="true" /></span>
+      <main id="class_config-main" tabIndex={-1} className="flex w-full min-w-0 flex-col gap-4 sm:gap-5">
+        <header className="flex flex-col gap-3 border-b border-[#dce5f1] pb-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:pb-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-2 text-primary-foreground shadow-md shadow-primary/20"><Settings2 className="size-4" aria-hidden="true" /></span>
             <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">班级评价 / 配置中心</p>
-              <h1 className="truncate text-lg font-bold tracking-tight">班级评价配置</h1>
+              <h1 className="text-[16px] font-bold tracking-tight text-foreground sm:text-xl">班级评价配置</h1>
             </div>
           </div>
-          <div className="min-w-0">
-  <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-[#dce2fa] bg-[#eef1ff] p-1" role="tablist" aria-label="班级评价配置分类">
+          <div className="inline-flex w-full max-w-full flex-wrap gap-1 rounded-2xl border border-[#d8e2f1] bg-white/75 p-1 shadow-sm sm:w-auto sm:shrink-0" role="tablist" aria-label="班级评价配置分类">
             {([
               { key: "indicator" as const, label: "指标配置", icon: Settings2 },
               { key: "flag" as const, label: "流动红旗配置", icon: Flag },
             ]).map((tab) => {
               const Icon = tab.icon
-              return <button key={tab.key} type="button" role="tab" aria-selected={page === tab.key} onClick={() => setPage(tab.key)} className={cn("flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50", page === tab.key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Icon className="size-3.5" />{tab.label}</button>
+              return <button key={tab.key} id={`class-config-tab-${tab.key}`} type="button" role="tab" aria-controls={`class-config-panel-${tab.key}`} aria-selected={page === tab.key} onClick={() => setPage(tab.key)} className={cn("flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:flex-none sm:px-4", page === tab.key ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-primary/[0.05] hover:text-foreground")}><Icon aria-hidden="true" className="size-4" />{tab.label}</button>
             })}
           </div>
-        </div>
-          </div>
-        </div>
-
-      
+        </header>
 
         {page === "indicator" && (
-          <div className="grid gap-4 xl:grid-cols-[minmax(330px,.82fr)_minmax(0,1.18fr)]">
-            <aside className="config-subpanel min-w-0 rounded-2xl p-4">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2"><span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><Settings2 className="size-4" /></span><p className="text-sm font-bold">评价指标树</p></div>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">一级指标下展开二级与三级指标；选中任一层级可在右侧编辑。</p>
-                </div>
-                <Button type="button" variant="outline" onClick={() => openAddDialog("level1")} className="h-10 shrink-0 rounded-lg bg-transparent px-3 text-xs"><Plus className="size-3.5" />新增</Button>
+          <div id="class-config-panel-indicator" role="tabpanel" aria-labelledby="class-config-tab-indicator" className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(330px,.82fr)_minmax(0,1.18fr)]">
+            <aside className="config-subpanel min-w-0 rounded-2xl p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5"><span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Settings2 aria-hidden="true" className="size-4" /></span><p className="text-sm font-bold tracking-tight sm:text-[16px]">评价指标树</p></div>
+                <Button type="button" variant="outline" onClick={() => openAddDialog("level1")} className="h-11 shrink-0 rounded-xl bg-white px-3 text-sm shadow-sm hover:bg-primary/[0.035]"><Plus aria-hidden="true" className="size-4" />新增</Button>
               </div>
 
               <div role="tree" aria-label="评价指标层级" className="config-inset overflow-hidden rounded-xl">
@@ -654,21 +731,27 @@ export function ClassConfigTab() {
                   const level1Expanded = expandedIds.has(level1.id)
                   return (
                     <div key={level1.id} role="treeitem" aria-expanded={level1Expanded} aria-selected={selectedId === level1.id}>
-                      <button type="button" onClick={() => { selectNode(level1.id); toggleExpanded(level1.id) }} className={cn("flex min-h-11 w-full items-center gap-2 border-b border-border/45 px-3 text-left text-sm font-bold transition", selectedId === level1.id ? "bg-primary/10 text-primary" : "bg-primary/[0.035] hover:bg-primary/[0.07]")}>
-                        {level1Expanded ? <ChevronDown className="size-4 shrink-0" /> : <ChevronRight className="size-4 shrink-0" />}
-                        <span className="size-2 shrink-0 rounded-full bg-primary" />
-                        <span className="min-w-0 flex-1 truncate">{level1.name}</span>
-                        <span className="shrink-0 text-xs font-normal text-muted-foreground">{level1.children.length} 个子级指标</span>
-                      </button>
+                      <div className={cn("flex min-h-12 items-center border-b border-l-[3px] border-border/45 border-l-transparent text-sm font-bold", selectedId === level1.id ? "border-l-primary bg-primary/10 text-primary" : "bg-primary/[0.025]")}>
+                        <button type="button" aria-label={`${level1Expanded ? "收起" : "展开"}${level1.name}`} aria-expanded={level1Expanded} onClick={() => toggleExpanded(level1.id)} className="flex size-11 shrink-0 items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50">
+                          {level1Expanded ? <ChevronDown aria-hidden="true" className="size-4" /> : <ChevronRight aria-hidden="true" className="size-4" />}
+                        </button>
+                        <button type="button" onClick={() => selectNode(level1.id)} className="flex min-h-11 min-w-0 flex-1 items-center gap-2 py-1 pr-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50">
+                          <span className="size-2 shrink-0 rounded-full bg-primary" />
+                          <span className="min-w-0 flex-1 truncate">{level1.name}</span>
+                        </button>
+                      </div>
                       {level1Expanded && <div role="group">{level1.children.map((level2) => {
                         const level2Expanded = expandedIds.has(level2.id)
                         return <div key={level2.id} role="treeitem" aria-expanded={level2Expanded} aria-selected={selectedId === level2.id}>
-                          <button type="button" onClick={() => { selectNode(level2.id); toggleExpanded(level2.id) }} className={cn("flex min-h-10 w-full items-center gap-2 border-b border-border/35 py-1.5 pr-3 pl-8 text-left text-xs font-semibold transition", selectedId === level2.id ? "bg-primary/10 text-primary" : "hover:bg-primary/[0.045]")}>
-                            {level2Expanded ? <ChevronDown className="size-3.5 shrink-0" /> : <ChevronRight className="size-3.5 shrink-0" />}
-                            <span className="min-w-0 flex-1 truncate">{level2.name}</span>
-                            <span className="shrink-0 text-xs font-normal text-muted-foreground">{level2.items.length} 个子级指标</span>
-                          </button>
-                          {level2Expanded && <div role="group">{level2.items.map((item) => <button key={item.id} type="button" role="treeitem" aria-selected={selectedId === item.id} onClick={() => selectNode(item.id)} className={cn("flex min-h-10 w-full items-center gap-2 border-b border-border/25 py-1.5 pr-3 pl-14 text-left text-xs transition last:border-b-0", selectedId === item.id ? "bg-primary/10 font-semibold text-primary" : "text-foreground hover:bg-primary/[0.045]")}><span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/50" /><span className="min-w-0 flex-1 truncate">{item.name}</span><span className={cn("shrink-0 font-semibold", item.defaultScore > 0 ? "text-brand-green" : "text-brand-orange")}>{item.defaultScore > 0 ? "+" : ""}{item.defaultScore}</span></button>)}</div>}
+                          <div className={cn("flex min-h-11 items-center border-b border-l-2 border-border/35 border-l-transparent text-sm font-semibold", selectedId === level2.id ? "border-l-primary bg-primary/[0.07] text-primary" : "hover:bg-primary/[0.045]")}>
+                            <button type="button" aria-label={`${level2Expanded ? "收起" : "展开"}${level2.name}`} aria-expanded={level2Expanded} onClick={() => toggleExpanded(level2.id)} className="ml-5 flex size-11 shrink-0 items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50">
+                              {level2Expanded ? <ChevronDown aria-hidden="true" className="size-3.5" /> : <ChevronRight aria-hidden="true" className="size-3.5" />}
+                            </button>
+                            <button type="button" onClick={() => selectNode(level2.id)} className="flex min-h-11 min-w-0 flex-1 items-center py-1 pr-3 pl-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50">
+                              <span className="min-w-0 flex-1 truncate">{level2.name}</span>
+                            </button>
+                          </div>
+                          {level2Expanded && <div role="group">{level2.items.map((item) => <button key={item.id} type="button" role="treeitem" aria-selected={selectedId === item.id} onClick={() => selectNode(item.id)} className={cn("flex min-h-11 w-full items-center gap-2 border-b border-border/25 py-1.5 pr-3 pl-14 text-left text-sm transition-colors last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50", selectedId === item.id ? "bg-primary/[0.085] font-semibold text-primary" : "text-foreground hover:bg-primary/[0.045]")}><span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/50" /><span className="min-w-0 flex-1 truncate">{item.name}</span><span className={cn("shrink-0 rounded-md px-2 py-0.5 text-xs font-bold tabular-nums", item.defaultScore > 0 ? "bg-brand-green/10 text-brand-green" : "bg-brand-orange/10 text-brand-orange")}>{item.defaultScore > 0 ? "+" : ""}{item.defaultScore}</span></button>)}</div>}
                         </div>
                       })}</div>}
                     </div>
@@ -677,48 +760,11 @@ export function ClassConfigTab() {
               </div>
             </aside>
 
-            <section className="config-editor-panel flex min-w-0 flex-col rounded-2xl p-4 sm:p-5">
-              {selected ? <>
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 pb-4">
-                  <div>
-                    <p className="text-xs font-semibold text-primary">{selectedKindLabel}</p>
-                    <h2 className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg font-bold">
-                      <span>{selected.node.name}</span>
-                      {selected.kind !== "level3" && <span className="text-sm font-medium text-muted-foreground">{selected.kind === "level1" ? selected.node.children.length : selected.node.items.length} 个子级指标</span>}
-                    </h2>
-                    <p className="mt-1 text-xs text-muted-foreground">{selectedPath}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-2">
-                      {selected.kind !== "level3" && <Button type="button" variant="outline" onClick={() => openAddDialog(selected.kind === "level1" ? "level2" : "level3", selected.node.id)} className="h-10 rounded-lg bg-transparent px-3 text-xs"><Plus className="size-3.5" />{selectedAddLabel}</Button>}
-                      <Button type="button" variant="outline" onClick={() => setConfirmDeleteOpen(true)} className="h-10 rounded-lg bg-transparent px-3 text-xs text-destructive hover:text-destructive"><Trash2 className="size-3.5" />删除</Button>
-                    </div>
-                    <Button type="button" onClick={() => { if (selected.node.permission === "specified" && selected.node.memberIds.length === 0) { notify("请至少添加一名指定成员"); return }; commitScore(); notify("指标配置已保存") }} className="h-10 rounded-lg px-3 text-xs"><Save className="size-3.5" />保存指标</Button>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground sm:col-span-2">指标名称
-                    <input name="indicator-name" autoComplete="off" value={selected.node.name} onChange={(event) => updateSelected({ name: event.target.value })} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                  </label>
-                  <div className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground"><span>指标权限</span><PermissionControl name="selected-indicator-permission" value={selected.node.permission} memberIds={selected.node.memberIds} onChange={(permission) => updateSelected({ permission })} onMemberIdsChange={(memberIds) => updateSelected({ memberIds })} /></div>
-                  {selected.kind === "level3" && <>
-                    <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">单次默认分值
-                      <input name="indicator-default-score" autoComplete="off" aria-describedby="score-help" type="number" step="0.5" value={scoreDraft} onChange={(event) => setScoreDraft(event.target.value)} onBlur={commitScore} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                    </label>
-                    <p id="score-help" className="self-end text-xs font-normal leading-5 text-muted-foreground">负数表示扣分，正数表示加分。</p>
-                    <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground sm:col-span-2">指标说明
-                      <textarea name="indicator-description" autoComplete="off" value={selected.node.description} onChange={(event) => updateSelected({ description: event.target.value })} className="min-h-24 resize-none rounded-lg border border-border/70 bg-background/55 px-3 py-2 text-sm font-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                    </label>
-                  </>}
-                </div>
-
-              </> : <p className="py-20 text-center text-sm text-muted-foreground">暂无可编辑指标</p>}
-            </section>
+            <div className="hidden min-w-0 xl:block">{renderSelectedEditor()}</div>
           </div>
         )}
 
-        {page === "flag" && <div className="grid min-w-0 gap-4"><FlagEditor period="week" items={weeklyFlags} onAdd={() => openFlagDialog("week")} onEdit={(item) => openFlagDialog(item.period, item)} /><FlagEditor period="month" items={monthlyFlags} onAdd={() => openFlagDialog("month")} onEdit={(item) => openFlagDialog(item.period, item)} /></div>}
+        {page === "flag" && <div id="class-config-panel-flag" role="tabpanel" aria-labelledby="class-config-tab-flag" className="grid min-w-0 gap-4"><FlagEditor period="week" items={weeklyFlags} onAdd={() => openFlagDialog("week")} onEdit={(item) => openFlagDialog(item.period, item)} /><FlagEditor period="month" items={monthlyFlags} onAdd={() => openFlagDialog("month")} onEdit={(item) => openFlagDialog(item.period, item)} /></div>}
 
         {page === "appearance" && appearanceEditor && false && <section className="grid gap-4 xl:grid-cols-[minmax(280px,.72fr)_minmax(0,1.28fr)]">
           <aside className="config-subpanel min-w-0 rounded-2xl p-4">
@@ -769,14 +815,59 @@ export function ClassConfigTab() {
         </section>}
       </main>
 
+      <Dialog open={mobileEditorOpen} onOpenChange={setMobileEditorOpen}>
+        <DialogContent showCloseButton={false} className="w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] p-0">
+          <DialogHeader className="border-b border-[#dce5f1] bg-white px-4 py-3 pr-14">
+            <DialogTitle className="truncate text-base">{selected?.node.name ?? "指标配置"}</DialogTitle>
+            <button type="button" aria-label="关闭指标配置" onClick={() => setMobileEditorOpen(false)} className="absolute right-2 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+              <X aria-hidden="true" className="size-5" />
+            </button>
+          </DialogHeader>
+          {renderSelectedEditor(true)}
+          <DialogFooter className="mx-0 mb-0 grid grid-cols-2 gap-2 rounded-none border-t border-[#dce5f1] bg-white px-4 py-3">
+            <Button type="button" variant="outline" onClick={() => setConfirmDeleteOpen(true)} className="h-11 min-h-11 w-full rounded-xl border-destructive/25 text-destructive hover:bg-destructive/[0.05]"><Trash2 aria-hidden="true" className="size-4" />删除</Button>
+            <Button type="button" onClick={saveSelected} className="h-11 min-h-11 w-full rounded-xl"><Save aria-hidden="true" className="size-4" />保存指标</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {toast && <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-medium text-background shadow-xl">{toast}</div>}
 
       <Dialog open={addTarget !== null} onOpenChange={(open) => { if (!open) setAddTarget(null) }}>
-        <DialogContent className="glass-surface sm:max-w-md"><DialogHeader><DialogTitle>{addDialogTitle}</DialogTitle></DialogHeader><div className="grid gap-4">
-          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">指标名称<input name="new-indicator-name" autoComplete="off" autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} placeholder={addTarget?.kind === "level1" ? "例如：学习发展…" : addTarget?.kind === "level2" ? "例如：学习习惯…" : "例如：主动完成预习…"} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none focus:border-primary" /></label>
-          <div className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground"><span>指标权限</span><PermissionControl name="new-indicator-permission" value={newPermission} memberIds={newMemberIds} onChange={setNewPermission} onMemberIdsChange={setNewMemberIds} /></div>
-          {addTarget?.kind === "level3" && <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">单次默认分值<input name="new-indicator-default-score" autoComplete="off" type="number" step="0.5" value={newScore} onChange={(event) => setNewScore(event.target.value)} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none focus:border-primary" /><span className="font-normal leading-5">负数表示扣分，正数表示加分。</span></label>}
-        </div><DialogFooter><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => setAddTarget(null)}>取消</Button><Button type="button" className="text-xs" onClick={addIndicator}>新增指标</Button></DialogFooter></DialogContent>
+        <DialogContent className="glass-surface w-[min(1000px,calc(100vw-2rem))] max-w-none p-0 sm:!min-h-[560px] sm:max-w-none">
+          <DialogHeader className="border-b border-[#dce4fa] bg-[linear-gradient(110deg,#edf2ff,#ffffff_62%,#f7f4ff)] px-5 py-5 pr-14 sm:px-7">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/20"><Plus aria-hidden="true" className="size-5" /></span>
+              <div className="min-w-0">
+                <DialogTitle className="text-lg font-bold tracking-tight text-foreground">{addDialogTitle}</DialogTitle>
+                <DialogDescription className="mt-1">设置指标内容、权限范围{addTarget?.kind === "level3" ? "和默认分值" : ""}。</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="grid min-w-0 gap-4 px-5 py-5 sm:grid-cols-[minmax(0,.82fr)_minmax(0,1.18fr)] sm:gap-5 sm:px-7">
+            <section className="min-w-0 rounded-2xl border border-[#e0e7f3] bg-white/80 p-4 sm:p-5" aria-labelledby="new-indicator-details-title">
+              <h3 id="new-indicator-details-title" className="mb-4 text-sm font-bold text-foreground">指标信息</h3>
+              <label className="flex flex-col gap-2 text-sm font-semibold text-foreground">指标名称 <span className="sr-only">必填</span>
+                <input name="new-indicator-name" autoComplete="off" required aria-required="true" value={newName} onChange={(event) => setNewName(event.target.value)} placeholder={addTarget?.kind === "level1" ? "例如：学习发展…" : addTarget?.kind === "level2" ? "例如：学习习惯…" : "例如：主动完成预习…"} className="h-11 rounded-xl border border-[#d7e1ef] bg-[#fbfcff] px-3.5 text-sm font-medium text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/15" />
+              </label>
+              {addTarget?.kind === "level3" && <label className="mt-4 flex flex-col gap-2 text-sm font-semibold text-foreground">单次默认分值
+                <input name="new-indicator-default-score" autoComplete="off" type="number" step="0.5" value={newScore} onChange={(event) => setNewScore(event.target.value)} className="h-11 rounded-xl border border-[#d7e1ef] bg-[#fbfcff] px-3.5 text-sm font-medium tabular-nums text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/15" />
+                <span className="text-xs font-normal leading-5 text-muted-foreground">负数表示扣分，正数表示加分。</span>
+              </label>}
+            </section>
+
+            <section className="min-w-0 rounded-2xl border border-[#e0e7f3] bg-white/80 p-4 sm:p-5" aria-labelledby="new-indicator-permission-title">
+              <h3 id="new-indicator-permission-title" className="mb-4 flex items-center gap-2 text-sm font-bold text-foreground"><Users aria-hidden="true" className="size-4 text-primary" />指标权限</h3>
+              <PermissionControl name="new-indicator-permission" value={newPermission} roleIds={newRoleIds} memberIds={newMemberIds} onChange={setNewPermission} onRoleIdsChange={setNewRoleIds} onMemberIdsChange={setNewMemberIds} />
+            </section>
+          </div>
+
+          <DialogFooter className="mx-0 mb-0 flex-col-reverse gap-2 border-t border-[#dce4fa] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+            <Button type="button" variant="outline" className="h-11 min-h-11 w-full rounded-xl bg-transparent px-4 text-sm sm:w-auto" onClick={() => setAddTarget(null)}>取消</Button>
+            <Button type="button" className="h-11 min-h-11 w-full rounded-xl px-5 text-sm shadow-sm sm:w-auto" disabled={!newName.trim()} onClick={addIndicator}>新增指标</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       <Dialog open={flagDialog !== null} onOpenChange={(open) => { if (!open) { setFlagDialog(null); setEditingFlagId(null) } }}>
@@ -791,15 +882,15 @@ export function ClassConfigTab() {
             <div className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground"><span>二级指标 <span className="font-normal text-muted-foreground">（可选）</span></span><Select value={newFlagLevel2} disabled={!newFlagLevel1} onValueChange={(value) => { setNewFlagLevel2(String(value ?? "")); setNewFlagLevel3("") }}><SelectTrigger aria-label="选择二级指标" className="w-full font-normal"><SelectValue placeholder="不指定二级指标" /></SelectTrigger><SelectContent>{newFlagLevel2Options.map((level2) => <SelectItem key={level2} value={level2}>{level2}</SelectItem>)}</SelectContent></Select></div>
             <div className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground"><span>三级指标 <span className="font-normal text-muted-foreground">（可选）</span></span><Select value={newFlagLevel3} disabled={!newFlagLevel2} onValueChange={(value) => setNewFlagLevel3(String(value ?? ""))}><SelectTrigger aria-label="选择三级指标" className="w-full font-normal"><SelectValue placeholder="不指定三级指标" /></SelectTrigger><SelectContent>{newFlagLevel3Options.map((level3) => <SelectItem key={level3} value={level3}>{level3}</SelectItem>)}</SelectContent></Select></div>
           </div>}
-        </div></div><DialogFooter className="mx-0 mb-0 flex-row justify-between gap-2 border-t border-[#dce4fa] bg-white px-5 py-4">{editingFlagId ? <Button type="button" variant="outline" className="border-destructive/30 bg-transparent text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setFlagToDelete(editingFlagId)}><Trash2 aria-hidden="true" className="size-3.5" />删除红旗</Button> : <span /> }<div className="flex gap-2"><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => { setFlagDialog(null); setEditingFlagId(null) }}>取消</Button><Button type="button" className="text-xs" onClick={saveFlag}>{editingFlagId ? "保存修改" : "新增红旗"}</Button></div></DialogFooter></DialogContent>
+        </div></div><DialogFooter className="mx-0 mb-0 flex-col-reverse gap-2 border-t border-[#dce4fa] bg-white px-5 py-4 sm:flex-row sm:justify-between">{editingFlagId ? <Button type="button" variant="outline" className="h-11 min-h-11 w-full border-destructive/30 bg-transparent text-xs text-destructive hover:bg-destructive/10 hover:text-destructive sm:w-auto" onClick={() => setFlagToDelete(editingFlagId)}><Trash2 aria-hidden="true" className="size-3.5" />删除红旗</Button> : <span className="hidden sm:block" /> }<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><Button type="button" variant="outline" className="h-11 min-h-11 w-full bg-transparent text-xs sm:w-auto" onClick={() => { setFlagDialog(null); setEditingFlagId(null) }}>取消</Button><Button type="button" className="h-11 min-h-11 w-full text-xs sm:w-auto" onClick={saveFlag}>{editingFlagId ? "保存修改" : "新增红旗"}</Button></div></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={flagToDelete !== null} onOpenChange={(open) => !open && setFlagToDelete(null)}>
-        <DialogContent className="glass-surface sm:max-w-md"><DialogHeader><DialogTitle>确认删除流动红旗</DialogTitle></DialogHeader><p className="text-sm leading-6 text-muted-foreground">删除“{flagConfigs.find((item) => item.id === flagToDelete)?.name}”后，该红旗将不再用于评选和发放。</p><DialogFooter><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => setFlagToDelete(null)}>取消</Button><Button type="button" variant="destructive" className="text-xs" onClick={() => { if (!flagToDelete) return; removeFlagConfig(flagToDelete); setFlagToDelete(null); setFlagDialog(null); setEditingFlagId(null); notify("流动红旗已删除") }}>确认删除</Button></DialogFooter></DialogContent>
+        <DialogContent className="glass-surface sm:max-w-md"><DialogHeader><DialogTitle>确认删除流动红旗</DialogTitle></DialogHeader><p className="text-sm leading-6 text-muted-foreground">删除“{flagConfigs.find((item) => item.id === flagToDelete)?.name}”后，该红旗将不再用于评选和发放。</p><DialogFooter><Button type="button" variant="outline" className="h-11 min-h-11 w-full bg-transparent text-xs sm:w-auto" onClick={() => setFlagToDelete(null)}>取消</Button><Button type="button" variant="destructive" className="h-11 min-h-11 w-full text-xs sm:w-auto" onClick={() => { if (!flagToDelete) return; removeFlagConfig(flagToDelete); setFlagToDelete(null); setFlagDialog(null); setEditingFlagId(null); notify("流动红旗已删除") }}>确认删除</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-        <DialogContent className="glass-surface sm:max-w-md"><DialogHeader><DialogTitle>确认删除指标</DialogTitle></DialogHeader><p className="text-sm leading-6 text-muted-foreground">删除“{selected?.node.name}”后，其下级指标也会一并移除；历史评价记录不受影响。</p><DialogFooter><Button type="button" variant="outline" className="bg-transparent text-xs" onClick={() => setConfirmDeleteOpen(false)}>取消</Button><Button type="button" variant="destructive" className="text-xs" onClick={deleteSelected}>确认删除</Button></DialogFooter></DialogContent>
+        <DialogContent className="glass-surface sm:max-w-md"><DialogHeader><DialogTitle>确认删除指标</DialogTitle></DialogHeader><p className="text-sm leading-6 text-muted-foreground">删除“{selected?.node.name}”后，其下级指标也会一并移除；历史评价记录不受影响。</p><DialogFooter><Button type="button" variant="outline" className="h-11 min-h-11 w-full bg-transparent text-xs sm:w-auto" onClick={() => setConfirmDeleteOpen(false)}>取消</Button><Button type="button" variant="destructive" className="h-11 min-h-11 w-full text-xs sm:w-auto" onClick={deleteSelected}>确认删除</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={appearanceDrawerOpen} onOpenChange={(open) => { if (!open) closeAppearanceDrawer() }}>
