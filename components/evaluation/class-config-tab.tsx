@@ -348,7 +348,7 @@ function FlagEditor({ period, items, onAdd, onEdit, onToggle }: FlagEditorProps)
             <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-foreground">{item.name}</p><p className="mt-1.5 truncate text-xs text-muted-foreground">{item.syncFiveEducation ? [item.syncLevel1, item.syncLevel2, item.syncLevel3].filter(Boolean).join(" / ") : "未关联五育指标"}</p></div>
             <button type="button" aria-label={`编辑${item.name}`} onClick={() => onEdit(item)} className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition-colors hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"><Pencil aria-hidden="true" className="size-3.5" /></button>
           </div>
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-3"><ToggleSwitch compact checked={item.enabled} onChange={() => onToggle(item)} label={`启用${item.name}`} />{item.syncFiveEducation && <span className="text-xs font-semibold tabular-nums text-primary">发放积分 {item.points ?? 1} 分</span>}</div>
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-3"><div className="flex items-center gap-1.5"><span className="text-xs font-medium text-muted-foreground">是否启用</span><ToggleSwitch compact checked={item.enabled} onChange={() => onToggle(item)} label={`启用${item.name}`} /></div>{item.syncFiveEducation && <span className="text-xs font-semibold tabular-nums text-primary">发放积分 {item.points ?? 1} 分</span>}</div>
         </article>)}
       </div>
     </section>
