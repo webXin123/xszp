@@ -171,7 +171,7 @@ function removeNode(tree: Level1Node[], id: string): Level1Node[] {
     }))
 }
 
-function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+function ToggleSwitch({ checked, onChange, label, compact = false }: { checked: boolean; onChange: () => void; label: string; compact?: boolean }) {
   return (
     <button
       type="button"
@@ -180,11 +180,12 @@ function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange
       aria-label={label}
       onClick={onChange}
       className={cn(
-        "relative flex h-9 w-14 shrink-0 items-center rounded-full p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-        checked ? "bg-primary" : "bg-muted",
+        "relative flex shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        compact ? "size-11 justify-center bg-transparent" : "h-11 w-16 p-1",
+        !compact && (checked ? "bg-primary" : "bg-muted"),
       )}
     >
-      <span className={cn("size-7 rounded-full bg-white shadow-sm transition-transform", checked ? "translate-x-5" : "translate-x-0")} />
+      {compact ? <span className={cn("flex h-6 w-10 items-center rounded-full p-0.5 transition-colors", checked ? "bg-primary" : "bg-muted")}><span className={cn("size-5 rounded-full bg-white shadow-sm transition-transform", checked ? "translate-x-4" : "translate-x-0")} /></span> : <span className={cn("size-9 rounded-full bg-white shadow-sm transition-transform", checked ? "translate-x-5" : "translate-x-0")} />}
     </button>
   )
 }
@@ -314,9 +315,10 @@ interface FlagEditorProps {
   items: FlagConfig[]
   onAdd: () => void
   onEdit: (item: FlagConfig) => void
+  onToggle: (item: FlagConfig) => void
 }
 
-function FlagEditor({ period, items, onAdd, onEdit }: FlagEditorProps) {
+function FlagEditor({ period, items, onAdd, onEdit, onToggle }: FlagEditorProps) {
   const isWeek = period === "week"
   const title = isWeek ? "周流动红旗" : "月流动红旗"
 
@@ -342,11 +344,11 @@ function FlagEditor({ period, items, onAdd, onEdit }: FlagEditorProps) {
       >
         {items.map((item) => <article key={item.id} className={cn("min-h-[120px] w-full max-w-[360px] min-w-0 justify-self-start rounded-2xl border p-4 shadow-[0_8px_20px_-18px_rgba(37,61,111,0.45)]", item.enabled ? "border-primary/30 bg-primary/[0.055]" : "border-[#dce5f1] bg-white")}>
           <div className="flex items-start gap-3">
-            <span className={cn("flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl", isWeek ? "bg-brand-yellow/15 text-brand-yellow" : "bg-brand-orange/15 text-brand-orange")}>{item.image ? <img src={item.image} alt={`${item.name}流动红旗图标`} width={44} height={44} className="size-full object-cover" /> : <Flag aria-hidden="true" className="size-5" />}</span>
+            <span className={cn("inline-flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border p-1.5", item.image ? "border-primary/15 bg-primary/[0.035]" : "border-rose-200 bg-rose-50")}><img src={item.image ?? `${DEFAULT_ICON_PATH}/flag-issued.svg`} alt={item.image ? `${item.name}流动红旗图标` : ""} width={36} height={36} className="size-9 rounded-md object-cover" /></span>
             <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-foreground">{item.name}</p><p className="mt-1.5 truncate text-xs text-muted-foreground">{item.syncFiveEducation ? [item.syncLevel1, item.syncLevel2, item.syncLevel3].filter(Boolean).join(" / ") : "未关联五育指标"}</p></div>
             <button type="button" aria-label={`编辑${item.name}`} onClick={() => onEdit(item)} className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition-colors hover:border-primary/35 hover:bg-primary/[0.06] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"><Pencil aria-hidden="true" className="size-3.5" /></button>
           </div>
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-3"><span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", item.enabled ? "bg-brand-green/15 text-brand-green" : "bg-muted text-muted-foreground")}>{item.enabled ? "已启用" : "未启用"}</span><span className="text-xs font-semibold tabular-nums text-primary">发放积分 {item.points ?? 1} 分</span></div>
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-3"><ToggleSwitch compact checked={item.enabled} onChange={() => onToggle(item)} label={`启用${item.name}`} />{item.syncFiveEducation && <span className="text-xs font-semibold tabular-nums text-primary">发放积分 {item.points ?? 1} 分</span>}</div>
         </article>)}
       </div>
     </section>
@@ -764,7 +766,7 @@ export function ClassConfigTab() {
           </div>
         )}
 
-        {page === "flag" && <div id="class-config-panel-flag" role="tabpanel" aria-labelledby="class-config-tab-flag" className="grid min-w-0 gap-4"><FlagEditor period="week" items={weeklyFlags} onAdd={() => openFlagDialog("week")} onEdit={(item) => openFlagDialog(item.period, item)} /><FlagEditor period="month" items={monthlyFlags} onAdd={() => openFlagDialog("month")} onEdit={(item) => openFlagDialog(item.period, item)} /></div>}
+        {page === "flag" && <div id="class-config-panel-flag" role="tabpanel" aria-labelledby="class-config-tab-flag" className="grid min-w-0 gap-4"><FlagEditor period="week" items={weeklyFlags} onAdd={() => openFlagDialog("week")} onEdit={(item) => openFlagDialog(item.period, item)} onToggle={(item) => updateFlagConfig(item.id, { enabled: !item.enabled })} /><FlagEditor period="month" items={monthlyFlags} onAdd={() => openFlagDialog("month")} onEdit={(item) => openFlagDialog(item.period, item)} onToggle={(item) => updateFlagConfig(item.id, { enabled: !item.enabled })} /></div>}
 
         {page === "appearance" && appearanceEditor && false && <section className="grid gap-4 xl:grid-cols-[minmax(280px,.72fr)_minmax(0,1.28fr)]">
           <aside className="config-subpanel min-w-0 rounded-2xl p-4">
@@ -874,7 +876,6 @@ export function ClassConfigTab() {
         <DialogContent className="fixed inset-y-0 right-0 left-auto top-0 flex h-full max-h-full w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden overscroll-contain rounded-none rounded-l-[24px] border-l border-[#d5ddf7] bg-white p-0 shadow-[-24px_0_60px_-32px_rgba(48,62,139,0.78)] data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right sm:w-[640px] sm:max-w-none"><DialogHeader className="border-b border-[#dce4fa] px-5 py-4"><DialogTitle>{editingFlagId ? "编辑" : "新增"}{flagDialog === "week" ? "周" : "月"}流动红旗</DialogTitle></DialogHeader><div className="min-h-0 flex-1 overflow-y-auto px-5 py-5"><div className="grid gap-4">
           <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">红旗名称<input name="flag-name" autoComplete="off" value={newFlagName} onChange={(event) => setNewFlagName(event.target.value)} placeholder="例如：阅读推广示范班…" className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15" /></label>
           <div className="rounded-xl border border-border/60 bg-background/35 p-3"><div className="flex flex-wrap items-center gap-3"><div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/[0.08] text-primary">{newFlagImage ? <img src={newFlagImage} alt="待新增流动红旗图片预览" width={64} height={64} className="size-full object-cover" /> : <Flag aria-hidden="true" className="size-6" />}</div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-foreground">流动红旗图片</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">未上传时使用默认状态图标，支持常见图片格式，单张不超过 2MB。</p></div><div className="flex shrink-0 items-center gap-2">{newFlagImage && <button type="button" onClick={() => { setNewFlagImage(null); setNewFlagImageError("") }} className="h-10 rounded-lg border border-border/70 bg-background/55 px-2.5 text-xs font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">恢复默认</button>}<label className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 text-xs font-semibold text-primary transition hover:bg-primary/10 focus-within:ring-2 focus-within:ring-primary/30"><ImagePlus aria-hidden="true" className="size-3.5" />{newFlagImage ? "更换图片" : "上传图片"}<input name="new-flag-image" type="file" accept="image/*" onChange={handleNewFlagImage} className="sr-only" /></label></div></div>{newFlagImageError && <p role="alert" className="mt-2 text-xs text-destructive">{newFlagImageError}</p>}</div>
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/25 p-3"><div><p className="text-xs font-semibold text-foreground">启用流动红旗</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">关闭后不在评选和发放列表中展示。</p></div><ToggleSwitch checked={newFlagEnabled} onChange={() => setNewFlagEnabled((current) => !current)} label="启用流动红旗" /></div>
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/25 p-3"><div><p className="text-xs font-semibold text-foreground">发放五育积分</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">发放流动红旗后自动为对应班级去全部学生增加五育积分</p></div><ToggleSwitch checked={newFlagSync} onChange={() => setNewFlagSync((current) => !current)} label="新增流动红旗同步到五育指标" /></div>
           {newFlagSync && <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/[0.035] p-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">奖励积分* <input name="new-flag-points" autoComplete="off" required type="number" inputMode="numeric" min="1" max="100" step="1" value={newFlagPoints} onChange={(event) => setNewFlagPoints(event.target.value)} className="h-10 rounded-lg border border-border/70 bg-background/55 px-3 text-sm font-normal text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /><span className="font-normal leading-5">班级每位学生都获得该积分，支持 1–100 的整数。</span></label>
