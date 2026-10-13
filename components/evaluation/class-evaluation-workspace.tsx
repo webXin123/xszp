@@ -122,36 +122,6 @@ export function ClassEvaluationWorkspace() {
     }).map((schoolClass) => schoolClass.id))
   }, [availableClasses, normalizedTreeSearch, studentsByClass])
 
-  const todayScores = useMemo(() => {
-    const scoreMap = new Map<string, { add: number; deduct: number }>()
-    students.forEach((student) => scoreMap.set(student.id, { add: 0, deduct: 0 }))
-    records.filter((record) => record.date === today).forEach((record) => {
-      const ids = record.studentIds?.length
-        ? record.studentIds
-        : students
-          .filter((student) => student.classId === record.classId && record.studentNames.includes(student.name))
-          .map((student) => student.id)
-      ids.forEach((id) => {
-        const score = scoreMap.get(id)
-        if (!score) return
-        if (record.totalDeduction > 0) score.add += record.totalDeduction
-        if (record.totalDeduction < 0) score.deduct += Math.abs(record.totalDeduction)
-      })
-    })
-    return scoreMap
-  }, [records, students, today])
-  const todayClassScores = useMemo(() => {
-    const scoreMap = new Map<string, { add: number; deduct: number }>()
-    availableClasses.forEach((schoolClass) => scoreMap.set(schoolClass.id, { add: 0, deduct: 0 }))
-    records.filter((record) => record.date === today).forEach((record) => {
-      const classScore = scoreMap.get(record.classId)
-      if (!classScore) return
-      if (record.totalDeduction > 0) classScore.add += record.totalDeduction
-      if (record.totalDeduction < 0) classScore.deduct += Math.abs(record.totalDeduction)
-    })
-    return scoreMap
-  }, [availableClasses, records, today])
-
   const visibleGroups = useMemo(
     () => INDICATOR_GROUPS
       .filter((group) => group.level1 === level1)
@@ -391,12 +361,10 @@ export function ClassEvaluationWorkspace() {
                   }} className="flex min-h-11 w-full cursor-pointer items-center gap-2.5 px-3 text-left transition-colors hover:bg-[#f6f8ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45">
                     {expanded ? <ChevronDown className="size-4 shrink-0 text-primary" aria-hidden="true" /> : <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
                     <span className="min-w-0 flex-1 text-sm font-extrabold text-[#263553]">{grade.name}</span>
-                    <span className="rounded-full bg-[#f0f3fa] px-2 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">{gradeClasses.length} 个班</span>
                   </button>
                   {expanded && <div id={gradeContentId} className="space-y-2 border-t border-[#edf0f7] bg-[#f8faff] p-2">
                     {gradeClasses.map((schoolClass) => {
                       const classStudentsList = studentsByClass.get(schoolClass.id) ?? []
-                      const classTodayScore = todayClassScores.get(schoolClass.id) ?? { add: 0, deduct: 0 }
                       const isClassNameMatch = Boolean(normalizedTreeSearch) && schoolClass.name.toLocaleLowerCase("zh-CN").includes(normalizedTreeSearch)
                       const matchingStudents = normalizedTreeSearch
                         ? classStudentsList.filter((student) => `${student.name} ${student.studentNo}`.toLocaleLowerCase("zh-CN").includes(normalizedTreeSearch))
@@ -415,23 +383,19 @@ export function ClassEvaluationWorkspace() {
                           <label className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg">
                             <input ref={(element) => { if (element) element.indeterminate = selectedInClass > 0 && !classSelected }} type="checkbox" aria-label={`选择整个${schoolClass.name}`} aria-checked={classSelected ? "true" : selectedInClass > 0 ? "mixed" : "false"} checked={classSelected} onChange={() => toggleClassSelection(schoolClass.id)} className="size-4 cursor-pointer accent-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" />
                           </label>
-                          <button type="button" aria-label={`${schoolClass.name}，今日 +${classTodayScore.add} 分 / -${classTodayScore.deduct} 分，${schoolClass.studentCount} 名学生`} aria-expanded={classExpanded} aria-controls={classContentId} onClick={() => toggleClassExpansion(schoolClass.id, searchExpanded)} className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 text-left hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">
+                          <button type="button" aria-label={schoolClass.name} aria-expanded={classExpanded} aria-controls={classContentId} onClick={() => toggleClassExpansion(schoolClass.id, searchExpanded)} className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 text-left hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">
                             <span className="min-w-0 truncate text-xs font-extrabold text-[#2c3c5c]">{schoolClass.name}</span>
-                            <span title={`今日 +${classTodayScore.add} 分 / -${classTodayScore.deduct} 分`} className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums"><span className="mr-1 text-[11px] font-medium text-muted-foreground">今日</span><span className="text-emerald-700">+{classTodayScore.add}</span><span className="text-[#9aa6ba]">/</span><span className="text-rose-700">-{classTodayScore.deduct}</span></span>
-                            <span className="hidden shrink-0 text-[10px] font-medium text-muted-foreground xl:inline">{schoolClass.studentCount} 人</span>
                           </button>
                           {classSelected ? <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">整班</span> : selectedInClass > 0 && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">已选 {selectedInClass}</span>}
                         </div>
                         {classExpanded && <div id={classContentId} className="border-t border-[#edf0f7] px-2.5 py-2.5">
-                          <div className="mb-2 flex items-center justify-between px-0.5"><span className="text-[10px] font-bold tracking-wide text-muted-foreground">学生名单</span><span className="text-[10px] tabular-nums text-muted-foreground">{visibleStudents.length} 位</span></div>
+                          <div className="mb-2 flex items-center justify-between px-0.5"><span className="text-[10px] font-bold tracking-wide text-muted-foreground">学生名单</span></div>
                           {visibleStudents.length > 0 ? <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,148px),1fr))] gap-1.5">
                             {visibleStudents.map((student) => {
                               const selected = selectedStudentIds.includes(student.id)
-                              const score = todayScores.get(student.id) ?? { add: 0, deduct: 0 }
                               return <label key={student.id} className={cn("flex min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-2 transition-colors", selected ? "border-primary/35 bg-primary/[0.075]" : "border-[#e7ebf3] bg-white hover:border-primary/30 hover:bg-[#f8faff]")}>
                                 <input type="checkbox" aria-label={`选择${schoolClass.name}${student.studentNo}号${student.name}`} checked={selected} onChange={() => toggleStudent(student.id)} className="size-4 shrink-0 cursor-pointer accent-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" />
                                 <span className="min-w-0 flex-1"><span className="mr-1.5 text-[9px] font-bold tabular-nums text-[#8090aa]">{student.studentNo}</span><span className="truncate text-[11px] font-bold text-[#33425f]">{student.name}</span></span>
-                                <span className="shrink-0 text-right text-[9px] font-semibold tabular-nums"><span className="text-emerald-700">+{score.add}</span><span className="px-0.5 text-[#9aa6ba]">/</span><span className="text-rose-700">−{score.deduct}</span></span>
                               </label>
                             })}
                           </div> : <p className="rounded-lg bg-[#f8faff] px-3 py-2 text-xs text-muted-foreground">没有匹配的学生</p>}
