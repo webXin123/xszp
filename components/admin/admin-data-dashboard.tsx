@@ -160,8 +160,8 @@ export function AdminDataDashboard({ onBack }: AdminDataDashboardProps) {
               <BarChart3 className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h2 id="data-dashboard-title" className="text-xl font-bold text-foreground text-balance">五育积分数据看板</h2>
-              <p className="mt-1 text-xs text-muted-foreground">学生本学期积分明细 · {formatDate(start)} 至 {formatDate(end)}</p>
+              <h2 id="data-dashboard-title" className="text-xl font-bold text-foreground text-balance">学生五育积分排行</h2>
+              <p className="mt-1 text-xs text-muted-foreground">全校学生本学期积分排名与明细 · {formatDate(start)} 至 {formatDate(end)}</p>
             </div>
           </div>
           <div className="hidden shrink-0 items-center gap-2 rounded-xl bg-primary/[0.06] px-3 py-2 text-xs text-primary sm:flex">

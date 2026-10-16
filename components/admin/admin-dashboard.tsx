@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import Link from "next/link"
 import type { EChartsOption } from "echarts"
 import { Award, ArrowRight, CalendarDays, ClipboardList, FileSpreadsheet, LayoutGrid, NotebookPen, PieChart, ShoppingBag, Trophy, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -162,7 +163,7 @@ function LegacyAdminDashboard({ onNavigate }: AdminDashboardProps) {
         </section>
 
         <section className={cn("flex h-[320px] min-h-0 flex-col p-4 sm:p-5", styles.card, styles.contentCard)} aria-labelledby="points-ranking-title">
-          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-[#fff3db] text-[#b66d0a]"><Trophy className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-[#b66d0a]">成长激励</p><h3 id="points-ranking-title" className="mt-0.5 text-[15px] font-bold tracking-tight text-foreground">本学期五育积分总分排行</h3></div></div><button type="button" onClick={() => onNavigate("dashboard")} className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 text-sm font-semibold text-[#9a5e08] transition hover:bg-[#fff3db] hover:text-[#8f5708] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看全部<ArrowRight className="size-3.5" aria-hidden="true" /></button></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-[#fff3db] text-[#b66d0a]"><Trophy className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-[#b66d0a]">成长激励</p><h3 id="points-ranking-title" className="mt-0.5 text-[15px] font-bold tracking-tight text-foreground">本学期五育积分总分排行</h3></div></div><Link href="/admin-data-dashboard" target="_top" className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 text-sm font-semibold text-[#9a5e08] transition hover:bg-[#fff3db] hover:text-[#8f5708] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45">查看全部<ArrowRight className="size-3.5" aria-hidden="true" /></Link></div>
           {pointsRanking.length > 0 ? <ol tabIndex={0} className="mt-3 min-h-0 flex-1 divide-y divide-[#e7ebfa] overflow-y-auto rounded-xl border border-[#e2e7f8] bg-[#fffcf6] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45" aria-label="五育积分排名（同分并列）">{pointsRanking.map((student) => <li key={student.id} className="flex min-h-14 items-center gap-3 py-2 transition-colors hover:bg-[#fff8ea]"><RankMark rank={student.rank} /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-foreground">{student.name}</span><span className="block truncate text-xs text-muted-foreground">{student.className}</span></span><span className="shrink-0 text-sm font-bold tabular-nums text-[#b66d0a]">{student.points} 分</span></li>)}</ol> : <div className="mt-3 flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-[#cfd7f6] text-sm text-muted-foreground">本学期暂无学生积分记录</div>}
         </section>
       </div>
