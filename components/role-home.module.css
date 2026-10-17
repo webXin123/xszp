@@ -24,6 +24,17 @@
   background-image: none;
 }
 
+.homeroomOverviewGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1280px) {
+  .homeroomOverviewGrid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
 .workspaceHome > section,
 .workspaceHome > div,
 .workspaceHome > div > section {

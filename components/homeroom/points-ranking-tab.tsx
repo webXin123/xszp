@@ -39,6 +39,7 @@ export function PointsRankingTab({ classId, range, search }: PointsRankingTabPro
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [page, setPage] = useState(1)
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
+  const [selectedDimension, setSelectedDimension] = useState<{ studentId: string; level1: string } | null>(null)
   const PAGE_SIZE = 10
 
   const allEntries = useMemo(() => buildPointEntries(awardCards, honors), [awardCards, honors])
@@ -75,6 +76,23 @@ export function PointsRankingTab({ classId, range, search }: PointsRankingTabPro
       .filter((entry) => entry.studentId === selectedStudentId && inRange(entry.date, semesterStart, semesterEnd))
       .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
   }, [allEntries, selectedStudentId, semesterEnd, semesterStart])
+  const selectedDimensionEntries = useMemo(() => {
+    if (!selectedDimension) return []
+    return allEntries
+      .filter((entry) =>
+        entry.studentId === selectedDimension.studentId &&
+        entry.level1 === selectedDimension.level1 &&
+        inRange(entry.date, semesterStart, semesterEnd),
+      )
+      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+  }, [allEntries, selectedDimension, semesterEnd, semesterStart])
+  const selectedDimensionStudent = selectedDimension
+    ? students.find((student) => student.id === selectedDimension.studentId) ?? null
+    : null
+  const selectedDimensionPoints = selectedDimensionEntries.reduce(
+    (sum, entry) => sum + entry.points,
+    0,
+  )
   const selectedHonors = useMemo(() => selectedStudentId ? getReportHonors(honors, selectedStudentId, semesterStart, semesterEnd) : [], [honors, selectedStudentId, semesterEnd, semesterStart])
   const selectedActivities = useMemo(() => getReportActivities(activities, classId, semesterStart, semesterEnd), [activities, classId, semesterEnd, semesterStart])
 
@@ -116,7 +134,22 @@ export function PointsRankingTab({ classId, range, search }: PointsRankingTabPro
                 <td className="px-3 py-3 text-center font-semibold text-foreground">{row.name}</td>
                 <td className="px-3 py-3 text-center font-mono text-xs tabular-nums text-muted-foreground">{row.studentNo}</td>
                 <td className="px-3 py-3 text-center text-muted-foreground">{row.gender}</td>
-                {AWARD_LEVEL1_LIST.map((name) => <td key={name} className="px-3 py-3 text-center tabular-nums text-foreground">{row.byLevel1[name] ?? 0}</td>)}
+                {AWARD_LEVEL1_LIST.map((name) => {
+                  const points = row.byLevel1[name] ?? 0
+                  return (
+                    <td key={name} className="px-3 py-2 text-center tabular-nums text-foreground">
+                      <button
+                        type="button"
+                        aria-haspopup="dialog"
+                        aria-label={row.name + " " + name + "积分 " + points + " 分，查看本学期记录"}
+                        onClick={() => setSelectedDimension({ studentId: row.studentId, level1: name })}
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2 font-semibold text-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+                      >
+                        {points}
+                      </button>
+                    </td>
+                  )
+                })}
                 <td className="px-3 py-3 text-center font-bold tabular-nums text-primary">{row.semesterTotal}</td>
                 <td className="px-3 py-3 text-center font-semibold tabular-nums text-brand-green">{row.cumulativeTotal}</td>
                 <td className="sticky right-0 bg-inherit px-3 py-3 text-center"><button type="button" onClick={() => setSelectedStudentId(row.studentId)} className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"><FileText className="size-3.5" aria-hidden="true" />查看报告单</button></td>
@@ -131,7 +164,7 @@ export function PointsRankingTab({ classId, range, search }: PointsRankingTabPro
       {selectedRow && selectedStudent && <StudentSemesterReportDrawer
         open={Boolean(selectedRow)}
         onOpenChange={(open) => !open && setSelectedStudentId(null)}
-                semesterLabel={getSemesterLabel(POINTS_RANKING_REFERENCE_DATE)}
+        semesterLabel={getSemesterLabel(POINTS_RANKING_REFERENCE_DATE)}
         student={{ name: selectedStudent.name, gender: selectedStudent.gender, studentNo: selectedStudent.studentNo }}
         className={selectedClass?.shortName ?? ""}
         gradeName={selectedGradeName}
@@ -144,6 +177,62 @@ export function PointsRankingTab({ classId, range, search }: PointsRankingTabPro
         honors={selectedHonors}
         activities={selectedActivities}
       />}
+
+      {selectedDimension && (
+        <Dialog
+          open={Boolean(selectedDimension)}
+          onOpenChange={(open) => !open && setSelectedDimension(null)}
+        >
+          <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-hidden border border-[#d4def4] p-0">
+            <DialogHeader className="border-b border-[#e4e8f7] bg-[#f8faff] px-5 py-5 pr-12 sm:px-6">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Medal className="size-5" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <DialogTitle className="text-lg font-bold text-foreground">
+                    {selectedDimension.level1}积分记录
+                  </DialogTitle>
+                  <DialogDescription className="mt-1">
+                    {selectedDimensionStudent?.name ?? "学生"} · 本学期 {selectedDimensionPoints} 分 · {selectedDimensionEntries.length} 条记录
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="max-h-[65vh] overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
+              {selectedDimensionEntries.length > 0 ? (
+                <ul className="divide-y divide-[#edf0fb] rounded-xl border border-[#e1e6f7] bg-white">
+                  {selectedDimensionEntries.map((entry) => (
+                    <li key={entry.id} className="flex items-center gap-3 px-3.5 py-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#eef2ff] text-primary">
+                        <Medal className="size-4" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-foreground">
+                          {entry.detail}
+                        </span>
+                        <span className="mt-1 block truncate text-xs text-muted-foreground">
+                          {POINT_SOURCE_LABEL[entry.source]} · {entry.date}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-sm font-bold tabular-nums text-brand-green">
+                        +{entry.points} 分
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p
+                  aria-live="polite"
+                  className="rounded-xl border border-dashed border-[#cfd7f6] bg-[#fafbff] px-4 py-12 text-center text-sm text-muted-foreground"
+                >
+                  本学期暂无{selectedDimension.level1}积分记录
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

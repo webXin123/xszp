@@ -2,20 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Award,
-  BarChart3,
-  CalendarDays,
   CheckCircle2,
   ChevronDown,
-  ChevronRight,
   ClipboardCheck,
   LayoutGrid,
+  ListChecks,
   Medal,
   MinusCircle,
-  NotebookPen,
   PlusCircle,
+  RefreshCw,
   Search,
-  TrendingDown,
   Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,23 +23,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useLoadMore, useScrollLoadMore } from "@/lib/use-load-more";
-import { LoadMoreFooter } from "@/components/ui/load-more";
 import { useEvaluation } from "@/lib/evaluation-context";
 import { usePermission } from "@/lib/use-permission";
 import {
-  getActivityStatus,
-  requiresActivityEnrollment,
-} from "@/lib/activity-utils";
-import {
-  formatDate,
-  formatDateRangeLabel,
   getISOWeekKey,
   getRecordsForWeek,
   getWeekRange,
 } from "@/lib/scoring-utils";
 import { TIME_RANGE_LABEL, type TimeRange } from "@/lib/points-utils";
-import { readSemesterEvaluationRecords } from "@/lib/semester-evaluation-utils";
 import { PointsRankingTab } from "./points-ranking-tab";
 import { HonorUploadTab } from "../evaluation/honor-upload-tab";
 import { ParentHonorReview } from "./parent-honor-review";
@@ -55,129 +42,45 @@ interface HomeroomDashboardProps {
   onNavigate: (tab: MainTab) => void;
 }
 
-type MessageTone = "blue" | "green" | "orange" | "purple";
-type ProgressStatus = "未开始" | "录入中" | "已提交";
-
-interface DashboardMessage {
-  id: string;
-  category: string;
-  title: string;
-  summary: string;
-  detail: string;
-  icon: typeof Award;
-  tone: MessageTone;
-}
-
 interface DashboardTodo {
   id: string;
   title: string;
   description: string;
-  count: number;
-  icon: typeof LayoutGrid;
   actionLabel: string;
   onClick?: () => void;
 }
 
-interface CommentProgressItem {
-  id: string;
-  subject: string;
-  teacher: string;
-  status: ProgressStatus;
-}
-
-type EvaluationDetailPeriod = "day" | "week" | "month";
-type EvaluationDetailKind = "all" | "addition" | "deduction";
-
 const RANGES: TimeRange[] = ["week", "month", "semester"];
-const COMMENT_TASKS_KEY = "mzlg-comment-entry-tasks-v1";
-const FALLBACK_COMMENT_PROGRESS: CommentProgressItem[] = [
-  {
-    id: "comment-homeroom",
-    subject: "班主任评语",
-    teacher: "班主任",
-    status: "录入中",
-  },
-  { id: "comment-chinese", subject: "语文", teacher: "刘敏", status: "已提交" },
-  { id: "comment-math", subject: "数学", teacher: "张哲", status: "录入中" },
-];
-
-function getSemesterStart(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth() >= 7 ? 8 : 1, 1);
-}
-
-function getSemesterWeekKeys(date: Date) {
-  const semesterStart = getSemesterStart(date);
-  const cursor = new Date(date);
-  const result: string[] = [];
-  while (getWeekRange(cursor).end >= semesterStart) {
-    result.push(getISOWeekKey(cursor));
-    cursor.setDate(cursor.getDate() - 7);
-  }
-  return result;
-}
-
-function getSemesterMonthKeys(date: Date) {
-  const semesterStart = getSemesterStart(date);
-  const cursor = new Date(date.getFullYear(), date.getMonth(), 1);
-  const result: string[] = [];
-  while (cursor >= semesterStart) {
-    result.push(
-      `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`,
-    );
-    cursor.setMonth(cursor.getMonth() - 1);
-  }
-  return result;
-}
-
-function formatWeekLabel(weekKey: string) {
-  return `第${Number(weekKey.split("-W")[1])}周`;
-}
-
-function formatMonthLabel(monthKey: string) {
-  const [year, month] = monthKey.split("-");
-  return `${year}年${Number(month)}月`;
-}
-
-const dashboardActionButtonClass =
-  "inline-flex h-9 w-24 shrink-0 touch-manipulation items-center justify-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-bold text-primary-foreground shadow-[0_7px_16px_-14px_rgba(63,81,188,0.9)] transition-[background-color,box-shadow] duration-200 hover:bg-primary/90 hover:shadow-[0_9px_18px_-14px_rgba(63,81,188,0.95)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45";
+const DASHBOARD_TODO_PAGE_SIZE = 5;
+const WEEK_EVALUATION_PAGE_SIZE = 5;
 
 const HOMEROOM_REFERENCE_DATE = new Date("2026-09-21T04:00:00.000Z");
+const EVALUATION_DATE_FORMATTER = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function formatEvaluationDate(value: string) {
+  const date = new Date(value + "T00:00:00");
+  return Number.isNaN(date.getTime()) ? value : EVALUATION_DATE_FORMATTER.format(date);
+}
 
 export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
   const {
     records,
-    awardCards,
     classes,
+    students,
     flags,
     flagConfigs,
-    activities,
-    currentTeacher,
-    students,
   } = useEvaluation();
   const { scoringClasses } = usePermission();
   const [classId, setClassId] = useState(scoringClasses[0]?.id ?? "");
   const [range, setRange] = useState<TimeRange>("semester");
   const [studentSearch, setStudentSearch] = useState("");
   const [classSwitchOpen, setClassSwitchOpen] = useState(false);
-  const [evaluationDetailOpen, setEvaluationDetailOpen] = useState(false);
-  const [evaluationDetailPeriod, setEvaluationDetailPeriod] =
-    useState<EvaluationDetailPeriod>("week");
-  const [evaluationDetailKind, setEvaluationDetailKind] =
-    useState<EvaluationDetailKind>("all");
-  const [evaluationDetailDay, setEvaluationDetailDay] = useState(() =>
-    formatDate(HOMEROOM_REFERENCE_DATE),
-  );
-  const [evaluationDetailWeek, setEvaluationDetailWeek] = useState(() =>
-    getISOWeekKey(HOMEROOM_REFERENCE_DATE),
-  );
-  const [evaluationDetailMonth, setEvaluationDetailMonth] = useState(() =>
-    formatDate(HOMEROOM_REFERENCE_DATE).slice(0, 7),
-  );
-  const [selectedMessage, setSelectedMessage] =
-    useState<DashboardMessage | null>(null);
-  const [topPanelTab, setTopPanelTab] = useState<"messages" | "todos">(
-    "messages",
-  );
+  const [todoPage, setTodoPage] = useState(1);
+  const [evaluationPage, setEvaluationPage] = useState(1);
   const [honorDrawerOpen, setHonorDrawerOpen] = useState(false);
   const {
     offset: honorFabOffset,
@@ -187,11 +90,6 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
     onPointerMove: moveHonorFab,
     onPointerUp: endHonorFabDrag,
   } = useDraggableFab({ size: 52, mobileBottom: 88 });
-  const [commentProgress, setCommentProgress] = useState<CommentProgressItem[]>(
-    FALLBACK_COMMENT_PROGRESS,
-  );
-  const [pendingEvaluationCount, setPendingEvaluationCount] = useState(0);
-
   const handleHonorFabClick = () => {
     if (consumeHonorFabClick()) return;
     setHonorDrawerOpen(true);
@@ -199,190 +97,97 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
 
   const currentClass =
     classes.find((item) => item.id === classId) ?? scoringClasses[0];
+  const currentClassStudents = useMemo(
+    () => students.filter((student) => student.classId === currentClass?.id),
+    [currentClass?.id, students],
+  );
   const now = HOMEROOM_REFERENCE_DATE;
-  const today = formatDate(now);
   const weekKey = getISOWeekKey(now);
   const currentWeek = getWeekRange(now);
   const previousWeekDate = new Date(currentWeek.start);
   previousWeekDate.setDate(previousWeekDate.getDate() - 7);
   const previousWeekKey = getISOWeekKey(previousWeekDate);
 
-  useEffect(() => {
-    if (!currentClass) return;
-    try {
-      const commentCache = JSON.parse(
-        localStorage.getItem(COMMENT_TASKS_KEY) ?? "null",
-      ) as Array<{
-        progress?: Array<{
-          id: string;
-          teacherName: string;
-          classNames: string;
-          role: "homeroom" | "subject";
-          status: ProgressStatus;
-        }>;
-      }> | null;
-      const cachedComments = commentCache
-        ?.flatMap((task) => task.progress ?? [])
-        .filter((item) => item.classNames === currentClass.name)
-        .map((item) => ({
-          id: item.id,
-          subject:
-            item.role === "homeroom"
-              ? "班主任评语"
-              : item.teacherName === "刘敏"
-                ? "语文"
-                : item.teacherName === "张哲"
-                  ? "数学"
-                  : "任课教师评语",
-          teacher: item.role === "homeroom" ? "班主任" : item.teacherName,
-          status: item.status,
-        }));
-      setCommentProgress(
-        cachedComments && cachedComments.length > 0
-          ? cachedComments
-          : FALLBACK_COMMENT_PROGRESS,
-      );
-    } catch {
-      setCommentProgress(FALLBACK_COMMENT_PROGRESS);
-    }
-  }, [currentClass]);
-
-  useEffect(() => {
-    if (!currentClass || !currentTeacher) return;
-    const roster = students.filter(
-      (student) => student.classId === currentClass.id,
-    );
-    const completed = roster.filter((student) => {
-      const record = readSemesterEvaluationRecords().find(
-        (item) =>
-          item.teacherId === currentTeacher.id &&
-          item.classId === currentClass.id &&
-          item.studentId === student.id,
-      );
-      return Object.keys(record?.ratings ?? {}).length >= 10;
-    }).length;
-    setPendingEvaluationCount(Math.max(roster.length - completed, 0));
-  }, [currentClass, currentTeacher, students]);
-
   const classFlagConfigs = useMemo(
     () => new Map(flagConfigs.map((item) => [item.id, item])),
     [flagConfigs],
   );
+  const flagConfigOrder = useMemo(
+    () => new Map(flagConfigs.map((item, index) => [item.id, index] as const)),
+    [flagConfigs],
+  );
 
-  const weekDeductions = useMemo(() => {
+  const weekEvaluations = useMemo(() => {
     if (!currentClass) return [];
     return getRecordsForWeek(records, currentClass.id, weekKey)
-      .filter((record) => record.totalDeduction < 0)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      .sort(
+        (a, b) =>
+          b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt),
+      );
   }, [currentClass, records, weekKey]);
-  const deductionsLoadMore = useLoadMore(weekDeductions, 6);
-  const deductionsScroll = useScrollLoadMore(
-    deductionsLoadMore.hasMore,
-    deductionsLoadMore.loadMore,
-  );
-
-  const weekAwards = useMemo(() => {
-    if (!currentClass) return [];
-    return awardCards
-      .filter(
-        (award) =>
-          award.classId === currentClass.id &&
-          getISOWeekKey(new Date(award.date)) === weekKey,
-      )
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [awardCards, currentClass, weekKey]);
-  const awardsLoadMore = useLoadMore(weekAwards, 6);
-  const awardsScroll = useScrollLoadMore(
-    awardsLoadMore.hasMore,
-    awardsLoadMore.loadMore,
-  );
-  const weekAwardPoints = useMemo(
-    () => weekAwards.reduce((sum, award) => sum + award.points, 0),
-    [weekAwards],
-  );
-
-  const weekEvaluationTotals = useMemo(() => {
-    if (!currentClass) return { deduction: 0, addition: 0 };
-    return getRecordsForWeek(records, currentClass.id, weekKey).reduce(
-      (totals, record) => {
-        if (record.totalDeduction < 0)
-          totals.deduction += Math.abs(record.totalDeduction);
-        if (record.totalDeduction > 0) totals.addition += record.totalDeduction;
-        return totals;
-      },
-      { deduction: 0, addition: 0 },
+  const weeklyEvaluationStats = useMemo(() => {
+    const additionRecords = weekEvaluations.filter(
+      (record) => record.totalDeduction > 0,
     );
-  }, [currentClass, records, weekKey]);
-
-  const evaluationDetailWeekOptions = useMemo(
-    () => getSemesterWeekKeys(now),
-    [now.getFullYear(), now.getMonth(), now.getDate()],
-  );
-  const evaluationDetailMonthOptions = useMemo(
-    () => getSemesterMonthKeys(now),
-    [now.getFullYear(), now.getMonth(), now.getDate()],
-  );
-  const evaluationDetailRecords = useMemo(() => {
-    if (!currentClass) return [];
-    const filtered =
-      evaluationDetailPeriod === "day"
-        ? records.filter(
-            (record) =>
-              record.classId === currentClass.id &&
-              record.date === evaluationDetailDay,
-          )
-        : evaluationDetailPeriod === "week"
-          ? getRecordsForWeek(records, currentClass.id, evaluationDetailWeek)
-          : records.filter(
-              (record) =>
-                record.classId === currentClass.id &&
-                record.date.startsWith(evaluationDetailMonth),
-            );
-    return [...filtered].sort((a, b) =>
-      `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`),
+    const deductionRecords = weekEvaluations.filter(
+      (record) => record.totalDeduction < 0,
     );
-  }, [
-    currentClass,
-    evaluationDetailDay,
-    evaluationDetailMonth,
-    evaluationDetailPeriod,
-    evaluationDetailWeek,
-    records,
-  ]);
-  const evaluationDetailTotals = useMemo(
-    () =>
-      evaluationDetailRecords.reduce(
-        (totals, record) => {
-          if (record.totalDeduction > 0)
-            totals.addition += record.totalDeduction;
-          if (record.totalDeduction < 0)
-            totals.deduction += Math.abs(record.totalDeduction);
-          return totals;
-        },
-        { addition: 0, deduction: 0 },
+    const countAffectedStudents = (evaluationRecords: typeof weekEvaluations) => {
+      const affected = new Set<string>();
+      const studentIdByName = new Map(
+        currentClassStudents.map((student) => [student.name, student.id]),
+      );
+
+      evaluationRecords.forEach((record) => {
+        if (record.studentIds?.length) {
+          record.studentIds.forEach((studentId) => affected.add(studentId));
+          return;
+        }
+        if (record.studentNames.length) {
+          record.studentNames.forEach((name) =>
+            affected.add(studentIdByName.get(name) ?? `name:${name}`),
+          );
+          return;
+        }
+        currentClassStudents.forEach((student) => affected.add(student.id));
+      });
+
+      return affected.size;
+    };
+
+    return {
+      additionStudentCount: countAffectedStudents(additionRecords),
+      deductionStudentCount: countAffectedStudents(deductionRecords),
+      additionTotal: additionRecords.reduce(
+        (total, record) => total + record.totalDeduction,
+        0,
       ),
-    [evaluationDetailRecords],
+      deductionTotal: Math.abs(
+        deductionRecords.reduce(
+          (total, record) => total + record.totalDeduction,
+          0,
+        ),
+      ),
+    };
+  }, [currentClassStudents, weekEvaluations]);
+  const evaluationPageCount = Math.max(
+    1,
+    Math.ceil(weekEvaluations.length / WEEK_EVALUATION_PAGE_SIZE),
   );
-  const visibleEvaluationDetailRecords = useMemo(
-    () =>
-      evaluationDetailKind === "all"
-        ? evaluationDetailRecords
-        : evaluationDetailRecords.filter((record) =>
-            evaluationDetailKind === "addition"
-              ? record.totalDeduction > 0
-              : record.totalDeduction < 0,
-          ),
-    [evaluationDetailKind, evaluationDetailRecords],
-  );
-  const showEvaluationStudentColumn = evaluationDetailRecords.some(
-    (record) =>
-      record.targetType === "student" || record.studentNames.length > 0,
+  const currentEvaluationPage = Math.min(evaluationPage, evaluationPageCount);
+  const visibleWeekEvaluations = weekEvaluations.slice(
+    (currentEvaluationPage - 1) * WEEK_EVALUATION_PAGE_SIZE,
+    currentEvaluationPage * WEEK_EVALUATION_PAGE_SIZE,
   );
 
-  const todayAwards = useMemo(
-    () => weekAwards.filter((award) => award.date === today).slice(0, 4),
-    [today, weekAwards],
-  );
+  useEffect(() => {
+    if (evaluationPage > evaluationPageCount) setEvaluationPage(evaluationPageCount);
+  }, [evaluationPage, evaluationPageCount]);
+
+  useEffect(() => {
+    setEvaluationPage(1);
+  }, [currentClass?.id]);
+
   const lastWeekFlags = useMemo(
     () =>
       flags
@@ -396,165 +201,68 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
         .map((flag) => ({
           ...flag,
           config: classFlagConfigs.get(flag.configId ?? ""),
-        })),
-    [classFlagConfigs, currentClass, flags, previousWeekKey],
+        }))
+        .sort(
+          (a, b) =>
+            (flagConfigOrder.get(a.configId ?? "") ?? Number.MAX_SAFE_INTEGER) -
+            (flagConfigOrder.get(b.configId ?? "") ?? Number.MAX_SAFE_INTEGER),
+        ),
+    [classFlagConfigs, currentClass, flagConfigOrder, flags, previousWeekKey],
   );
 
-  const classActivities = useMemo(() => {
-    if (!currentClass) return [];
-    return activities
-      .map((activity) => ({
-        activity,
-        computedStatus: getActivityStatus(activity, now),
-      }))
-      .filter(({ activity, computedStatus }) => {
-        const belongsToClass =
-          activity.classIds.length > 0
-            ? activity.classIds.includes(currentClass.id)
-            : activity.gradeIds.includes(currentClass.gradeId);
-        const start = activity.startDate
-          ? new Date(activity.startDate).getTime()
-          : Number.NaN;
-        const end = activity.endDate
-          ? new Date(activity.endDate).getTime()
-          : Number.NaN;
-        const overlapsWeek =
-          !Number.isNaN(start) &&
-          !Number.isNaN(end) &&
-          start <= currentWeek.end.getTime() &&
-          end >= currentWeek.start.getTime();
-        const activeOrRecruiting =
-          computedStatus === "recruiting" || computedStatus === "ongoing";
-        return (
-          belongsToClass &&
-          (activeOrRecruiting ||
-            (!requiresActivityEnrollment(activity) && overlapsWeek))
-        );
-      })
-      .sort((a, b) => a.activity.startDate.localeCompare(b.activity.startDate))
-      .slice(0, 5);
-  }, [activities, currentClass, currentWeek.end, currentWeek.start, now]);
-
-  const latestMessages = useMemo<DashboardMessage[]>(
-    () => [
-      ...todayAwards.map((award) => ({
-        id: `award-${award.id}`,
-        category: "今日奖卡",
-        title: `${award.studentName} 获得「${award.level2}」奖卡`,
-        summary: `${award.level1} · +${award.points} 积分 · 发放人：${award.operatorName}`,
-        detail: `${award.studentName}于 ${award.date} 获得 ${award.level1}「${award.level2}」奖卡，本次获得 ${award.points} 积分，发放人为 ${award.operatorName}。`,
-        icon: Award,
-        tone: "blue" as const,
-      })),
-      ...lastWeekFlags.map((flag) => ({
-        id: `flag-${flag.classId}-${flag.configId ?? flag.weekKey}`,
-        category: "上周流动红旗",
-        title: `${currentClass?.name ?? "本班"} 获得「${flag.config?.name ?? "流动红旗"}」`,
-        summary: "上周班级荣誉",
-        detail: `${currentClass?.name ?? "本班"}在上周获得「${flag.config?.name ?? "流动红旗"}」班级荣誉。`,
-        icon: Trophy,
-        tone: "orange" as const,
-      })),
-      ...classActivities.map(({ activity, computedStatus }) => ({
-        id: `activity-${activity.id}`,
-        category: "本周活动",
-        title: activity.title,
-        summary:
-          computedStatus === "recruiting" ? "本周可报名参加" : "本周需参加",
-        detail:
-          activity.description ||
-          `${activity.title}安排在本周进行，${computedStatus === "recruiting" ? "当前可报名参加" : "请按要求组织学生参加"}。`,
-        icon: CalendarDays,
-        tone: "purple" as const,
-      })),
-    ],
-    [classActivities, currentClass?.name, lastWeekFlags, todayAwards],
-  );
-  const messagesLoadMore = useLoadMore(latestMessages, 2);
-  const messagesScroll = useScrollLoadMore(
-    messagesLoadMore.hasMore,
-    messagesLoadMore.loadMore,
-  );
-
-  const commentCompleted = commentProgress.filter(
-    (item) => item.status === "已提交",
-  ).length;
-  const pendingCommentCount = commentProgress.length - commentCompleted;
-  const pendingTodoCount =
-    weekDeductions.length + pendingCommentCount + pendingEvaluationCount;
   const dashboardTodos = useMemo<DashboardTodo[]>(
     () => [
       {
         id: "score-review",
         title: "班级评价待审核",
-        description:
-          weekDeductions.length > 0
-            ? `本周有 ${weekDeductions.length} 条评价记录待查看`
-            : "本周暂无待审核评价记录",
-        count: weekDeductions.length,
-        icon: LayoutGrid,
-        actionLabel: "去查看",
+        description: "检查并确认本班评价记录",
+        actionLabel: "去审核",
         onClick: () => onNavigate("score"),
       },
       {
         id: "comment-review",
         title: "学期评语待完成",
-        description:
-          pendingCommentCount > 0
-            ? `还有 ${pendingCommentCount} 项教师评语待跟进`
-            : "学期评语录入已完成",
-        count: pendingCommentCount,
-        icon: NotebookPen,
+        description: "完成本学期教师评语",
         actionLabel: "去完成",
         onClick: () => onNavigate("comment_entry"),
       },
       {
         id: "semester-evaluation",
         title: "学期评价待完成",
-        description:
-          pendingEvaluationCount > 0
-            ? `还有 ${pendingEvaluationCount} 名学生待完成学期评价`
-            : "本班学期评价已完成",
-        count: pendingEvaluationCount,
-        icon: ClipboardCheck,
+        description: "更新本学期学生综合评价",
         actionLabel: "去评价",
         onClick: () => onNavigate("semester_evaluation"),
       },
       {
         id: "honor-entry",
         title: "班级荣誉记录",
-        description: "为获奖学生补录荣誉信息并同步加分",
-        count: 0,
-        icon: Medal,
+        description: "补录获奖学生荣誉信息",
         actionLabel: "去录入",
         onClick: () => setHonorDrawerOpen(true),
       },
       {
         id: "activity-follow-up",
         title: "本周活动待跟进",
-        description:
-          classActivities.length > 0
-            ? `本周有 ${classActivities.length} 项活动需要组织`
-            : "本周暂无需要跟进的活动",
-        count: classActivities.length,
-        icon: CalendarDays,
+        description: "跟进本周班级活动进度",
         actionLabel: "去查看",
         onClick: () => onNavigate("activity"),
       },
     ],
-    [
-      classActivities.length,
-      onNavigate,
-      pendingCommentCount,
-      pendingEvaluationCount,
-      weekDeductions.length,
-    ],
+    [onNavigate],
   );
-  const todosLoadMore = useLoadMore(dashboardTodos, 3);
-  const todosScroll = useScrollLoadMore(
-    todosLoadMore.hasMore,
-    todosLoadMore.loadMore,
+  const todoPageCount = Math.max(
+    1,
+    Math.ceil(dashboardTodos.length / DASHBOARD_TODO_PAGE_SIZE),
   );
+  const currentTodoPage = Math.min(todoPage, todoPageCount);
+  const visibleDashboardTodos = dashboardTodos.slice(
+    (currentTodoPage - 1) * DASHBOARD_TODO_PAGE_SIZE,
+    currentTodoPage * DASHBOARD_TODO_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    if (todoPage > todoPageCount) setTodoPage(todoPageCount);
+  }, [todoPage, todoPageCount]);
 
   if (!currentClass) {
     return (
@@ -581,365 +289,367 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
     >
       <section
         className="w-full min-w-0 overflow-hidden rounded-2xl border border-[#cbd6f7] border-t-[3px] border-t-primary bg-white shadow-[0_18px_38px_-30px_rgba(48,62,139,0.72)]"
-        aria-label="班主任信息、最新消息与待办事项"
+        aria-label="班主任首页班级信息与班级荣誉"
       >
-        <div className="grid xl:grid-cols-[minmax(340px,0.82fr)_minmax(0,1.18fr)]">
-          <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] p-4 sm:p-5 xl:border-r xl:border-[#e4e9f8]">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.16em] text-primary">
-                班级工作台
-              </p>
-              <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">
-                班主任首页
-              </h1>
-              <p
-                data-mobile-secondary="true"
-                className="mt-1 text-xs text-muted-foreground"
-              >
-                关注班级表现与本周待办，及时推进评价工作。
-              </p>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground">
-                  班
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-foreground">
-                    {currentClass.homeroomTeacher}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {currentClass.name} 班主任
-                  </p>
-                </div>
+        <div className="bg-[linear-gradient(135deg,#f5f7ff_0%,#ffffff_72%)] p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
+              <div className="shrink-0">
+                <p className="text-xs font-semibold tracking-[0.16em] text-primary">
+                  班级工作台
+                </p>
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">
+                  班主任首页
+                </h1>
               </div>
-              <button
-                type="button"
-                onClick={() => setClassSwitchOpen(true)}
-                aria-haspopup="dialog"
-                className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-[#dbe3fa] bg-white px-3 text-left transition-colors hover:border-primary/45 hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
-              >
-                <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                  {currentClass.name.slice(0, 1)}
-                </span>
-                <span className="text-sm font-bold text-foreground">
-                  {currentClass.name}
-                </span>
-                <span className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-                  切换班级
-                  <ChevronDown className="size-3.5" aria-hidden="true" />
-                </span>
-              </button>
-            </div>
-            <div className="mt-3 grid gap-2.5">
+              <div className="min-w-0 border-l border-[#dfe6f7] pl-4">
+                <p className="text-sm font-bold text-foreground">
+                  {currentClass.homeroomTeacher}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {currentClass.name} 班主任
+                </p>
+              </div>
               <div
-                className="flex min-h-[68px] min-w-0 items-center gap-2.5 rounded-2xl border border-[#f1dfb7] bg-[#fffaf0] px-3 py-2 shadow-[0_10px_22px_-22px_rgba(167,120,33,0.38)]"
-                aria-label="上周流动红旗获得情况"
+                className="flex basis-full min-w-0 flex-wrap items-center gap-2.5 lg:basis-auto"
+                role="group"
+                aria-label="班级荣誉与上周流动红旗"
               >
-                <img
-                  src={
-                    lastWeekFlags[0]?.config?.image ??
-                    "/xszp/images/flag-issued.svg"
-                  }
-                  alt=""
-                  width="38"
-                  height="38"
-                  fetchPriority="high"
-                  className="size-9 shrink-0 object-contain"
-                />
-                <span className="min-w-0">
-                  <span className="block text-xs font-semibold text-[#a77821]">
-                    上周流动红旗
-                  </span>
-                  <span
-                    title={lastWeekFlags
-                      .map((flag) => flag.config?.name ?? "流动红旗")
-                      .join("、")}
-                    className="block truncate text-sm font-bold text-foreground"
-                  >
-                    {lastWeekFlags.length > 0
-                      ? lastWeekFlags
-                          .map((flag) => flag.config?.name ?? "流动红旗")
-                          .join("、")
-                      : "暂未获得"}
-                  </span>
-                </span>
+                {lastWeekFlags.length > 0 ? (
+                  lastWeekFlags.map((flag, index) => {
+                    const flagName = flag.config?.name ?? "流动红旗";
+                    return (
+                      <div
+                        key={flag.configId ?? index}
+                        className="flex h-[68px] w-56 shrink-0 items-center gap-2.5 rounded-2xl border border-[#f1dfb7] bg-[#fffaf0] px-3 py-2"
+                      >
+                        <img
+                          src={flag.config?.image ?? "/xszp/images/flag-issued.svg"}
+                          alt=""
+                          width="38"
+                          height="38"
+                          className="size-9 shrink-0 object-contain"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-[11px] font-semibold text-[#a77821]">
+                            上周流动红旗
+                          </span>
+                          <span
+                            title={flagName}
+                            className="block truncate text-sm font-bold text-foreground"
+                          >
+                            {flagName}
+                          </span>
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex h-[68px] w-56 shrink-0 items-center gap-2.5 rounded-2xl border border-[#f1dfb7] bg-[#fffaf0] px-3 py-2">
+                    <img
+                      src="/xszp/images/flag-issued.svg"
+                      alt=""
+                      width="38"
+                      height="38"
+                      className="size-9 shrink-0 object-contain opacity-70"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[11px] font-semibold text-[#a77821]">
+                        上周流动红旗
+                      </span>
+                      <span className="block truncate text-sm font-semibold text-muted-foreground">
+                        暂无荣誉
+                      </span>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-          <div className="min-w-0 p-5 sm:p-6">
-            <div
-              role="tablist"
-              aria-label="班级消息与待办事项"
-              className="flex items-center gap-5 border-b border-[#e5e9f6]"
+            <button
+              type="button"
+              onClick={() => setClassSwitchOpen(true)}
+              aria-haspopup="dialog"
+              className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-[#dbe3fa] bg-white px-3 text-left transition-colors hover:border-primary/45 hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
             >
-              <button
-                id="top-messages-tab"
-                type="button"
-                role="tab"
-                aria-selected={topPanelTab === "messages"}
-                aria-controls="top-information-panel"
-                onClick={() => setTopPanelTab("messages")}
-                className={cn(
-                  "relative inline-flex min-h-10 items-center gap-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
-                  topPanelTab === "messages"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                最新消息
-                {topPanelTab === "messages" && (
-                  <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary" />
-                )}
-              </button>
-              <button
-                id="top-todos-tab"
-                type="button"
-                role="tab"
-                aria-selected={topPanelTab === "todos"}
-                aria-controls="top-information-panel"
-                onClick={() => setTopPanelTab("todos")}
-                className={cn(
-                  "relative inline-flex min-h-10 items-center gap-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
-                  topPanelTab === "todos"
-                    ? "text-brand-orange"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                待办事项
-                <span
-                  className={cn(
-                    "inline-flex size-5 items-center justify-center rounded-full text-[11px] font-bold tabular-nums",
-                    pendingTodoCount > 0
-                      ? "bg-[#fff1e9] text-brand-orange"
-                      : "bg-[#eaf8f1] text-brand-green",
-                  )}
-                >
-                  {pendingTodoCount}
-                </span>
-                {topPanelTab === "todos" && (
-                  <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand-orange" />
-                )}
-              </button>
-            </div>
-            <div
-              id="top-information-panel"
-              role="tabpanel"
-              aria-labelledby={
-                topPanelTab === "messages"
-                  ? "top-messages-tab"
-                  : "top-todos-tab"
-              }
-              className="pt-4"
-            >
-              {topPanelTab === "messages" ? (
-                latestMessages.length > 0 ? (
-                  <ul
-                    tabIndex={0}
-                    aria-label="最新消息列表"
-                    className="h-[128px] space-y-2.5 overflow-y-auto overscroll-contain rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
-                    onScroll={messagesScroll.onScroll}
-                  >
-                    {messagesLoadMore.visible.map((message) => (
-                      <li key={message.id}>
-                        <MessageCard
-                          message={message}
-                          onClick={() => setSelectedMessage(message)}
-                        />
-                      </li>
-                    ))}
-                    <li>
-                      <LoadMoreFooter
-                        hasMore={messagesLoadMore.hasMore}
-                        loaded={messagesLoadMore.visible.length}
-                        total={messagesLoadMore.total}
-                        onLoadMore={messagesLoadMore.loadMore}
-                      />
-                    </li>
-                  </ul>
-                ) : (
-                  <EmptyPanel text="暂无班级最新消息" />
-                )
-              ) : (
-                <ul
-                  tabIndex={0}
-                  aria-label="待办事项列表"
-                  className="h-[192px] space-y-2.5 overflow-y-auto overscroll-contain rounded-xl pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
-                  onScroll={todosScroll.onScroll}
-                >
-                  {todosLoadMore.visible.map((todo) => (
-                    <li key={todo.id}>
-                      <TodoItem {...todo} />
-                    </li>
-                  ))}
-                  <li>
-                    <LoadMoreFooter
-                      hasMore={todosLoadMore.hasMore}
-                      loaded={todosLoadMore.visible.length}
-                      total={todosLoadMore.total}
-                      onLoadMore={todosLoadMore.loadMore}
-                    />
-                  </li>
-                </ul>
-              )}
-            </div>
+              <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
+                {currentClass.name.slice(0, 1)}
+              </span>
+              <span className="text-sm font-bold text-foreground">
+                {currentClass.name}
+              </span>
+              <span className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                切换班级
+                <ChevronDown className="size-3.5" aria-hidden="true" />
+              </span>
+            </button>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section
-          className="flex h-[320px] min-h-0 flex-col rounded-2xl border border-[#cbd6f7] border-t-2 border-t-brand-orange bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6"
-          aria-labelledby="week-deductions-title"
-        >
-          <SectionHeading
-            id="week-deductions-title"
-            icon={TrendingDown}
-            tone="orange"
-            title="本周班级评价扣分动态"
-            description={`共 ${weekDeductions.length} 条扣分记录 · 扣分 -${weekEvaluationTotals.deduction} · 加分 +${weekEvaluationTotals.addition}`}
-            action={
-              <button
-                type="button"
-                onClick={() => setEvaluationDetailOpen(true)}
-                className={dashboardActionButtonClass}
-              >
-                查看明细
-                <ChevronRight className="size-3.5" aria-hidden="true" />
-              </button>
-            }
-          />
-          {weekDeductions.length === 0 ? (
-            <EmptyPanel text="本周暂无扣分记录，继续保持！" />
-          ) : (
-            <ul
-              tabIndex={0}
-              aria-label="本周班级评价扣分动态"
-              className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-xl border border-[#e6eaf6] bg-[#fbfcff] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
-              onScroll={deductionsScroll.onScroll}
+      <div className={cn(styles.homeroomOverviewGrid, "gap-4")}>
+            <section
+              className="flex min-h-[360px] min-w-0 flex-col rounded-2xl border border-[#cbd6f7] bg-white p-4 shadow-[0_16px_32px_-26px_rgba(48,62,139,0.62)] sm:p-5"
+              aria-labelledby="week-evaluations-title"
             >
-              {deductionsLoadMore.visible.map((record) => (
-                <li
-                  key={record.id}
-                  className="flex items-start gap-2.5 border-b border-[#edf0fa] py-2.5 last:border-0"
+              <SectionHeading
+                id="week-evaluations-title"
+                icon={ListChecks}
+                tone="orange"
+                title="本班本周评价明细"
+                description={"共 " + weekEvaluations.length + " 条评价记录"}
+                descriptionClassName="text-[#111827]"
+                action={
+                  <div
+                    role="group"
+                    aria-label="本周班级评价统计"
+                    className="flex w-full flex-wrap justify-start gap-x-3 gap-y-1 text-[13px] font-medium leading-5 text-[#111827] sm:w-auto sm:max-w-[62%] sm:justify-end sm:text-sm"
+                  >
+                    <span className="whitespace-nowrap">
+                      本周加分 <strong className="font-bold text-[#111827]">{weeklyEvaluationStats.additionStudentCount}</strong> 人，
+                    </span>
+                    <span className="whitespace-nowrap">
+                      本周扣分 <strong className="font-bold text-[#111827]">{weeklyEvaluationStats.deductionStudentCount}</strong> 人，
+                    </span>
+                    <span className="whitespace-nowrap">
+                      本周总加分 <strong className="font-bold text-[#111827]">{weeklyEvaluationStats.additionTotal}</strong> 分，
+                    </span>
+                    <span className="whitespace-nowrap">
+                      本周总扣分 <strong className="font-bold text-[#111827]">{weeklyEvaluationStats.deductionTotal}</strong> 分
+                    </span>
+                  </div>
+                }
+              />
+              <div className="mt-3 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#e3e8f5] bg-white">
+                <div className="min-h-0 flex-1 overflow-x-auto">
+                  <table className="h-full w-full min-w-[520px] table-fixed border-separate border-spacing-0 text-xs">
+                    <caption className="sr-only">
+                      本班本周评价明细，按评价时间倒序排列
+                    </caption>
+                    <thead>
+                      <tr className="border-b border-[#e3e8f5] bg-[#f7f9ff] text-muted-foreground">
+                        <th scope="col" className="sticky left-0 z-20 w-[112px] min-w-[112px] max-w-[112px] bg-[#f7f9ff] px-2 py-2.5 text-center font-semibold">
+                          学生
+                        </th>
+                        <th scope="col" className="w-[27%] px-2 py-2.5 text-center font-semibold">
+                          评价指标
+                        </th>
+                        <th scope="col" className="w-[18%] px-2 py-2.5 text-center font-semibold">
+                          评价时间
+                        </th>
+                        <th scope="col" className="w-[17%] px-2 py-2.5 text-center font-semibold">
+                          评价人
+                        </th>
+                        <th scope="col" className="w-[20%] px-2 py-2.5 text-center font-semibold">
+                          加分/扣分
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleWeekEvaluations.length > 0 ? (
+                        visibleWeekEvaluations.map((record) => (
+                          <tr
+                            key={record.id}
+                            className="border-b border-[#edf0fa] last:border-0"
+                          >
+                            <td
+                              title={
+                                record.studentNames.length > 0
+                                  ? record.studentNames.join("、")
+                                  : "全班"
+                              }
+                              className="sticky left-0 z-10 w-[112px] min-w-[112px] max-w-[112px] bg-white px-2 py-2.5 text-center text-muted-foreground shadow-[1px_0_0_#edf0fa]"
+                            >
+                              <span className="block truncate">
+                                {record.studentNames.length > 0
+                                  ? record.studentNames.join("、")
+                                  : "全班"}
+                              </span>
+                            </td>
+                            <td className="max-w-0 px-2 py-2.5 text-center">
+                              <span
+                                title={record.level1 + " · " + record.level2}
+                                className="block truncate font-semibold text-foreground"
+                              >
+                                {record.level1} · {record.level2}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-2 py-2.5 text-center tabular-nums text-muted-foreground">
+                              {formatEvaluationDate(record.date)}
+                            </td>
+                            <td className="max-w-0 px-2 py-2.5 text-center text-muted-foreground">
+                              <span className="block truncate" title={record.operatorName}>
+                                {record.operatorName || "—"}
+                              </span>
+                            </td>
+                            <td className="px-2 py-2.5 text-center font-bold tabular-nums">
+                              <span
+                                className={cn(
+                                  record.totalDeduction > 0
+                                    ? "text-emerald-700"
+                                    : record.totalDeduction < 0
+                                      ? "text-rose-700"
+                                      : "text-muted-foreground",
+                                )}
+                              >
+                                {record.totalDeduction > 0
+                                  ? "+" + record.totalDeduction
+                                  : record.totalDeduction}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="px-3 py-8 text-center text-xs text-muted-foreground"
+                          >
+                            本周暂无评价记录
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <nav
+                  aria-label="本周评价明细分页"
+                  className="flex items-center justify-between gap-2 border-t border-[#edf0fa] px-3 py-2 text-xs text-muted-foreground"
                 >
-                  <MinusCircle
-                    className="mt-0.5 size-4 shrink-0 text-brand-orange"
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground">
-                      {record.level1}
-                      <span className="font-normal text-muted-foreground">
-                        {" "}
-                        · {record.level2}
-                      </span>
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                      {record.studentNames.length > 0
-                        ? `涉及：${record.studentNames.join("、")}`
-                        : record.note || "班级评价记录"}
-                    </span>
+                  <span aria-live="polite" className="whitespace-nowrap">
+                    共 <span className="font-semibold tabular-nums text-foreground">{weekEvaluations.length}</span> 条
                   </span>
-                  <span className="shrink-0 text-right">
-                    <span className="block text-sm font-bold tabular-nums text-brand-orange">
-                      -{Math.abs(record.totalDeduction)}
+                  <div className="inline-flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={currentEvaluationPage <= 1}
+                      onClick={() =>
+                        setEvaluationPage((page) => Math.max(1, page - 1))
+                      }
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-[#dbe3fa] bg-white px-2.5 text-[11px] font-medium text-primary transition-colors hover:bg-[#f3f6ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 disabled:cursor-not-allowed disabled:text-[#aab5ce]"
+                    >
+                      上一页
+                    </button>
+                    <span
+                      aria-current="page"
+                      aria-label={`第 ${currentEvaluationPage} 页，共 ${evaluationPageCount} 页`}
+                      className="inline-flex h-8 min-w-10 items-center justify-center rounded-lg bg-[#eef2ff] px-2 text-[11px] font-semibold tabular-nums text-primary"
+                    >
+                      {currentEvaluationPage} / {evaluationPageCount}
                     </span>
-                    <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
-                      {record.date}
-                    </span>
+                    <button
+                      type="button"
+                      disabled={currentEvaluationPage >= evaluationPageCount}
+                      onClick={() =>
+                        setEvaluationPage((page) =>
+                          Math.min(evaluationPageCount, page + 1),
+                        )
+                      }
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-[#dbe3fa] bg-white px-2.5 text-[11px] font-medium text-primary transition-colors hover:bg-[#f3f6ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 disabled:cursor-not-allowed disabled:text-[#aab5ce]"
+                    >
+                      下一页
+                    </button>
+                  </div>
+                </nav>
+              </div>
+            </section>
+            <section
+              className="flex h-full min-h-[360px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#e2e7f8] border-t-[3px] border-t-primary bg-[linear-gradient(180deg,#fbfcff_0%,#f5f8ff_100%)] p-4 sm:p-5"
+              aria-labelledby="homeroom-todos-title"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff3db] text-[#a66a12]">
+                    <ClipboardCheck className="size-5" aria-hidden="true" />
                   </span>
-                </li>
-              ))}
-              <li>
-                <LoadMoreFooter
-                  hasMore={deductionsLoadMore.hasMore}
-                  loaded={deductionsLoadMore.visible.length}
-                  total={deductionsLoadMore.total}
-                  onLoadMore={deductionsLoadMore.loadMore}
-                />
-              </li>
-            </ul>
-          )}
-        </section>
-        <section
-          className="flex h-[320px] min-h-0 flex-col rounded-2xl border border-[#cbd6f7] border-t-2 border-t-brand-green bg-white p-5 shadow-[0_14px_30px_-26px_rgba(48,62,139,0.62)] sm:p-6"
-          aria-labelledby="week-awards-title"
-        >
-          <SectionHeading
-            id="week-awards-title"
-            icon={Award}
-            tone="green"
-            title="本周班级奖卡记录动态"
-            description="按发放时间倒序"
-            action={
-              <div className="flex items-center gap-2">
-                <span className="inline-flex min-h-8 items-center rounded-lg bg-[#eaf8f1] px-2 text-[11px] font-bold tabular-nums text-brand-green">
-                  {weekAwards.length} 张 · +{weekAwardPoints} 分
-                </span>
+                  <h2
+                    id="homeroom-todos-title"
+                    className="text-[15px] font-bold tracking-tight text-foreground"
+                  >
+                    待办事项
+                  </h2>
+                </div>
                 <button
                   type="button"
-                  onClick={() => onNavigate("award")}
-                  className={dashboardActionButtonClass}
+                  aria-label="刷新待办事项"
+                  title="刷新待办事项"
+                  onClick={() => setTodoPage(1)}
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
                 >
-                  去发放
-                  <ChevronRight className="size-3.5" aria-hidden="true" />
+                  <RefreshCw className="size-4" aria-hidden="true" />
                 </button>
               </div>
-            }
-          />
-          {weekAwards.length === 0 ? (
-            <EmptyPanel text="本周暂无奖卡记录" />
-          ) : (
-            <ul
-              tabIndex={0}
-              aria-label="本周班级奖卡记录动态"
-              className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-xl border border-[#e6eaf6] bg-[#fbfcff] px-3 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
-              onScroll={awardsScroll.onScroll}
-            >
-              {awardsLoadMore.visible.map((award) => (
-                <li
-                  key={award.id}
-                  className="flex items-center gap-3 border-b border-[#edf0fa] py-2.5 last:border-0"
+              <div className="mt-3 flex min-h-[300px] min-w-0 flex-1 flex-col overflow-hidden">
+              {visibleDashboardTodos.length > 0 ? (
+                <ul
+                  aria-label="待办事项列表"
+                  className="min-h-0 flex-1 divide-y divide-[#e7ebfa] overflow-y-auto"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#eaf8f1] text-brand-green">
-                    <Award className="size-4" aria-hidden="true" />
+                  {visibleDashboardTodos.map((todo) => (
+                    <li key={todo.id}>
+                      <TodoItem {...todo} />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex min-h-0 flex-1 items-center justify-center border-y border-dashed border-[#d8e0f3] text-sm text-muted-foreground">
+                  当前暂无待处理任务
+                </div>
+              )}
+              {dashboardTodos.length > 0 && (
+                <nav
+                  aria-label="待办事项分页"
+                  className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-[#e7ebfa] pt-2 text-xs text-muted-foreground"
+                >
+                  <p aria-live="polite" className="whitespace-nowrap">
+                    共 {dashboardTodos.length} 项 · 第 {currentTodoPage} / {todoPageCount} 页
+                  </p>
+                  <span className="inline-flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      aria-label="上一页待办事项"
+                      disabled={currentTodoPage <= 1}
+                      onClick={() => setTodoPage((page) => Math.max(1, page - 1))}
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#e2e7f8] bg-white px-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 disabled:cursor-not-allowed disabled:text-[#aab5ce]"
+                    >
+                      上一页
+                    </button>
+                    {Array.from(
+                      { length: todoPageCount },
+                      (_, index) => index + 1,
+                    ).map((page) => (
+                      <button
+                        key={page}
+                        type="button"
+                        aria-label={"第 " + page + " 页"}
+                        aria-current={page === currentTodoPage ? "page" : undefined}
+                        onClick={() => setTodoPage(page)}
+                        className={cn(
+                          "inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border px-3 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
+                          page === currentTodoPage
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-[#e2e7f8] bg-white text-primary hover:border-primary/30 hover:bg-[#f3f6ff]",
+                        )}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      aria-label="下一页待办事项"
+                      disabled={currentTodoPage >= todoPageCount}
+                      onClick={() =>
+                        setTodoPage((page) => Math.min(todoPageCount, page + 1))
+                      }
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#e2e7f8] bg-white px-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 disabled:cursor-not-allowed disabled:text-[#aab5ce]"
+                    >
+                      下一页
+                    </button>
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground">
-                      {award.studentName}
-                      <span className="font-normal text-muted-foreground">
-                        {" "}
-                        · {award.level2}
-                      </span>
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                      {award.level1} · 发放人：{award.operatorName}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-right">
-                    <span className="block text-xs font-bold tabular-nums text-brand-green">
-                      +{award.points} 分
-                    </span>
-                    <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
-                      {award.date}
-                    </span>
-                  </span>
-                </li>
-              ))}
-              <li>
-                <LoadMoreFooter
-                  hasMore={awardsLoadMore.hasMore}
-                  loaded={awardsLoadMore.visible.length}
-                  total={awardsLoadMore.total}
-                  onLoadMore={awardsLoadMore.loadMore}
-                />
-              </li>
-            </ul>
-          )}
-        </section>
+                </nav>
+              )}
+              </div>
+            </section>
       </div>
-
       <section
         className="rounded-2xl border border-[#cbd6f7] bg-white p-5 shadow-[0_16px_32px_-26px_rgba(48,62,139,0.62)] sm:p-6"
         aria-labelledby="student-ranking-title"
@@ -950,7 +660,6 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
             icon={Trophy}
             tone="purple"
             title="班级学生积分排名"
-            description="五育一级指标学期总分、学期总积分与累计总积分"
           />
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
@@ -1001,364 +710,6 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
           />
         </div>
       </section>
-
-      <Dialog
-        open={evaluationDetailOpen}
-        onOpenChange={setEvaluationDetailOpen}
-      >
-        <DialogContent className="max-h-[88vh] border border-[#cfd8f6] bg-[#f7f9ff] p-0 shadow-[0_24px_70px_-32px_rgba(48,62,139,0.72)] sm:max-w-5xl">
-          <DialogHeader className="border-b border-[#dfe5f7] bg-gradient-to-r from-[#eef2ff] via-white to-[#fff8f0] px-5 py-5 pr-12 sm:px-6">
-            <div className="flex items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff1e9] text-brand-orange">
-                <BarChart3 className="size-5" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <DialogTitle className="text-lg font-bold">
-                  {currentClass.name} · 班级评价明细
-                </DialogTitle>
-                <DialogDescription className="mt-1">
-                  按日、周、月查看班级加分与扣分记录及统计数据。
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-          <div className="space-y-4 bg-[#f7f9ff] p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dce4f7] bg-white p-3.5">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <div
-                  className="inline-flex rounded-xl border border-primary/10 bg-[#eef1ff] p-1"
-                  role="tablist"
-                  aria-label="评价明细周期"
-                >
-                  {(["day", "week", "month"] as EvaluationDetailPeriod[]).map(
-                    (item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        role="tab"
-                        aria-selected={evaluationDetailPeriod === item}
-                        onClick={() => setEvaluationDetailPeriod(item)}
-                        className={cn(
-                          "min-h-10 min-w-16 touch-manipulation rounded-lg px-3 text-xs font-bold transition-[background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                          evaluationDetailPeriod === item
-                            ? "bg-gradient-to-r from-primary to-primary-2 text-primary-foreground shadow-[0_7px_16px_-9px_rgba(63,81,188,0.92)]"
-                            : "text-[#687898] hover:bg-white hover:text-primary",
-                        )}
-                      >
-                        {item === "day"
-                          ? "按天"
-                          : item === "week"
-                            ? "按周"
-                            : "按月"}
-                      </button>
-                    ),
-                  )}
-                </div>
-                {evaluationDetailPeriod === "day" && (
-                  <label className="flex h-10 items-center gap-2 rounded-xl border border-[#dbe3f7] bg-[#fbfcff] px-3">
-                    <CalendarDays
-                      className="size-3.5 text-primary"
-                      aria-hidden="true"
-                    />
-                    <span className="sr-only">选择评价明细日期</span>
-                    <Input
-                      type="date"
-                      name="homeroom-evaluation-detail-day"
-                      autoComplete="off"
-                      aria-label="选择评价明细日期"
-                      max={today}
-                      value={evaluationDetailDay}
-                      onChange={(event) =>
-                        setEvaluationDetailDay(event.target.value)
-                      }
-                      className="h-8 w-[132px] border-0 bg-transparent p-0 text-xs font-semibold shadow-none focus-visible:ring-0"
-                    />
-                  </label>
-                )}
-                {evaluationDetailPeriod === "week" && (
-                  <label className="flex h-10 items-center gap-2 rounded-xl border border-[#dbe3f7] bg-[#fbfcff] px-3">
-                    <CalendarDays
-                      className="size-3.5 text-primary"
-                      aria-hidden="true"
-                    />
-                    <span className="sr-only">选择评价明细周次</span>
-                    <select
-                      aria-label="选择评价明细周次"
-                      value={evaluationDetailWeek}
-                      onChange={(event) =>
-                        setEvaluationDetailWeek(event.target.value)
-                      }
-                      className="h-8 min-w-40 bg-transparent text-xs font-semibold text-foreground outline-none"
-                    >
-                      <option value="" disabled>
-                        选择周次
-                      </option>
-                      {evaluationDetailWeekOptions.map((item) => (
-                        <option key={item} value={item}>
-                          {item === weekKey
-                            ? `本周 · ${formatWeekLabel(item)}`
-                            : formatWeekLabel(item)}{" "}
-                          · {formatDateRangeLabel(item)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {evaluationDetailPeriod === "month" && (
-                  <label className="flex h-10 items-center gap-2 rounded-xl border border-[#dbe3f7] bg-[#fbfcff] px-3">
-                    <CalendarDays
-                      className="size-3.5 text-primary"
-                      aria-hidden="true"
-                    />
-                    <span className="sr-only">选择评价明细月份</span>
-                    <select
-                      aria-label="选择评价明细月份"
-                      value={evaluationDetailMonth}
-                      onChange={(event) =>
-                        setEvaluationDetailMonth(event.target.value)
-                      }
-                      className="h-8 min-w-32 bg-transparent text-xs font-semibold text-foreground outline-none"
-                    >
-                      <option value="" disabled>
-                        选择月份
-                      </option>
-                      {evaluationDetailMonthOptions.map((item) => (
-                        <option key={item} value={item}>
-                          {item === today.slice(0, 7)
-                            ? `本月 · ${formatMonthLabel(item)}`
-                            : formatMonthLabel(item)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-              </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                {evaluationDetailPeriod === "day"
-                  ? evaluationDetailDay
-                  : evaluationDetailPeriod === "week"
-                    ? `${formatWeekLabel(evaluationDetailWeek)} · ${formatDateRangeLabel(evaluationDetailWeek)}`
-                    : formatMonthLabel(evaluationDetailMonth)}
-              </span>
-            </div>
-
-            <div
-              className="grid grid-cols-2 gap-2.5 sm:gap-3"
-              aria-live="polite"
-            >
-              <div className="rounded-2xl border border-[#c6e9d4] bg-[#f3fcf6] px-3 py-2.5 sm:p-3">
-                <p className="text-xs font-semibold text-[#43835b]">加分合计</p>
-                <p className="mt-0.5 text-[18px] leading-6 font-bold tabular-nums text-emerald-700">
-                  +{evaluationDetailTotals.addition.toFixed(1)}{" "}
-                  <span className="text-xs font-semibold">分</span>
-                </p>
-                <p className="mt-0.5 text-xs text-[#6b9279]">
-                  {
-                    evaluationDetailRecords.filter(
-                      (record) => record.totalDeduction > 0,
-                    ).length
-                  }{" "}
-                  条加分记录
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[#f2d0c3] bg-[#fff7f3] px-3 py-2.5 sm:p-3">
-                <p className="text-xs font-semibold text-[#a8644b]">扣分合计</p>
-                <p className="mt-0.5 text-[18px] leading-6 font-bold tabular-nums text-rose-700">
-                  -{evaluationDetailTotals.deduction.toFixed(1)}{" "}
-                  <span className="text-xs font-semibold">分</span>
-                </p>
-                <p className="mt-0.5 text-xs text-[#a47c70]">
-                  {
-                    evaluationDetailRecords.filter(
-                      (record) => record.totalDeduction < 0,
-                    ).length
-                  }{" "}
-                  条扣分记录
-                </p>
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border border-[#dce4f7] bg-white">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e5eaf7] bg-[#fbfcff] px-3.5 py-3 sm:px-4">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">
-                    评价记录
-                  </h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    当前显示 {visibleEvaluationDetailRecords.length} 条
-                  </p>
-                </div>
-                <div
-                  className="inline-flex rounded-lg border border-[#dbe3f7] bg-white p-1"
-                  role="tablist"
-                  aria-label="评价记录类型"
-                >
-                  {(
-                    ["all", "addition", "deduction"] as EvaluationDetailKind[]
-                  ).map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      role="tab"
-                      aria-selected={evaluationDetailKind === item}
-                      onClick={() => setEvaluationDetailKind(item)}
-                      className={cn(
-                        "min-h-8 touch-manipulation rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                        evaluationDetailKind === item
-                          ? item === "deduction"
-                            ? "bg-[#fff1e9] text-brand-orange"
-                            : item === "addition"
-                              ? "bg-[#eaf8f1] text-brand-green"
-                              : "bg-[#eef2ff] text-primary"
-                          : "text-muted-foreground hover:bg-[#f7f9ff] hover:text-foreground",
-                      )}
-                    >
-                      {item === "all"
-                        ? "全部"
-                        : item === "addition"
-                          ? "只看加分"
-                          : "只看扣分"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {visibleEvaluationDetailRecords.length === 0 ? (
-                <div className="px-4 py-12 text-center">
-                  <p className="text-sm font-semibold text-foreground">
-                    当前范围暂无
-                    {evaluationDetailKind === "addition"
-                      ? "加分"
-                      : evaluationDetailKind === "deduction"
-                        ? "扣分"
-                        : "评价"}
-                    记录
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    可切换日期或周期查看其他班级评价数据。
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table
-                    className={cn(
-                      "w-full border-collapse text-left",
-                      showEvaluationStudentColumn
-                        ? "min-w-[820px]"
-                        : "min-w-[720px]",
-                    )}
-                  >
-                    <caption className="sr-only">
-                      {currentClass.name}{" "}
-                      {evaluationDetailPeriod === "day"
-                        ? evaluationDetailDay
-                        : evaluationDetailPeriod === "week"
-                          ? formatWeekLabel(evaluationDetailWeek)
-                          : formatMonthLabel(evaluationDetailMonth)}
-                      班级评价明细
-                    </caption>
-                    <thead>
-                      <tr className="border-b border-[#e5eaf7] bg-[#f7f9ff] text-xs font-bold text-muted-foreground">
-                        <th scope="col" className="w-28 px-4 py-3">
-                          日期
-                        </th>
-                        <th scope="col" className="px-4 py-3">
-                          评价项目 / 说明
-                        </th>
-                        {showEvaluationStudentColumn && (
-                          <th scope="col" className="w-32 px-4 py-3">
-                            扣分学生
-                          </th>
-                        )}
-                        <th scope="col" className="w-24 px-4 py-3">
-                          操作人
-                        </th>
-                        <th scope="col" className="w-28 px-4 py-3 text-right">
-                          分值
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleEvaluationDetailRecords.map((record) => {
-                        const addition = record.totalDeduction > 0;
-                        const meta =
-                          [
-                            record.note,
-                            record.studentNames.length > 0
-                              ? `涉及学生：${record.studentNames.join("、")}`
-                              : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" · ") || "未填写说明";
-                        return (
-                          <tr
-                            key={record.id}
-                            className="border-b border-[#edf0fa] align-top transition-colors last:border-0 hover:bg-[#fbfcff]"
-                          >
-                            <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
-                              <time dateTime={record.date}>{record.date}</time>
-                            </td>
-                            <td className="px-4 py-3">
-                              <p className="text-sm font-semibold text-foreground">
-                                {record.level1}{" "}
-                                <span className="font-normal text-muted-foreground">
-                                  · {record.level2}
-                                </span>
-                              </p>
-                              <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
-                                {meta}
-                              </p>
-                            </td>
-                            {showEvaluationStudentColumn && (
-                              <td className="px-4 py-3 text-xs font-medium text-foreground">
-                                {record.studentNames.length > 0
-                                  ? record.studentNames.join("、")
-                                  : "—"}
-                              </td>
-                            )}
-                            <td className="px-4 py-3 text-xs text-muted-foreground">
-                              {record.operatorName || "系统"}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span
-                                className={cn(
-                                  "inline-flex items-center justify-end gap-1 text-sm font-bold tabular-nums",
-                                  addition
-                                    ? "text-emerald-700"
-                                    : "text-rose-700",
-                                )}
-                              >
-                                {addition ? (
-                                  <PlusCircle
-                                    className="size-3.5"
-                                    aria-hidden="true"
-                                  />
-                                ) : (
-                                  <MinusCircle
-                                    className="size-3.5"
-                                    aria-hidden="true"
-                                  />
-                                )}
-                                {addition ? "+" : "−"}
-                                {Math.abs(record.totalDeduction).toFixed(1)}
-                                <span className="text-xs font-semibold">
-                                  分
-                                </span>
-                              </span>
-                              <span className="mt-1 block text-xs text-muted-foreground">
-                                {addition ? "加分" : "扣分"}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={classSwitchOpen} onOpenChange={setClassSwitchOpen}>
         <DialogContent className="max-w-md border border-[#dce3f7] p-0">
@@ -1415,15 +766,6 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={Boolean(selectedMessage)}
-        onOpenChange={(open) => !open && setSelectedMessage(null)}
-      >
-        {selectedMessage ? (
-          <MessageDetailDialog message={selectedMessage} />
-        ) : null}
-      </Dialog>
-
       <button
         type="button"
         onClick={handleHonorFabClick}
@@ -1455,13 +797,13 @@ export function HomeroomDashboard({ onNavigate }: HomeroomDashboardProps) {
     </div>
   );
 }
-
 function SectionHeading({
   id,
   icon: Icon,
   tone,
   title,
   description,
+  descriptionClassName,
   action,
 }: {
   id?: string;
@@ -1469,6 +811,7 @@ function SectionHeading({
   tone: "blue" | "green" | "orange" | "purple";
   title: React.ReactNode;
   description: string;
+  descriptionClassName?: string;
   action?: React.ReactNode;
 }) {
   const styles = {
@@ -1478,7 +821,7 @@ function SectionHeading({
     purple: "bg-[#f2f0ff] text-[#7166b3]",
   };
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
         <span
           className={cn(
@@ -1492,9 +835,11 @@ function SectionHeading({
           <h2 id={id} className="text-base font-bold text-foreground">
             {title}
           </h2>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {description}
-          </p>
+          {description && (
+            <p className={cn("mt-1 truncate text-xs text-muted-foreground", descriptionClassName)}>
+              {description}
+            </p>
+          )}
         </div>
       </div>
       {action}
@@ -1502,152 +847,31 @@ function SectionHeading({
   );
 }
 
-function MessageCard({
-  message,
-  onClick,
-}: {
-  message: DashboardMessage;
-  onClick: () => void;
-}) {
-  const styles = {
-    blue: "bg-[#eef2ff] text-primary",
-    green: "bg-[#eaf8f1] text-brand-green",
-    orange: "bg-[#fff1e9] text-brand-orange",
-    purple: "bg-[#f2f0ff] text-[#7166b3]",
-  };
-  const Icon = message.icon;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex h-[68px] w-full items-center gap-3 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] px-3 py-2.5 text-left transition-colors hover:border-primary/35 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
-    >
-      <span
-        className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-lg",
-          styles[message.tone],
-        )}
-      >
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground ring-1 ring-[#e4e8f5]">
-            {message.category}
-          </span>
-          <span className="truncate text-sm font-semibold text-foreground">
-            {message.title}
-          </span>
-        </span>
-        <span className="mt-1 block truncate text-xs text-muted-foreground">
-          {message.summary}
-        </span>
-      </span>
-      <span className="hidden shrink-0 text-xs font-semibold text-primary sm:inline">
-        查看详情
-      </span>
-      <ChevronRight
-        className="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-hover:translate-x-0.5"
-        aria-hidden="true"
-      />
-    </button>
-  );
-}
-
 function TodoItem({
-  icon: Icon,
   title,
   description,
-  count,
   actionLabel,
   onClick,
 }: DashboardTodo) {
-  const actionClassName =
-    "group inline-flex min-h-9 shrink-0 items-center rounded-lg px-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45";
-  const actionContent = (
-    <>
-      <span>{actionLabel}</span>
-      <ChevronRight
-        className="size-4 transition-transform motion-reduce:transition-none group-hover:translate-x-0.5"
-        aria-hidden="true"
-      />
-    </>
-  );
   return (
-    <div className="flex h-[76px] items-center gap-3 rounded-xl border border-[#e1e6f5] bg-[#fbfcff] p-3">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#eef2ff] text-primary">
-        <Icon className="size-4" aria-hidden="true" />
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="group flex min-h-[64px] w-full touch-manipulation items-center gap-3 py-2.5 text-left transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45"
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#fff3db] text-[#a66a12]">
+        <ClipboardCheck className="size-4" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-bold text-foreground">{title}</span>
+        <span className="block truncate text-sm font-semibold text-foreground group-hover:text-primary">
+          {title}
+        </span>
         <span className="mt-0.5 block truncate text-xs text-muted-foreground">
           {description}
         </span>
       </span>
-      <span
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums",
-          count > 0
-            ? "bg-[#fff1e9] text-brand-orange"
-            : "bg-[#eaf8f1] text-brand-green",
-        )}
-      >
-        {count > 0 ? (
-          count
-        ) : (
-          <CheckCircle2 className="size-4" aria-label="已完成" />
-        )}
-      </span>
-      <button type="button" onClick={onClick} className={actionClassName}>
-        {actionContent}
-      </button>
-    </div>
-  );
-}
-
-function MessageDetailDialog({ message }: { message: DashboardMessage }) {
-  const styles = {
-    blue: "bg-[#eef2ff] text-primary",
-    green: "bg-[#eaf8f1] text-brand-green",
-    orange: "bg-[#fff1e9] text-brand-orange",
-    purple: "bg-[#f2f0ff] text-[#7166b3]",
-  };
-  const Icon = message.icon;
-  return (
-    <DialogContent className="max-w-md border border-[#dce3f7] p-0">
-      <DialogHeader className="border-b border-[#e8ecf8] bg-[#f8faff] px-5 py-5 pr-12">
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl",
-              styles[message.tone],
-            )}
-          >
-            <Icon className="size-5" aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <span className="text-xs font-bold text-muted-foreground">
-              {message.category}
-            </span>
-            <DialogTitle className="mt-1 truncate text-base font-bold text-foreground">
-              {message.title}
-            </DialogTitle>
-          </div>
-        </div>
-      </DialogHeader>
-      <div className="px-5 py-5">
-        <DialogDescription className="leading-6 text-muted-foreground">
-          {message.detail}
-        </DialogDescription>
-      </div>
-    </DialogContent>
-  );
-}
-
-function EmptyPanel({ text }: { text: string }) {
-  return (
-    <div className="mt-4 flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-[#d5def5] bg-[#fbfcff] px-3 text-sm text-muted-foreground">
-      {text}
-    </div>
+      <span className="shrink-0 text-xs font-semibold text-primary">{actionLabel}</span>
+    </button>
   );
 }

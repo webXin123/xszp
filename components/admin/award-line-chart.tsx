@@ -3,15 +3,16 @@
 import { useMemo } from "react"
 
 interface AwardLineChartProps {
-  /** 最近 N 天，按时间正序：[{date, count}] */
-  data: { date: string; count: number }[]
+  /** 按时间正序展示每日或每月发放数 */
+  data: { date: string; label: string; count: number }[]
+  rangeLabel: string
 }
 
 const W = 640
 const H = 200
 const PAD = { top: 16, right: 16, bottom: 28, left: 32 }
 
-export function AwardLineChart({ data }: AwardLineChartProps) {
+export function AwardLineChart({ data, rangeLabel }: AwardLineChartProps) {
   const { points, areaPath, linePath, max, min, xLabels } = useMemo(() => {
     const n = data.length
     const max = Math.max(1, ...data.map((d) => d.count))
@@ -29,8 +30,7 @@ export function AwardLineChart({ data }: AwardLineChartProps) {
       `M${points[0]?.x.toFixed(1)},${(PAD.top + plotH).toFixed(1)} ` +
       points.map((p) => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") +
       ` L${points[n - 1]?.x.toFixed(1)},${(PAD.top + plotH).toFixed(1)} Z`
-    // 横轴标签：最多 7 个
-    const xLabels = data.map((d, i) => ({ x: xOf(i), label: d.date.slice(5) }))
+    const xLabels = data.map((d, i) => ({ x: xOf(i), label: d.label }))
     return { points, areaPath, linePath, max, min, xLabels }
   }, [data])
 
@@ -44,10 +44,10 @@ export function AwardLineChart({ data }: AwardLineChartProps) {
         <p className="text-xs text-muted-foreground">
           合计 <span className="text-sm font-bold text-foreground">{total}</span> 张
         </p>
-        <p className="text-xs text-muted-foreground">最近 {data.length} 天</p>
+        <p className="text-xs text-muted-foreground">{rangeLabel}</p>
       </div>
       <div className="w-full overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full min-w-[420px]" preserveAspectRatio="xMidYMid meet">
+        <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full min-w-[420px]" preserveAspectRatio="xMidYMid meet" role="img" aria-label={`${rangeLabel}奖卡发放趋势：${data.map((item) => `${item.label}：${item.count}张`).join("，")}`}>
           <defs>
             <linearGradient id="award-area" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.22" />
@@ -83,11 +83,9 @@ export function AwardLineChart({ data }: AwardLineChartProps) {
           {points.map((p, i) => (
             <g key={i}>
               <circle cx={p.x} cy={p.y} r="3.5" fill="var(--primary)" stroke="var(--background)" strokeWidth="1.5" />
-              {p.count > 0 && (
-                <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--foreground)">
-                  {p.count}
-                </text>
-              )}
+              <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--foreground)">
+                {p.count}
+              </text>
             </g>
           ))}
           {/* x 轴标签 */}
